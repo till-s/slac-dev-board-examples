@@ -33,7 +33,8 @@ entity DigilentZyboDevBoard is
       TPD_G         : time    := 1 ns;
       BUILD_INFO_G  : BuildInfoType;
       SIM_SPEEDUP_G : boolean := false;
-      SIMULATION_G  : boolean := false);
+      SIMULATION_G  : boolean := false;
+      XVC_EN_G      : boolean := false);
    port (
       DDR_addr          : inout STD_LOGIC_VECTOR ( 14 downto 0 );
       DDR_ba            : inout STD_LOGIC_VECTOR ( 2 downto 0 );
@@ -373,6 +374,8 @@ begin
 
    cpuIrqs(IRQ_MAX_C - 1 downto 0) <= appIrqs(IRQ_MAX_C - 1 downto 0);
 
+   GEN_XVC : if XVC_EN_G generate
+
    U_AxisBscan : entity work.AxisDebugBridge
       generic map (
          TPD_G        => TPD_G,
@@ -391,6 +394,8 @@ begin
          mAxisTdo     => dbgRxMaster,
          sAxisTdo     => dbgRxSlave
       );
+
+   end generate;
 
    ----------------
    -- Misc. Signals
