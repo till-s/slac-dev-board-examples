@@ -1,1 +1,1 @@
-SourceTclFile $::env(VIVADO_DIR)/debug.tcl
+#SourceTclFile $::env(VIVADO_DIR)/debug.tcl
