@@ -447,8 +447,8 @@ begin
    end generate;
 
    NO_GEN_GTX_COMMON : if (COMMON_EXTERN_G) generate
-      qplloutclk_i    <= plloutclk;
-      qplloutrefclk_i <= plloutrefclk;
+      qplloutclk_i    <= qplloutclk;
+      qplloutrefclk_i <= qplloutrefclk;
    end generate;
 
    txOutClk <= txoutclkb;
