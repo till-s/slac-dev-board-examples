@@ -24,13 +24,16 @@ use work.StdRtlPkg.all;
 use work.AxiLitePkg.all;
 use work.AxiStreamPkg.all;
 use work.SsiPkg.all;
+use work.TimingPkg.all;
+
+library unisim;
+use unisim.vcomponents.all;
 
 entity AppReg is
    generic (
       TPD_G            : time             := 1 ns;
       BUILD_INFO_G     : BuildInfoType;
       XIL_DEVICE_G     : string           := "7SERIES";
-      AXI_ERROR_RESP_G : slv( 1 downto 0) := AXI_RESP_DECERR_C;
       AXIL_BASE_ADDR_G : slv(31 downto 0) := x"00000000";
       USE_SLOWCLK_G    : boolean          := false;
       FIFO_DEPTH_G     : natural          := 0);
@@ -61,16 +64,27 @@ entity AppReg is
       -- ADC Ports
       vPIn            : in  sl;
       vNIn            : in  sl;
+      -- Timing
+      timingRefClkP   : in  sl;
+      timingRefClkN   : in  sl;
+      timingRxP       : in  sl;
+      timingRxN       : in  sl;
+      timingTxP       : out sl;
+      timingTxN       : out sl;
+
       -- IRQ
       irqOut          : out slv(7 downto 0)    := (others => '0'));
 end AppReg;
 
 architecture mapping of AppReg is
 
+   constant AXIL_CLK_FREQ_C    : real := 50.0E6;
+   constant CLK_PERIOD_C       : real := 1.0/AXIL_CLK_FREQ_C;
+
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 8;
+   constant NUM_AXI_MASTERS_C : natural := 10;
 
    constant VERSION_INDEX_C : natural := 0;
    constant XADC_INDEX_C    : natural := 1;
@@ -80,9 +94,11 @@ architecture mapping of AppReg is
    constant PRBS_RX_INDEX_C : natural := 5;
    constant HLS_INDEX_C     : natural := 6;
    constant FIFO_INDEX_C    : natural := 7;
+   constant TIM_GTX_INDEX_C : natural := 8;
+   constant TIM_COR_INDEX_C : natural := 9;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := 
-      genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 20, 16 );
+      genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 24, 20 );
 
 
    signal mAxilWriteMaster : AxiLiteWriteMasterType;
@@ -104,6 +120,31 @@ architecture mapping of AppReg is
    signal irq        : sl := '0';
 
    signal rstN       : sl;
+
+   signal timingRefClk      : sl := '0';
+   signal timingRecClk      : sl := '0';
+   signal timingRecRst      : sl := '1';
+   signal timingTxUsrClk    : sl := '0';
+   signal timingTxUsrRst    : sl := '1';
+   signal timingCdrStable   : sl;
+   signal timingLoopback    : slv(2 downto 0) := "000";
+   signal timingClkSel      : sl;
+   signal timingLoopbackSel : slv(2 downto 0) := "000";
+
+   signal timingTxPhy       : TimingPhyType;
+   signal timingTxPhyLoc    : TimingPhyType;
+   signal timingRxPhy       : TimingRxType;
+   signal timingRxControl   : TimingPhyControlType;
+   signal timingRxStatus    : TimingPhyStatusType := TIMING_PHY_STATUS_INIT_C;
+   signal timingTxStatus    : TimingPhyStatusType := TIMING_PHY_STATUS_INIT_C;
+   signal timingTxRstAsync  : sl;
+
+   signal timingBus         : TimingBusType;
+   signal appTimingMode     : sl;
+
+   signal appTimingClk      : sl;
+   signal appTimingRst      : sl;
+
 
    constant GEN_MB_C : boolean := false and FIFO_DEPTH_G = 0;
 
@@ -166,7 +207,6 @@ begin
    U_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         DEC_ERROR_RESP_G   => AXI_ERROR_RESP_G,
          NUM_SLAVE_SLOTS_G  => 2,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
          MASTERS_CONFIG_G   => AXI_CROSSBAR_MASTERS_CONFIG_C)
@@ -193,9 +233,9 @@ begin
       generic map (
          TPD_G            => TPD_G,
          BUILD_INFO_G     => BUILD_INFO_G,
-         AXI_ERROR_RESP_G => AXI_ERROR_RESP_G,
          XIL_DEVICE_G     => XIL_DEVICE_G,
          EN_DEVICE_DNA_G  => true,
+         CLK_PERIOD_G     => CLK_PERIOD_C,
          USE_SLOWCLK_G    => USE_SLOWCLK_G)
       port map (
          axiReadMaster  => mAxilReadMasters(VERSION_INDEX_C),
@@ -211,8 +251,8 @@ begin
       ------------------------
       U_XADC : entity work.AxiXadcWrapper
          generic map (
-            TPD_G            => TPD_G,
-            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
+            TPD_G            => TPD_G
+         )
          port map (
             axiReadMaster  => mAxilReadMasters(XADC_INDEX_C),
             axiReadSlave   => mAxilReadSlaves(XADC_INDEX_C),
@@ -222,20 +262,12 @@ begin
             axiRst         => rst,
             vPIn           => vPIn,
             vNIn           => vNIn);
+
       --------------------------
       -- AXI-Lite: SYSMON Module
       --------------------------
-      U_AxiLiteEmpty : entity work.AxiLiteEmpty
-         generic map (
-            TPD_G            => TPD_G,
-            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
-         port map (
-            axiClk         => clk,
-            axiClkRst      => rst,
-            axiReadMaster  => mAxilReadMasters(SYS_MON_INDEX_C),
-            axiReadSlave   => mAxilReadSlaves(SYS_MON_INDEX_C),
-            axiWriteMaster => mAxilWriteMasters(SYS_MON_INDEX_C),
-            axiWriteSlave  => mAxilWriteSlaves(SYS_MON_INDEX_C));
+      mAxilReadSlaves (SYS_MON_INDEX_C) <= AXI_LITE_READ_SLAVE_EMPTY_DECERR_C;
+      mAxilWriteSlaves(SYS_MON_INDEX_C) <= AXI_LITE_WRITE_SLAVE_EMPTY_DECERR_C;
 
    end generate;
 
@@ -243,17 +275,9 @@ begin
       ------------------------
       -- AXI-Lite: XADC Module
       ------------------------
-      U_AxiLiteEmpty : entity work.AxiLiteEmpty
-         generic map (
-            TPD_G            => TPD_G,
-            AXI_ERROR_RESP_G => AXI_ERROR_RESP_G)
-         port map (
-            axiClk         => clk,
-            axiClkRst      => rst,
-            axiReadMaster  => mAxilReadMasters(XADC_INDEX_C),
-            axiReadSlave   => mAxilReadSlaves(XADC_INDEX_C),
-            axiWriteMaster => mAxilWriteMasters(XADC_INDEX_C),
-            axiWriteSlave  => mAxilWriteSlaves(XADC_INDEX_C));
+      mAxilReadSlaves (XADC_INDEX_C) <= AXI_LITE_READ_SLAVE_EMPTY_DECERR_C;
+      mAxilWriteSlaves(XADC_INDEX_C) <= AXI_LITE_WRITE_SLAVE_EMPTY_DECERR_C;
+
       --------------------------
       -- AXI-Lite: SYSMON Module
       --------------------------
@@ -403,5 +427,142 @@ begin
       mAxilWriteSlaves(FIFO_INDEX_C).awready <= '1';
       mAxilWriteSlaves(FIFO_INDEX_C).wready  <= '1';
    end generate;
+
+   U_TimingGtx : entity work.TimingGtxCoreWrapper
+      generic map (
+         TPD_G              => TPD_G,
+         AXIL_CLK_FREQ_G    => AXIL_CLK_FREQ_C,
+         AXIL_BASE_ADDR_G   => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_GTX_INDEX_C).baseAddr
+      )
+      port map (
+         axilClk            => clk,
+         axilRst            => rst,
+
+         axilReadMaster     => mAxilReadMasters (TIM_GTX_INDEX_C),
+         axilReadSlave      => mAxilReadSlaves  (TIM_GTX_INDEX_C),
+         axilWriteMaster    => mAxilWriteMasters(TIM_GTX_INDEX_C),
+         axilWriteSlave     => mAxilWriteSlaves (TIM_GTX_INDEX_C),
+
+         stableClk          => clk,
+
+         gtRefClk           => timingRefClk,
+
+         gtRxP              => timingRxP,
+         gtRxN              => timingRxN,
+
+         gtTxP              => timingTxP,
+         gtTxN              => timingTxN,
+
+         rxControl          => timingRxControl,
+         rxStatus           => timingRxStatus,
+         rxUsrClk           => timingRecClk,
+         rxData             => timingRxPhy.data,
+         rxDataK            => timingRxPhy.dataK,
+         rxDispErr          => timingRxPhy.dspErr,
+         rxDecErr           => timingRxPhy.decErr,
+         rxOutClk           => timingRecClk,
+
+         txControl          => timingTxPhyLoc.control,
+         txStatus           => timingTxStatus,
+         txUsrClk           => timingTxUsrClk,
+         txUsrClkActive     => '1',
+         txData             => timingTxPhyLoc.data,
+         txDataK            => timingTxPhyLoc.dataK,
+         txOutClk           => timingTxUsrClk,
+         loopback           => timingLoopbackSel
+      );
+
+   P_TIMING_PHY : process( timingTxPhy, timingRxControl ) is
+      variable v : TimingPhyType;
+   begin
+      v                  := timingTxPhy;
+      v.control.reset    := timingTxPhy.control.reset or timingRxControl.bufferByRst; -- hack!
+
+      timingTxPhyLoc     <= v;
+   end process P_TIMING_PHY;
+
+
+   U_TimingCore : entity work.TimingCore
+      generic map (
+         TPD_G               => TPD_G,
+         STREAM_L1_G         => false,
+         AXIL_RINGB_G        => false,
+         ASYNC_G             => false,
+         AXIL_BASE_ADDR_G    => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_COR_INDEX_C).baseAddr
+      )
+      port map (
+         gtTxUsrClk          => timingTxUsrClk,
+         gtTxUsrRst          => timingTxUsrRst,
+
+         gtRxRecClk          => timingRecClk,
+         gtRxData            => timingRxPhy.data,
+         gtRxDataK           => timingRxPhy.dataK,
+         gtRxDispErr         => timingRxPhy.dspErr,
+         gtRxDecErr          => timingRxPhy.decErr,
+         gtRxControl         => timingRxControl,
+         gtRxStatus          => timingRxStatus,
+         gtTxReset           => open, -- not useful; if the TX is reset the TPGMini regs dont' work
+         gtLoopback          => timingLoopbackSel,
+
+         timingPhy           => timingTxPhy,
+         timingClkSel        => timingClkSel,
+
+         appTimingClk        => appTimingClk,
+         appTimingRst        => appTimingRst,
+         appTimingBus        => timingBus,
+         appTimingMode       => appTimingMode,
+
+         axilClk             => clk,
+         axilRst             => rst,
+         axilReadMaster      => mAxilReadMasters (TIM_COR_INDEX_C),
+         axilReadSlave       => mAxilReadSlaves  (TIM_COR_INDEX_C),
+         axilWriteMaster     => mAxilWriteMasters(TIM_COR_INDEX_C),
+         axilWriteSlave      => mAxilWriteSlaves (TIM_COR_INDEX_C)
+
+--         ibEthMsgMaster      => ibTimingEthMaster,
+--         ibEthMsgSlave       => ibTimingEthSlave,
+
+--         obEthMsgMaster      => obTimingEthMaster,
+--         obEthMsgSlave       => obTimingEthSlave
+      );
+
+      appTimingClk <= timingRecClk;
+      appTimingRst <= timingRecRst;
+
+      U_RXCLK_RST : entity work.RstSync
+         generic map (
+            TPD_G            => TPD_G,
+            IN_POLARITY_G    => '0'
+         )
+         port map (
+            clk              => timingRecClk,
+            asyncRst         => timingRxStatus.resetDone,
+            syncRst          => timingRecRst
+         );
+
+      U_TXCLK_RST : entity work.RstSync
+         generic map (
+            TPD_G            => TPD_G,
+            IN_POLARITY_G    => '0'
+         )
+         port map (
+            clk              => timingTxUsrClk,
+            asyncRst         => timingTxStatus.resetDone,
+            syncRst          => timingTxUsrRst
+         );
+
+      U_IBUF_GTX : IBUFDS_GTE2
+         generic map (
+            CLKRCV_TRST      => true, -- ug476
+            CLKCM_CFG        => true, -- ug476
+            CLKSWING_CFG     => "11"  -- ug476
+         )
+         port map (
+            I                => timingRefClkP,
+            IB               => timingRefClkN,
+            CEB              => '0',
+            O                => timingRefClk,
+            ODIV2            => open
+         );
 
 end mapping;
