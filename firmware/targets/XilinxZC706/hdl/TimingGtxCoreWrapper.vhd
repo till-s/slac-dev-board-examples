@@ -30,6 +30,7 @@ entity TimingGtxCoreWrapper is
       TPD_G            : time    := 1 ns;
       EXTREF_G         : boolean := false;
       AXIL_CLK_FREQ_G  : real    := 156.25E6;
+      COMMON_EXTERN_G  : boolean := true;
       AXIL_BASE_ADDR_G : slv(31 downto 0));
    port (
       -- AXI-Lite Port
@@ -70,7 +71,12 @@ entity TimingGtxCoreWrapper is
       txDataK        : in  slv(1 downto 0);
       txOutClk       : out sl;
 
-      loopback : in slv(2 downto 0));
+      -- Ports from common block (if external)
+      qplloutclk     : in  sl := '0';
+      qplloutrefclk  : in  sl := '0';
+
+      -- Loopback
+      loopback       : in slv(2 downto 0));
 end entity TimingGtxCoreWrapper;
 
 architecture rtl of TimingGtxCoreWrapper is
@@ -205,8 +211,8 @@ end component gtwizard_0;
    signal rxRst            : sl;
    signal bypassdone       : sl;
    signal bypasserr        : sl := '0';
-   signal qplloutclk       : sl;
-   signal qplloutrefclk    :  sl;
+   signal qplloutclk_i     : sl;
+   signal qplloutrefclk_i  : sl;
    signal axilWriteMasters : AxiLiteWriteMasterArray(1 downto 0);
    signal axilWriteSlaves  : AxiLiteWriteSlaveArray(1 downto 0);
    signal axilReadMasters  : AxiLiteReadMasterArray(1 downto 0);
@@ -402,8 +408,8 @@ begin
  
  
  
-         gt0_qplloutclk_in               =>      qplloutclk,
-         gt0_qplloutrefclk_in            =>      qplloutrefclk
+         gt0_qplloutclk_in               =>      qplloutclk_i,
+         gt0_qplloutrefclk_in            =>      qplloutrefclk_i
       );
   
 
@@ -417,6 +423,8 @@ begin
          I       => rxoutclk_out,
          O       => rxoutclkb);
 
+   GEN_GTX_COMMON : if (not COMMON_EXTERN_G) generate
+
    U_GTX_COMMON : entity work.gtwizard_0_common
       port map (
          DRPADDR_COMMON_IN  => (others => '0'),
@@ -428,18 +436,20 @@ begin
          DRPWE_COMMON_IN    => '0',
          QPLLREFCLKSEL_IN   => "001",
          GTREFCLK1_IN       => '0',
-         GTREFCLK0_IN       => '0',
+         GTREFCLK0_IN       => gtRefClk,
          QPLLLOCK_OUT       => open,
          QPLLLOCKDETCLK_IN  => stableClk,
-         QPLLOUTCLK_OUT     => qplloutclk,
-         QPLLOUTREFCLK_OUT  => qplloutrefclk,
+         QPLLOUTCLK_OUT     => qplloutclk_i,
+         QPLLOUTREFCLK_OUT  => qplloutrefclk_i,
          QPLLREFCLKLOST_OUT => open,
          QPLLRESET_IN       => '1'
       );
+   end generate;
 
-
---   txRst    <= txControl.reset;
---   rxRst    <= rxControl.reset;
+   NO_GEN_GTX_COMMON : if (COMMON_EXTERN_G) generate
+      qplloutclk_i    <= plloutclk;
+      qplloutrefclk_i <= plloutrefclk;
+   end generate;
 
    txOutClk <= txoutclkb;
    rxOutClk <= rxoutclkb;
