@@ -81,7 +81,7 @@ end entity TimingGtxCoreWrapper;
 
 architecture rtl of TimingGtxCoreWrapper is
 
-component gtwizard_0
+component TimingGtx
 port (
     SYSCLK_IN                               : in   std_logic;
     SOFT_RESET_TX_IN                        : in   std_logic;
@@ -180,7 +180,7 @@ port (
      GT0_QPLLOUTCLK_IN  : in std_logic;
      GT0_QPLLOUTREFCLK_IN : in std_logic
 );
-end component gtwizard_0;
+end component TimingGtx;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(1 downto 0) := (
       0               => (
@@ -311,7 +311,7 @@ begin
    drpClk <= axilClk;
    drpRst <= axilRst;
 
-   U_TimingGtxCore : component gtwizard_0
+   U_TimingGtxCore : component TimingGtx
       port map (
          sysclk_in                       =>      axilClk,
          soft_reset_tx_in                =>      txControl.reset,
