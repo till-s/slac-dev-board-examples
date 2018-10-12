@@ -93,3 +93,36 @@ create_clock -name timingRefClk -period 5.3846 [get_ports {timingRefClkP}]
 #set_property OFFCHIP_TERM NONE [get_ports iic_scl_io]
 #set_property OFFCHIP_TERM NONE [get_ports iic_sda_io]
 
+#PMOD
+#         Pin   Pin Name                 Memory Byte Group  Bank  VCCAUX Group  Super Logic Region  I/O Type  No-Connect
+# PMOD1_0 AJ21  IO_L3P_T0_DQS_11         0                  11    NA            NA                  HR        NA
+# PMOD1_1 AK21  IO_L3N_T0_DQS_11         0                  11    NA            NA                  HR        NA
+# PMOD1_2 AB21  IO_L19P_T3_11            3                  11    NA            NA                  HR        NA
+# PMOD1_3 AB16  IO_L24N_T3_10            3                  10    NA            NA                  HR        NA
+# PMOD1_4 Y20   IO_L6P_T0_9              0                  9     NA            NA                  HR        NA
+# PMOD1_5 AA20  IO_L6N_T0_VREF_9         0                  9     NA            NA                  HR        NA
+# PMOD1_6 AC18  IO_L11P_T1_SRCC_9        1                  9     NA            NA                  HR        NA
+# PMOD1_7 AC19  IO_L11N_T1_SRCC_9        1                  9     NA            NA                  HR        NA
+set_property PACKAGE_PIN Y20  [get_ports {diffOutP[0]}]
+set_property IOSTANDARD LVDS_25  [get_ports {diffOutP[0]}]
+set_property PACKAGE_PIN AA20 [get_ports {diffOutN[0]}]
+set_property IOSTANDARD LVDS_25 [get_ports {diffOutN[0]}]
+set_property PACKAGE_PIN AC18 [get_ports {diffOutP[1]}]
+set_property IOSTANDARD LVDS_25 [get_ports {diffOutP[1]}]
+set_property PACKAGE_PIN AC19 [get_ports {diffOutN[1]}]
+set_property IOSTANDARD LVDS_25 [get_ports {diffOutN[1]}]
+set_property PACKAGE_PIN AJ21 [get_ports {diffInpP[0]}]
+set_property IOSTANDARD LVDS_25 [get_ports {diffInpP[0]}]
+set_property PACKAGE_PIN AK21 [get_ports {diffInpN[0]}]
+set_property IOSTANDARD LVDS_25 [get_ports {diffInpN[0]}]
+
+set_property PACKAGE_PIN AB21    [get_ports {trigSE[0]}]
+set_property IOSTANDARD LVCMOS25 [get_ports {trigSE[0]}]
+set_property IOB TRUE            [get_ports {trigSE[0]}]
+
+set_property PACKAGE_PIN AD18 [get_ports {timingRecClkP}]
+set_property IOSTANDARD LVDS_25 [get_ports {timingRecClkP}]
+set_property PACKAGE_PIN AD19 [get_ports {timingRecClkN}]
+set_property IOSTANDARD LVDS_25 [get_ports {timingRecClkN}]
+
+

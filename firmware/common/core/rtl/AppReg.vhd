@@ -7,11 +7,11 @@
 -- Description:
 -------------------------------------------------------------------------------
 -- This file is part of 'Example Project Firmware'.
--- It is subject to the license terms in the LICENSE.txt file found in the 
--- top-level directory of this distribution and at: 
---    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'Example Project Firmware', including this file, 
--- may be copied, modified, propagated, or distributed except according to 
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Example Project Firmware', including this file,
+-- may be copied, modified, propagated, or distributed except according to
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
 
@@ -36,6 +36,7 @@ entity AppReg is
       XIL_DEVICE_G     : string           := "7SERIES";
       AXIL_BASE_ADDR_G : slv(31 downto 0) := x"00000000";
       USE_SLOWCLK_G    : boolean          := false;
+      NUM_TRIGS_G      : natural          := 8;
       FIFO_DEPTH_G     : natural          := 0);
    port (
       -- Clock and Reset
@@ -67,11 +68,13 @@ entity AppReg is
       -- Timing
       timingRefClkP   : in  sl;
       timingRefClkN   : in  sl;
+      timingRecClk    : out sl;
+      timingRecRst    : out sl;
       timingRxP       : in  sl;
       timingRxN       : in  sl;
       timingTxP       : out sl;
       timingTxN       : out sl;
-
+      timingTrig      : out TimingTrigType;
       -- IRQ
       irqOut          : out slv(7 downto 0)    := (others => '0'));
 end AppReg;
@@ -84,7 +87,7 @@ architecture mapping of AppReg is
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 10;
+   constant NUM_AXI_MASTERS_C : natural := 11;
 
    constant VERSION_INDEX_C : natural := 0;
    constant XADC_INDEX_C    : natural := 1;
@@ -96,8 +99,9 @@ architecture mapping of AppReg is
    constant FIFO_INDEX_C    : natural := 7;
    constant TIM_GTX_INDEX_C : natural := 8;
    constant TIM_COR_INDEX_C : natural := 9;
+   constant TIM_TRG_INDEX_C : natural :=10;
 
-   constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) := 
+   constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) :=
       genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 24, 20 );
 
 
@@ -122,8 +126,8 @@ architecture mapping of AppReg is
    signal rstN       : sl;
 
    signal timingRefClk      : sl := '0';
-   signal timingRecClk      : sl := '0';
-   signal timingRecRst      : sl := '1';
+   signal timingRecClkLoc   : sl := '0';
+   signal timingRecRstLoc   : sl := '1';
    signal timingTxUsrClk    : sl := '0';
    signal timingTxUsrRst    : sl := '1';
    signal timingCdrStable   : sl;
@@ -141,6 +145,7 @@ architecture mapping of AppReg is
 
    signal timingBus         : TimingBusType;
    signal appTimingMode     : sl;
+   signal appTimingTrig     : TimingTrigType;
 
    signal appTimingClk      : sl;
    signal appTimingRst      : sl;
@@ -203,7 +208,7 @@ begin
 
    ---------------------------
    -- AXI-Lite Crossbar Module
-   ---------------------------         
+   ---------------------------
    U_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
@@ -228,7 +233,7 @@ begin
 
    ---------------------------
    -- AXI-Lite: Version Module
-   ---------------------------            
+   ---------------------------
    U_AxiVersion : entity work.AxiVersion
       generic map (
          TPD_G            => TPD_G,
@@ -295,9 +300,9 @@ begin
             vNIn           => vNIn);
    end generate;
 
-   --------------------------------          
+   --------------------------------
    -- AXI-Lite Shared Memory Module
-   --------------------------------          
+   --------------------------------
    U_Mem : entity work.AxiDualPortRam
       generic map (
          TPD_G        => TPD_G,
@@ -370,7 +375,7 @@ begin
 
    ------------------------------
    -- AXI-Lite HLS Example Module
-   ------------------------------            
+   ------------------------------
    U_AxiLiteExample : entity work.AxiLiteExample
       port map (
          axiClk         => clk,
@@ -455,12 +460,12 @@ begin
 
          rxControl          => timingRxControl,
          rxStatus           => timingRxStatus,
-         rxUsrClk           => timingRecClk,
+         rxUsrClk           => timingRecClkLoc,
          rxData             => timingRxPhy.data,
          rxDataK            => timingRxPhy.dataK,
          rxDispErr          => timingRxPhy.dspErr,
          rxDecErr           => timingRxPhy.decErr,
-         rxOutClk           => timingRecClk,
+         rxOutClk           => timingRecClkLoc,
 
          txControl          => timingTxPhyLoc.control,
          txStatus           => timingTxStatus,
@@ -494,7 +499,7 @@ begin
          gtTxUsrClk          => timingTxUsrClk,
          gtTxUsrRst          => timingTxUsrRst,
 
-         gtRxRecClk          => timingRecClk,
+         gtRxRecClk          => timingRecClkLoc,
          gtRxData            => timingRxPhy.data,
          gtRxDataK           => timingRxPhy.dataK,
          gtRxDispErr         => timingRxPhy.dspErr,
@@ -526,8 +531,40 @@ begin
 --         obEthMsgSlave       => obTimingEthSlave
       );
 
-      appTimingClk <= timingRecClk;
-      appTimingRst <= timingRecRst;
+   U_EvrV2 : entity work.EvrV2CoreTriggers
+      generic map (
+         TPD_G               => TPD_G,
+         NCHANNELS_G         => NUM_TRIGS_G, -- event selectors
+         NTRIGGERS_G         => NUM_TRIGS_G,
+         TRIG_DEPTH_G        => 19,
+         COMMON_CLK_G        => false,
+         AXIL_BASEADDR_G     => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_TRG_INDEX_C).baseAddr
+      )
+      port map (
+         -- AXI-Lite and IRQ Interface
+         axilClk             => clk,
+         axilRst             => rst,
+         axilReadMaster      => mAxilReadMasters (TIM_TRG_INDEX_C),
+         axilReadSlave       => mAxilReadSlaves  (TIM_TRG_INDEX_C),
+         axilWriteMaster     => mAxilWriteMasters(TIM_TRG_INDEX_C),
+         axilWriteSlave      => mAxilWriteSlaves (TIM_TRG_INDEX_C),
+         -- EVR Ports
+         evrClk              => appTimingClk,
+         evrRst              => appTimingRst,
+         evrBus              => timingBus,
+         -- Trigger and Sync Port
+         trigOut             => appTimingTrig,
+         evrModeSel          => appTimingMode
+      );
+
+
+      appTimingClk <= timingRecClkLoc;
+      appTimingRst <= timingRecRstLoc;
+
+      timingRecClk <= timingRecClkLoc;
+      timingRecRst <= timingRecRstLoc;
+
+      timingTrig   <= appTimingTrig;
 
       U_RXCLK_RST : entity work.RstSync
          generic map (
@@ -535,9 +572,9 @@ begin
             IN_POLARITY_G    => '0'
          )
          port map (
-            clk              => timingRecClk,
+            clk              => timingRecClkLoc,
             asyncRst         => timingRxStatus.resetDone,
-            syncRst          => timingRecRst
+            syncRst          => timingRecRstLoc
          );
 
       U_TXCLK_RST : entity work.RstSync
