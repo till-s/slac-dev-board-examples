@@ -24,6 +24,7 @@ use work.AxiStreamPkg.all;
 use work.AxiLitePkg.all;
 use work.AxiPkg.all;
 use work.EthMacPkg.all;
+use work.TimingPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -64,9 +65,16 @@ entity XilinxZC706 is
       timingTxP         : out sl;
       timingTxN         : out sl;
       enableSFP         : out sl := '1';
+      diffOutP          : out slv(1 downto 0);
+      diffOutN          : out slv(1 downto 0);
+      diffInpP          : in  slv(0 downto 0);
+      diffInpN          : in  slv(0 downto 0);
+      trigSE            : out slv(0 downto 0); 
+      timingRecClkP     : out sl;
+      timingRecClkN     : out sl;
       btn               : in STD_LOGIC_VECTOR ( 3 downto 0 );
       led               : out STD_LOGIC_VECTOR ( 3 downto 0 );
-      sw         :        in STD_LOGIC_VECTOR ( 3 downto 0 )
+      sw                : in STD_LOGIC_VECTOR ( 3 downto 0 )
    );
 end XilinxZC706;
 
@@ -183,6 +191,15 @@ COMPONENT processing_system7_0
    signal   dbgTxSlave      : AxiStreamSlaveType     := AXI_STREAM_SLAVE_FORCE_C;
    signal   dbgRxMaster     : AxiStreamMasterType    := AXI_STREAM_MASTER_INIT_C;
    signal   dbgRxSlave      : AxiStreamSlaveType;
+
+   signal   timingTrig      : TimingTrigType;
+   signal   timingRecClk    : sl;
+   signal   timingRecClkLoc : sl;
+
+   signal   trigReg         : slv(2 downto 0);
+   
+   attribute IOB : string;
+   attribute IOB of trigReg : signal is "TRUE";
 
 begin
 
@@ -323,14 +340,18 @@ begin
          -- Timing
          timingRefClkP    => timingRefClkP,
          timingRefClkN    => timingRefClkN,
+         timingRecClk     => timingRecClk,
+         timingRecRst     => open,
          timingRxP        => timingRxP,
          timingRxN        => timingRxN,
          timingTxP        => timingTxP,
          timingTxN        => timingTxN,
+         timingTrig       => timingTrig,
          -- ADC Ports
          vPIn             => '0',
-         vNIn             => '1',
-         irqOut           => appIrqs);
+         vNIn             => '0',
+         irqOut           => appIrqs
+      );
 
    cpuIrqs(IRQ_MAX_C - 1 downto 0) <= appIrqs(IRQ_MAX_C - 1 downto 0);
 
@@ -357,13 +378,64 @@ begin
 
    end generate;
 
+   GEN_OUTBUFDS : for i in diffOutP'range generate
+      signal trig_i : sl;
+   begin
+      U_OBUFDS : component OBUFDS
+         port map (
+            I   => trigReg(i),
+            O   => diffOutP(i),
+            OB  => diffOutN(i)
+         );
+   end generate;
+
+   GEN_INPBUFDS : for i in diffInpP'range generate
+      U_IBUFDS : component IBUFDS
+         port map (
+            I   => diffInpP(i),
+            IB  => diffInpN(i),
+            O   => led(i)
+         );
+   end generate;
+
+--   trigSE <= trigReg(trigReg'high downto diffOutP'high + 1);
+   trigSE <= timingTrig.trigPulse(trigReg'high downto diffOutP'high + 1);
+
+   P_TRIG_REG : process ( timingTrig ) is
+   begin
+--      if ( rising_edge( timingRecClk ) ) then
+         trigReg <= timingTrig.trigPulse(trigReg'range);
+--      end if;
+   end process P_TRIG_REG;
+
+   U_ODDR : component ODDR
+      generic map (
+         DDR_CLK_EDGE => "SAME_EDGE"
+      )
+      port map (
+         C   => timingRecClk,
+         CE  => '1',
+         D1  => '1',
+         D2  => '0',
+         Q   => timingRecClkLoc,
+         S   => '0',
+         R   => '0'
+      );
+
+   U_RECCLKBUF : component OBUFDS
+      port map (
+         I  => timingRecClkLoc,
+         O  => timingRecClkP,
+         OB => timingRecClkN
+      );
+
    ----------------
    -- Misc. Signals
    ----------------
    led(3) <= btn(3);
    led(2) <= btn(2);
    led(1) <= btn(1);
-   led(0) <= btn(0);
+--   led(0) <= btn(0);
 
 
 end top_level;
