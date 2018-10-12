@@ -1,12 +1,12 @@
 [submodule "firmware/submodules/surf"]
 	path = firmware/submodules/surf
-	url = github.com:/slaclab/surf
+	url = git://github.com/slaclab/surf
 [submodule "firmware/submodules/ruckus"]
 	path = firmware/submodules/ruckus
-	url = github.com:/slaclab/ruckus
+	url = git://github.com/slaclab/ruckus
 [submodule "firmware/submodules/lcls-timing-core"]
 	path = firmware/submodules/lcls-timing-core
-	url = github.com:slaclab/lcls-timing-core
+	url = git://github.com/slaclab/lcls-timing-core
 [submodule "firmware/submodules/axiVlg"]
 	path = firmware/submodules/axiVlg
-	url = github.com:slaclab/lcls-bpm-verilog-axi4
+	url = git://github.com/slaclab/lcls-bpm-verilog-axi4
