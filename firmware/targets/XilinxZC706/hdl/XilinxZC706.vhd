@@ -327,11 +327,6 @@ begin
          pbrsTxSlave      => AXI_STREAM_SLAVE_FORCE_C,
          pbrsRxMaster     => AXI_STREAM_MASTER_INIT_C,
          pbrsRxSlave      => open,
-         -- HLS Interface
-         hlsTxMaster      => open,
-         hlsTxSlave       => AXI_STREAM_SLAVE_FORCE_C,
-         hlsRxMaster      => AXI_STREAM_MASTER_INIT_C,
-         hlsRxSlave       => open,
          -- Microblaze stream
          mbTxMaster       => dbgTxMaster,
          mbTxSlave        => dbgTxSlave,

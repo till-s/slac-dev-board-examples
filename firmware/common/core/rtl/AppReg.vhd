@@ -52,11 +52,6 @@ entity AppReg is
       pbrsTxSlave     : in  AxiStreamSlaveType;
       pbrsRxMaster    : in  AxiStreamMasterType;
       pbrsRxSlave     : out AxiStreamSlaveType;
-      -- HLS Interface
-      hlsTxMaster     : out AxiStreamMasterType;
-      hlsTxSlave      : in  AxiStreamSlaveType;
-      hlsRxMaster     : in  AxiStreamMasterType;
-      hlsRxSlave      : out AxiStreamSlaveType;
       -- MB Interface
       mbTxMaster      : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       mbTxSlave       : in  AxiStreamSlaveType;
@@ -87,7 +82,7 @@ architecture mapping of AppReg is
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 11;
+   constant NUM_AXI_MASTERS_C : natural := 10;
 
    constant VERSION_INDEX_C : natural := 0;
    constant XADC_INDEX_C    : natural := 1;
@@ -95,11 +90,10 @@ architecture mapping of AppReg is
    constant MEM_INDEX_C     : natural := 3;
    constant PRBS_TX_INDEX_C : natural := 4;
    constant PRBS_RX_INDEX_C : natural := 5;
-   constant HLS_INDEX_C     : natural := 6;
-   constant FIFO_INDEX_C    : natural := 7;
-   constant TIM_GTX_INDEX_C : natural := 8;
-   constant TIM_COR_INDEX_C : natural := 9;
-   constant TIM_TRG_INDEX_C : natural :=10;
+   constant FIFO_INDEX_C    : natural := 6;
+   constant TIM_GTX_INDEX_C : natural := 7;
+   constant TIM_COR_INDEX_C : natural := 8;
+   constant TIM_TRG_INDEX_C : natural := 9;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) :=
       genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 24, 20 );
@@ -372,32 +366,6 @@ begin
          axiReadSlave   => mAxilReadSlaves(PRBS_RX_INDEX_C),
          axiWriteMaster => mAxilWriteMasters(PRBS_RX_INDEX_C),
          axiWriteSlave  => mAxilWriteSlaves(PRBS_RX_INDEX_C));
-
-   ------------------------------
-   -- AXI-Lite HLS Example Module
-   ------------------------------
-   U_AxiLiteExample : entity work.AxiLiteExample
-      port map (
-         axiClk         => clk,
-         axiRst         => rst,
-         axiReadMaster  => mAxilReadMasters(HLS_INDEX_C),
-         axiReadSlave   => mAxilReadSlaves(HLS_INDEX_C),
-         axiWriteMaster => mAxilWriteMasters(HLS_INDEX_C),
-         axiWriteSlave  => mAxilWriteSlaves(HLS_INDEX_C));
-
-   ------------------------------------
-   -- AXI Streaming: HLS Example Module
-   ------------------------------------
-   U_AxiStreamExample : entity work.AxiStreamExample
-      port map (
-         axisClk     => clk,
-         axisRst     => rst,
-         -- Slave Port
-         sAxisMaster => hlsRxMaster,
-         sAxisSlave  => hlsRxSlave,
-         -- Master Port
-         mAxisMaster => hlsTxMaster,
-         mAxisSlave  => hlsTxSlave);
 
    GEN_FIFO : if ( FIFO_DEPTH_G > 0 ) generate
 
