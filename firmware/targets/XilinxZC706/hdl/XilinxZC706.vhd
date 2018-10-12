@@ -163,7 +163,7 @@ COMPONENT processing_system7_0
    constant AXIS_SIZE_C : positive         := 1;
 
    constant AXIS_WIDTH_C    : positive     := 4;
-   constant FIFO_DEPTH_C    : natural      := 512;
+   constant FIFO_DEPTH_C    : natural      := 0; -- had removed the axiVlg submodule
 
    signal   sysClk          : sl;
    signal   sysRst          : sl;
