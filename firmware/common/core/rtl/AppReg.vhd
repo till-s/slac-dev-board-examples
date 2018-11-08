@@ -37,7 +37,8 @@ entity AppReg is
       AXIL_BASE_ADDR_G : slv(31 downto 0) := x"00000000";
       USE_SLOWCLK_G    : boolean          := false;
       NUM_TRIGS_G      : natural          := 8;
-      FIFO_DEPTH_G     : natural          := 0);
+      FIFO_DEPTH_G     : natural          := 0;
+      GEN_TIMING_G     : boolean          := true);
    port (
       -- Clock and Reset
       clk             : in  sl;
@@ -61,12 +62,12 @@ entity AppReg is
       vPIn            : in  sl;
       vNIn            : in  sl;
       -- Timing
-      timingRefClkP   : in  sl;
-      timingRefClkN   : in  sl;
+      timingRefClkP   : in  sl := '0';
+      timingRefClkN   : in  sl := '1';
       timingRecClk    : out sl;
       timingRecRst    : out sl;
-      timingRxP       : in  sl;
-      timingRxN       : in  sl;
+      timingRxP       : in  sl := '0';
+      timingRxN       : in  sl := '1';
       timingTxP       : out sl;
       timingTxN       : out sl;
       timingTrig      : out TimingTrigType;
@@ -401,6 +402,8 @@ begin
       mAxilWriteSlaves(FIFO_INDEX_C).wready  <= '1';
    end generate;
 
+   GEN_TIMING : if ( GEN_TIMING_G ) generate
+
    U_TimingGtx : entity work.TimingGtxCoreWrapper
       generic map (
          TPD_G              => TPD_G,
@@ -569,5 +572,7 @@ begin
             O                => timingRefClk,
             ODIV2            => open
          );
+
+   end generate;
 
 end mapping;
