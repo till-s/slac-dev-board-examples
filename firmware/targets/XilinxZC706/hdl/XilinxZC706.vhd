@@ -226,7 +226,7 @@ COMPONENT processing_system7_0
    signal   timingRecClkLoc : sl;
    signal   timingTxClk     : sl;
 
-   signal   trigReg         : slv(NUM_TRIGS_G downto 0);
+   signal   trigReg         : slv(NUM_TRIGS_G - 1 downto 0);
 
    attribute IOB : string;
    attribute IOB of trigReg : signal is "TRUE";
