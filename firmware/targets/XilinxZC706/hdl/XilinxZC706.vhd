@@ -36,7 +36,7 @@ entity XilinxZC706 is
       SIM_SPEEDUP_G : boolean := false;
       SIMULATION_G  : boolean := false;
       PS_EN_G       : boolean := true;
-      NUM_TRIGS_G   : natural := 2;
+      NUM_TRIGS_G   : natural := 3;
       XVC_EN_G      : boolean := false);
    port (
       DDR_addr          : inout STD_LOGIC_VECTOR ( 14 downto 0 );
@@ -66,8 +66,8 @@ entity XilinxZC706 is
       timingRxN         : in  sl;
       timingTxP         : out sl;
       timingTxN         : out sl;
-      diffOutP          : out slv(NUM_TRIGS_G - 1 downto 0);
-      diffOutN          : out slv(NUM_TRIGS_G - 1 downto 0);
+      diffOutP          : out slv(NUM_TRIGS_G - 2 downto 0);
+      diffOutN          : out slv(NUM_TRIGS_G - 2 downto 0);
       diffInpP          : in  slv(0 downto 0) := (others => '0');
       diffInpN          : in  slv(0 downto 0) := (others => '1');
       trigSE            : out slv(0 downto 0) := (others => '0');
@@ -554,7 +554,7 @@ begin
    begin
       U_OBUFDS : component OBUFDS
          port map (
-            I   => sw(i),
+            I   => trigReg(i),
             O   => diffOutP(i),
             OB  => diffOutN(i)
          );
