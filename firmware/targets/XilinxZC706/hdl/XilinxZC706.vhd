@@ -7,11 +7,11 @@
 -- Description: Example using 1000BASE-SX Protocol
 -------------------------------------------------------------------------------
 -- This file is part of 'Example Project Firmware'.
--- It is subject to the license terms in the LICENSE.txt file found in the 
--- top-level directory of this distribution and at: 
---    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'Example Project Firmware', including this file, 
--- may be copied, modified, propagated, or distributed except according to 
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Example Project Firmware', including this file,
+-- may be copied, modified, propagated, or distributed except according to
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
 
@@ -35,6 +35,8 @@ entity XilinxZC706 is
       BUILD_INFO_G  : BuildInfoType;
       SIM_SPEEDUP_G : boolean := false;
       SIMULATION_G  : boolean := false;
+      PS_EN_G       : boolean := true;
+      NUM_TRIGS_G   : natural := 2;
       XVC_EN_G      : boolean := false);
    port (
       DDR_addr          : inout STD_LOGIC_VECTOR ( 14 downto 0 );
@@ -64,17 +66,21 @@ entity XilinxZC706 is
       timingRxN         : in  sl;
       timingTxP         : out sl;
       timingTxN         : out sl;
-      enableSFP         : out sl := '1';
-      diffOutP          : out slv(1 downto 0);
-      diffOutN          : out slv(1 downto 0);
-      diffInpP          : in  slv(0 downto 0);
-      diffInpN          : in  slv(0 downto 0);
-      trigSE            : out slv(0 downto 0); 
+      diffOutP          : out slv(NUM_TRIGS_G - 1 downto 0);
+      diffOutN          : out slv(NUM_TRIGS_G - 1 downto 0);
+      diffInpP          : in  slv(0 downto 0) := (others => '0');
+      diffInpN          : in  slv(0 downto 0) := (others => '1');
+      trigSE            : out slv(0 downto 0) := (others => '0');
       timingRecClkP     : out sl;
       timingRecClkN     : out sl;
-      btn               : in STD_LOGIC_VECTOR ( 3 downto 0 );
-      led               : out STD_LOGIC_VECTOR ( 3 downto 0 );
-      sw                : in STD_LOGIC_VECTOR ( 3 downto 0 )
+      uartTx            : out sl;
+      uartRx            : in  sl := '0';
+      sysClkIn          : in  sl := '0';
+      sysARstIn         : in  sl := '0';
+      btn               : in  slv(3 downto 0) := (others => '0');
+      sw                : in  slv(3 downto 0) := (others => '0');
+      led               : out slv(3 downto 0);
+      enableSFP         : out sl
    );
 end XilinxZC706;
 
@@ -82,7 +88,30 @@ architecture top_level of XilinxZC706 is
 
   constant NUM_IRQS_C  : natural          := 16;
   constant CLK_FREQ_C  : real             := 50.0E6;
-  
+
+  constant GEN_IC_C    : boolean          := true;
+
+  signal   diffInp     : slv(diffInpP'range);
+
+  signal   uartTx_i    : sl;
+  signal   uartRx_i    : sl;
+  signal   sysARst     : sl;
+
+  signal   siClk       : sl;
+
+  signal   txDiv       : unsigned(27 downto 0) := to_unsigned(0, 28);
+  signal   rxDiv       : unsigned(27 downto 0) := to_unsigned(0, 28);
+
+component Ila_256 is
+    Port ( 
+      clk : in STD_LOGIC;
+      probe0 : in STD_LOGIC_VECTOR ( 63 downto 0 );
+      probe1 : in STD_LOGIC_VECTOR ( 63 downto 0 );
+      probe2 : in STD_LOGIC_VECTOR ( 63 downto 0 );
+      probe3 : in STD_LOGIC_VECTOR ( 63 downto 0 )
+    );
+end component Ila_256;
+
 COMPONENT processing_system7_0
     PORT (
       GPIO_I : IN STD_LOGIC_VECTOR(31 DOWNTO 0);
@@ -195,9 +224,10 @@ COMPONENT processing_system7_0
    signal   timingTrig      : TimingTrigType;
    signal   timingRecClk    : sl;
    signal   timingRecClkLoc : sl;
+   signal   timingTxClk     : sl;
 
-   signal   trigReg         : slv(2 downto 0);
-   
+   signal   trigReg         : slv(NUM_TRIGS_G downto 0);
+
    attribute IOB : string;
    attribute IOB of trigReg : signal is "TRUE";
 
@@ -206,7 +236,9 @@ begin
    gpioI  <= (others => '0');
 
    sysRst <= not sysRstN;
-      
+
+   GEN_PS : if (PS_EN_G) generate
+
    U_Sys : component processing_system7_0
       port map (
          DDR_Addr(14 downto 0)         => DDR_addr(14 downto 0),
@@ -279,28 +311,167 @@ begin
          USB0_VBUS_PWRFAULT            => '0',
          USB0_VBUS_PWRSELECT           => open
       );
-      
+
    -- axiReadSlave  <= AXI_READ_SLAVE_FORCE_C;
    -- axiWriteSlave <= AXI_WRITE_SLAVE_FORCE_C;
 
-   U_A2A : entity work.AxiToAxiLite
+   GEN_INTERCONNECT : if ( GEN_IC_C ) generate
+
+   constant REG_C   : slv(3 downto 0) := "0000";
+
+   begin
+
+        U_A2A : entity work.axi4_2_axil_wrapper
+        port map (
+          axiClk                      => sysClk,
+          axiRstN                     => sysRstN,
+          axi4_araddr                 => axiReadMaster.araddr(31 downto 0),
+          axi4_arburst                => axiReadMaster.arburst,
+          axi4_arcache                => axiReadMaster.arcache,
+          axi4_arid                   => axiReadMaster.arid(11 downto 0),
+          axi4_arlen                  => axiReadMaster.arlen(7 downto 0),
+          axi4_arlock                 => axiReadMaster.arlock(0 downto 0),
+          axi4_arprot                 => axiReadMaster.arprot(2 downto 0),
+          axi4_arqos                  => axiReadMaster.arqos(3 downto 0),
+          axi4_arready                => axiReadSlave.arready,
+          axi4_arregion               => REG_C,
+          axi4_arsize                 => axiReadMaster.arsize( 2 downto 0 ),
+          axi4_arvalid                => axiReadMaster.arvalid,
+          
+          axi4_awaddr                 => axiWriteMaster.awaddr( 31 downto 0 ),
+          axi4_awburst                => axiWriteMaster.awburst ( 1 downto 0 ),
+          axi4_awcache                => axiWritemaster.awcache( 3 downto 0 ),
+          axi4_awid                   => axiWritemaster.awid(11 to 0 ),
+          axi4_awlen                  => axiWriteMaster.awlen ( 7 downto 0 ),
+          axi4_awlock                 => axiWriteMaster.awlock( 0 to 0 ),
+          axi4_awprot                 => axiWritemaster.awprot( 2 downto 0 ),
+          axi4_awqos                  => axiWriteMaster.awqos( 3 downto 0 ),
+          axi4_awready                => axiWriteSlave.awready,
+          axi4_awregion               => REG_C,
+          axi4_awsize                 => axiWriteMaster.awsize( 2 downto 0 ),
+          axi4_awvalid                => axiWriteMaster.awvalid,
+          
+          axi4_bid                    => axiWriteSlave.bid(11 to 0 ),
+          axi4_bready                 => axiWriteMaster.bready,
+          axi4_bresp                  => axiWriteSlave.bresp( 1 downto 0 ),
+          axi4_bvalid                 => axiWriteSlave.bvalid,
+          
+          axi4_rdata                  => axiReadSlave.rdata( 31 downto 0 ),
+          axi4_rid                    => axiReadSlave.rid(11 downto 0 ),
+          axi4_rlast                  => axiReadSlave.rlast,
+          axi4_rready                 => axiReadMaster.rready,
+          axi4_rresp                  => axiReadSlave.rresp( 1 downto 0 ),
+          axi4_rvalid                 => axiReadSlave.rvalid,
+          
+          axi4_wdata                  => axiWriteMaster.wdata( 31 downto 0 ),
+          axi4_wlast                  => axiWriteMaster.wlast,
+          axi4_wready                 => axiWriteSlave.wready,
+          axi4_wstrb                  => axiWriteMaster.wstrb( 3 downto 0 ),
+          axi4_wvalid                 => axiWriteMaster.wvalid,
+
+          axil_araddr                 => axilReadMaster.araddr,
+          axil_arprot                 => axilReadMaster.arprot,
+          axil_arready                => axilReadSlave.arready,
+          axil_arvalid                => axilReadMaster.arvalid,
+          axil_awaddr                 => axilWriteMaster.awaddr,
+          axil_awprot                 => axilWriteMaster.awprot,
+          axil_awready                => axilWriteSlave.awready,
+          axil_awvalid                => axilWriteMaster.awvalid,
+          axil_bready                 => axilWriteMaster.bready,
+          axil_bresp                  => axilWriteSlave.bresp,
+          axil_bvalid                 => axilWriteSlave.bvalid,
+          axil_rdata                  => axilReadSlave.rdata,
+          axil_rready                 => axilReadMaster.rready,
+          axil_rresp                  => axilReadSlave.rresp,
+          axil_rvalid                 => axilReadSlave.rvalid,
+          axil_wdata                  => axilWriteMaster.wdata,
+          axil_wready                 => axilWriteSlave.wready,
+          axil_wstrb                  => axilWriteMaster.wstrb,
+          axil_wvalid                 => axilWriteMaster.wvalid
+        );
+
+   end generate;
+
+
+   GEN_AXI_2_AXILITE : if ( not GEN_IC_C ) generate
+
+      U_A2A : entity work.AxiToAxiLite
+         generic map (
+            TPD_G            => TPD_G
+         )
+         port map (
+            axiClk           => sysClk,
+            axiClkRst        => sysRst,
+   
+            axiReadMaster    => axiReadMaster,
+            axiReadSlave     => axiReadSlave,
+            axiWriteMaster   => axiWriteMaster,
+            axiWriteSlave    => axiWriteSlave,
+   
+            axilReadMaster   => axilReadMaster,
+            axilReadSlave    => axilReadSlave,
+            axilWriteMaster  => axilWriteMaster,
+            axilWriteSlave   => axilWriteSlave
+         );
+
+   end generate;
+ 
+      enableSFP <= '1';
+
+   end generate;
+
+
+   GEN_UART : if ( not PS_EN_G ) generate
+
+   U_RSTBUF : component IBUF
+      port map (
+         I      => sysARstIn,
+         O      => sysARst
+      );
+
+   U_CLKBUFG : component IBUFG
+      port map (
+         I      => sysClkIn,
+         O      => sysClk
+      );
+
+   U_SYSRST : entity work.RstSync
       generic map (
-         TPD_G            => TPD_G
+         OUT_POLARITY_G => '0'
       )
       port map (
-         axiClk           => sysClk,
-         axiClkRst        => sysRst,
-
-         axiReadMaster    => axiReadMaster,
-         axiReadSlave     => axiReadSlave,
-         axiWriteMaster   => axiWriteMaster,
-         axiWriteSlave    => axiWriteSlave,
-
-         axilReadMaster   => axilReadMaster,
-         axilReadSlave    => axilReadSlave,
-         axilWriteMaster  => axilWriteMaster,
-         axilWriteSlave   => axilWriteSlave
+       clk      => sysClk,
+       asyncRst => sysARst,
+       syncRst  => sysRstN
       );
+
+   U_UART2AXIL : entity work.UartAxiLiteMaster
+      port map (
+         axilClk          => sysClk,
+         axilRst          => sysRst,
+
+         mAxilReadMaster  => axilReadMaster,
+         mAxilReadSlave   => axilReadSlave,
+         mAxilWriteMaster => axilWriteMaster,
+         mAxilWriteSlave  => axilWriteSlave,
+
+         tx               => uartTx_i,
+         rx               => uartRx_i
+      );
+
+   UART_IBUF : component IBUF
+      port map (
+         I                => uartRx,
+         O                => uartRx_i
+      );
+
+   UART_OBUF : component OBUF
+      port map (
+         I                => uartTx_i,
+         O                => uartTx
+      );
+
+   end generate;
 
    -------------------
    -- AXI-Lite Modules
@@ -312,6 +483,8 @@ begin
          XIL_DEVICE_G     => "7SERIES",
          AXIL_BASE_ADDR_G => x"40000000",
          USE_SLOWCLK_G    => true,
+         TPGMINI_G        => true,
+         NUM_TRIGS_G      => NUM_TRIGS_G,
          FIFO_DEPTH_G     => FIFO_DEPTH_C)
       port map (
          -- Clock and Reset
@@ -342,6 +515,9 @@ begin
          timingTxP        => timingTxP,
          timingTxN        => timingTxN,
          timingTrig       => timingTrig,
+         txRstStat        => led(1),
+         rxRstStat        => led(0),
+         timingTxClk      => timingTxClk,
          -- ADC Ports
          vPIn             => '0',
          vNIn             => '0',
@@ -378,20 +554,45 @@ begin
    begin
       U_OBUFDS : component OBUFDS
          port map (
-            I   => trigReg(i),
+            I   => sw(i),
             O   => diffOutP(i),
             OB  => diffOutN(i)
          );
    end generate;
 
    GEN_INPBUFDS : for i in diffInpP'range generate
-      U_IBUFDS : component IBUFDS
+      U_IBUFDS : component IBUFDS_GTE2
          port map (
             I   => diffInpP(i),
             IB  => diffInpN(i),
-            O   => led(i)
+            CEB => '0',
+            O   => diffInp(i)
          );
    end generate;
+
+   U_BUFG_SI : component BUFG
+      port map (
+         I   => diffInp(0),
+         O   => siClk
+      );
+
+   P_DIV_RX : process (timingRecClk) is
+   begin
+      if rising_edge( timingRecClk ) then
+         rxDiv <= rxDiv + 1;
+      end if;
+   end process P_DIV_RX;
+
+   P_DIV_TX : process (timingTxClk) is
+   begin
+      if rising_edge( timingTxClk ) then
+         txDiv <= txDiv + 1;
+      end if;
+   end process P_DIV_TX;
+
+
+   led(3) <= sl(rxDiv(27));
+   led(2) <= sl(txDiv(27));
 
 --   trigSE <= trigReg(trigReg'high downto diffOutP'high + 1);
    trigSE <= timingTrig.trigPulse(trigReg'high downto diffOutP'high + 1);
@@ -427,10 +628,4 @@ begin
    ----------------
    -- Misc. Signals
    ----------------
-   led(3) <= btn(3);
-   led(2) <= btn(2);
-   led(1) <= btn(1);
---   led(0) <= btn(0);
-
-
 end top_level;

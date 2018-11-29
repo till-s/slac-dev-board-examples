@@ -164,13 +164,13 @@ architecture top_level of DigilentZyboDevBoard is
    constant AXIS_SIZE_C : positive         := 1;
 
    constant AXIS_WIDTH_C    : positive     := 4;
-   constant FIFO_DEPTH_C    : natural      := 512;
+   constant FIFO_DEPTH_C    : natural      := 0;
 
    signal   sysClk          : sl;
    signal   sysRst          : sl;
    signal   sysRstN         : sl;
 
-   signal   appIrqs         : slv(7 downto 0);
+   signal   appIrqs         : slv(7 downto 0) := (others => '0');
 
    constant IRQ_MAX_C       : natural := ite( NUM_IRQS_C > 8, 8, NUM_IRQS_C );
 
@@ -192,14 +192,21 @@ architecture top_level of DigilentZyboDevBoard is
    signal   axiWriteSlave   : AxiWriteSlaveType      := AXI_WRITE_SLAVE_INIT_C;
    signal   axiReadSlave    : AxiReadSlaveType       := AXI_READ_SLAVE_INIT_C;
 
-   signal   dbgTxMaster     : AxiStreamMasterType;
+   signal   dbgTxMaster     : AxiStreamMasterType    := AXI_STREAM_MASTER_INIT_C;
    signal   dbgTxSlave      : AxiStreamSlaveType     := AXI_STREAM_SLAVE_FORCE_C;
    signal   dbgRxMaster     : AxiStreamMasterType    := AXI_STREAM_MASTER_INIT_C;
-   signal   dbgRxSlave      : AxiStreamSlaveType;
+   signal   dbgRxSlave      : AxiStreamSlaveType     := AXI_STREAM_SLAVE_FORCE_C;
+
+   signal   cnt             : unsigned(25 downto 0) := (others => '0');
+   
+   constant GEN_I_C : boolean := true;
+   
+   constant REG_C   : slv(3 downto 0) := "0000";
 
 begin
 
    gpioI  <= (others => '0');
+  
 
    sysRst <= not sysRstN;
 
@@ -311,25 +318,152 @@ begin
       
    -- axiReadSlave  <= AXI_READ_SLAVE_FORCE_C;
    -- axiWriteSlave <= AXI_WRITE_SLAVE_FORCE_C;
+   
+    U_Ila_Axi4 : entity work.ila_axi4_bd_wrapper
+         port map (
+           axiClk                      => sysClk,
+           axiRstN                     => sysRstN,
+           axi4_araddr                 => axiReadMaster.araddr(31 downto 0),
+           axi4_arburst                => axiReadMaster.arburst,
+           axi4_arcache                => axiReadMaster.arcache,
+           axi4_arid                   => axiReadMaster.arid(0 downto 0),
+           axi4_arlen                  => axiReadMaster.arlen(7 downto 0),
+           axi4_arlock                 => axiReadMaster.arlock(0 downto 0),
+           axi4_arprot                 => axiReadMaster.arprot(2 downto 0),
+           axi4_arqos                  => axiReadMaster.arqos(3 downto 0),
+           axi4_arready(0)             => axiReadSlave.arready,
+           axi4_arregion               => REG_C,
+           axi4_arsize                 => axiReadMaster.arsize( 2 downto 0 ),
+           axi4_arvalid(0)             => axiReadMaster.arvalid,
+           axi4_aruser(0)              => '0',
+           
+           axi4_awaddr                 => axiWriteMaster.awaddr( 31 downto 0 ),
+           axi4_awburst                => axiWriteMaster.awburst ( 1 downto 0 ),
+           axi4_awcache                => axiWritemaster.awcache( 3 downto 0 ),
+           axi4_awid                   => axiWritemaster.awid(0 to 0 ),
+           axi4_awlen                  => axiWriteMaster.awlen ( 7 downto 0 ),
+           axi4_awlock                 => axiWriteMaster.awlock( 0 to 0 ),
+           axi4_awprot                 => axiWritemaster.awprot( 2 downto 0 ),
+           axi4_awqos                  => axiWriteMaster.awqos( 3 downto 0 ),
+           axi4_awready(0)             => axiWriteSlave.awready,
+           axi4_awregion               => REG_C,
+           axi4_awsize                 => axiWriteMaster.awsize( 2 downto 0 ),
+           axi4_awvalid(0)             => axiWriteMaster.awvalid,
+           axi4_awuser(0)              => '0',
 
+           
+           axi4_bid                    => axiWriteSlave.bid(0 to 0 ),
+           axi4_bready(0)              => axiWriteMaster.bready,
+           axi4_bresp                  => axiWriteSlave.bresp( 1 downto 0 ),
+           axi4_bvalid(0)              => axiWriteSlave.bvalid,
+           axi4_buser(0)               => '0',
+
+           axi4_rdata                  => axiReadSlave.rdata( 31 downto 0 ),
+           axi4_rid                    => axiReadSlave.rid(0 downto 0 ),
+           axi4_rlast(0)               => axiReadSlave.rlast,
+           axi4_rready(0)              => axiReadMaster.rready,
+           axi4_rresp                  => axiReadSlave.rresp( 1 downto 0 ),
+           axi4_rvalid(0)              => axiReadSlave.rvalid,
+           axi4_ruser(0)               => '0',
+
+           axi4_wdata                  => axiWriteMaster.wdata( 31 downto 0 ),
+           axi4_wlast(0)               => axiWriteMaster.wlast,
+           axi4_wready(0)              => axiWriteSlave.wready,
+           axi4_wstrb                  => axiWriteMaster.wstrb( 3 downto 0 ),
+           axi4_wvalid(0)              => axiWriteMaster.wvalid,
+           axi4_wuser(0)               => '0'
+        );
+
+   GEN_INTERCONN : if ( GEN_I_C ) generate
+   U_A2A : entity work.axi4_2_axil_wrapper
+        port map (
+          axiClk                      => sysClk,
+          axiRstN                     => sysRstN,
+          axi4_araddr                 => axiReadMaster.araddr(31 downto 0),
+          axi4_arburst                => axiReadMaster.arburst,
+          axi4_arcache                => axiReadMaster.arcache,
+          axi4_arid                   => axiReadMaster.arid(11 downto 0),
+          axi4_arlen                  => axiReadMaster.arlen(7 downto 0),
+          axi4_arlock                 => axiReadMaster.arlock(0 downto 0),
+          axi4_arprot                 => axiReadMaster.arprot(2 downto 0),
+          axi4_arqos                  => axiReadMaster.arqos(3 downto 0),
+          axi4_arready                => axiReadSlave.arready,
+          axi4_arregion               => REG_C,
+          axi4_arsize                 => axiReadMaster.arsize( 2 downto 0 ),
+          axi4_arvalid                => axiReadMaster.arvalid,
+          
+          axi4_awaddr                 => axiWriteMaster.awaddr( 31 downto 0 ),
+          axi4_awburst                => axiWriteMaster.awburst ( 1 downto 0 ),
+          axi4_awcache                => axiWritemaster.awcache( 3 downto 0 ),
+          axi4_awid                   => axiWritemaster.awid(11 to 0 ),
+          axi4_awlen                  => axiWriteMaster.awlen ( 7 downto 0 ),
+          axi4_awlock                 => axiWriteMaster.awlock( 0 to 0 ),
+          axi4_awprot                 => axiWritemaster.awprot( 2 downto 0 ),
+          axi4_awqos                  => axiWriteMaster.awqos( 3 downto 0 ),
+          axi4_awready                => axiWriteSlave.awready,
+          axi4_awregion               => REG_C,
+          axi4_awsize                 => axiWriteMaster.awsize( 2 downto 0 ),
+          axi4_awvalid                => axiWriteMaster.awvalid,
+          
+          axi4_bid                    => axiWriteSlave.bid(11 to 0 ),
+          axi4_bready                 => axiWriteMaster.bready,
+          axi4_bresp                  => axiWriteSlave.bresp( 1 downto 0 ),
+          axi4_bvalid                 => axiWriteSlave.bvalid,
+          
+          axi4_rdata                  => axiReadSlave.rdata( 31 downto 0 ),
+          axi4_rid                    => axiReadSlave.rid(11 downto 0 ),
+          axi4_rlast                  => axiReadSlave.rlast,
+          axi4_rready                 => axiReadMaster.rready,
+          axi4_rresp                  => axiReadSlave.rresp( 1 downto 0 ),
+          axi4_rvalid                 => axiReadSlave.rvalid,
+          
+          axi4_wdata                  => axiWriteMaster.wdata( 31 downto 0 ),
+          axi4_wlast                  => axiWriteMaster.wlast,
+          axi4_wready                 => axiWriteSlave.wready,
+          axi4_wstrb                  => axiWriteMaster.wstrb( 3 downto 0 ),
+          axi4_wvalid                 => axiWriteMaster.wvalid,
+
+          axil_araddr                 => axilReadMaster.araddr,
+          axil_arprot                 => axilReadMaster.arprot,
+          axil_arready                => axilReadSlave.arready,
+          axil_arvalid                => axilReadMaster.arvalid,
+          axil_awaddr                 => axilWriteMaster.awaddr,
+          axil_awprot                 => axilWriteMaster.awprot,
+          axil_awready                => axilWriteSlave.awready,
+          axil_awvalid                => axilWriteMaster.awvalid,
+          axil_bready                 => axilWriteMaster.bready,
+          axil_bresp                  => axilWriteSlave.bresp,
+          axil_bvalid                 => axilWriteSlave.bvalid,
+          axil_rdata                  => axilReadSlave.rdata,
+          axil_rready                 => axilReadMaster.rready,
+          axil_rresp                  => axilReadSlave.rresp,
+          axil_rvalid                 => axilReadSlave.rvalid,
+          axil_wdata                  => axilWriteMaster.wdata,
+          axil_wready                 => axilWriteSlave.wready,
+          axil_wstrb                  => axilWriteMaster.wstrb,
+          axil_wvalid                 => axilWriteMaster.wvalid
+        );
+   end generate;
+   
+   GEN_A2A : if ( not GEN_I_C ) generate
    U_A2A : entity work.AxiToAxiLite
       generic map (
-         TPD_G            => TPD_G
+         TPD_G => TPD_G
       )
       port map (
-         axiClk           => sysClk,
-         axiClkRst        => sysRst,
-
-         axiReadMaster    => axiReadMaster,
-         axiReadSlave     => axiReadSlave,
-         axiWriteMaster   => axiWriteMaster,
-         axiWriteSlave    => axiWriteSlave,
-
-         axilReadMaster   => axilReadMaster,
-         axilReadSlave    => axilReadSlave,
-         axilWriteMaster  => axilWriteMaster,
-         axilWriteSlave   => axilWriteSlave
+         axiClk               => sysClk,
+         axiClkRst            => sysRst,
+         
+         axiReadMaster        => axiReadMaster,
+         axiReadSlave         => axiReadSlave,
+         axiWriteMaster       => axiWriteMaster,
+         axiWriteSlave        => axiWriteSlave,
+         axilReadMaster       => axilReadMaster,
+         axilReadSlave        => axilReadSlave,
+         axilWriteMaster      => axilWriteMaster,
+         axilWriteSlave       => axilWriteSlave
       );
+   end generate;
 
    -------------------
    -- AXI-Lite Modules
@@ -339,10 +473,10 @@ begin
          TPD_G            => TPD_G,
          BUILD_INFO_G     => BUILD_INFO_G,
          XIL_DEVICE_G     => "7SERIES",
-         AXI_ERROR_RESP_G => AXI_RESP_DECERR_C,
-         AXIL_BASE_ADDR_G => x"43c00000",
+         AXIL_BASE_ADDR_G => x"40000000",
          USE_SLOWCLK_G    => true,
-         FIFO_DEPTH_G     => FIFO_DEPTH_C)
+         FIFO_DEPTH_G     => FIFO_DEPTH_C,
+         GEN_TIMING_G     => false)
       port map (
          -- Clock and Reset
          clk              => sysClk,
@@ -357,11 +491,6 @@ begin
          pbrsTxSlave      => AXI_STREAM_SLAVE_FORCE_C,
          pbrsRxMaster     => AXI_STREAM_MASTER_INIT_C,
          pbrsRxSlave      => open,
-         -- HLS Interface
-         hlsTxMaster      => open,
-         hlsTxSlave       => AXI_STREAM_SLAVE_FORCE_C,
-         hlsRxMaster      => AXI_STREAM_MASTER_INIT_C,
-         hlsRxSlave       => open,
          -- Microblaze stream
          mbTxMaster       => dbgTxMaster,
          mbTxSlave        => dbgTxSlave,
@@ -371,6 +500,25 @@ begin
          vPIn             => '0',
          vNIn             => '1',
          irqOut           => appIrqs);
+
+--   GEN_HACK_1 : if (true) generate
+--      U_EMPTY : entity work.AxiLiteRegs
+--         generic map (
+--            TPD_G           => TPD_G,
+--            NUM_WRITE_REG_G => 32,
+--            NUM_READ_REG_G  => 32
+--         )
+--         port map (
+--            axiClk          => sysClk,
+--            axiClkRst       => sysRst,
+--            axiReadMaster   => axilReadMaster,
+--            axiReadSlave    => axilReadSlave,
+--            axiWriteMaster  => axilWriteMaster,
+--            axiWriteSlave   => axilWriteSlave,
+--            writeRegister   => open,
+--            readRegister    => (others => x"dead_beef")
+--         );
+--   end generate;
 
    cpuIrqs(IRQ_MAX_C - 1 downto 0) <= appIrqs(IRQ_MAX_C - 1 downto 0);
 
@@ -397,13 +545,20 @@ begin
 
    end generate;
 
+   P_CNT : process (sysClk) is
+   begin
+      if ( rising_edge( sysClk ) ) then
+         cnt <= cnt + 1;
+      end if;
+   end process P_CNT;
+
    ----------------
    -- Misc. Signals
    ----------------
    led(3) <= '0';
    led(2) <= '0';
    led(1) <= '0';
-   led(0) <= '0';
+   led(0) <= cnt(25);
 
 
 end top_level;

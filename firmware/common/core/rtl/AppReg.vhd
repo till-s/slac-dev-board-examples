@@ -38,6 +38,7 @@ entity AppReg is
       USE_SLOWCLK_G    : boolean          := false;
       NUM_TRIGS_G      : natural          := 8;
       FIFO_DEPTH_G     : natural          := 0;
+      TPGMINI_G        : boolean          := true;
       GEN_TIMING_G     : boolean          := true);
    port (
       -- Clock and Reset
@@ -71,6 +72,9 @@ entity AppReg is
       timingTxP       : out sl;
       timingTxN       : out sl;
       timingTrig      : out TimingTrigType;
+      txRstStat       : out sl;
+      rxRstStat       : out sl;
+      timingTxClk     : out sl;
       -- IRQ
       irqOut          : out slv(7 downto 0)    := (others => '0'));
 end AppReg;
@@ -437,6 +441,7 @@ begin
          rxDispErr          => timingRxPhy.dspErr,
          rxDecErr           => timingRxPhy.decErr,
          rxOutClk           => timingRecClkLoc,
+         rxPolInvert        => '1',
 
          txControl          => timingTxPhyLoc.control,
          txStatus           => timingTxStatus,
@@ -447,6 +452,8 @@ begin
          txOutClk           => timingTxUsrClk,
          loopback           => timingLoopbackSel
       );
+
+   timingTxClk <= timingTxUsrClk;
 
    P_TIMING_PHY : process( timingTxPhy, timingRxControl ) is
       variable v : TimingPhyType;
@@ -463,6 +470,8 @@ begin
          TPD_G               => TPD_G,
          STREAM_L1_G         => false,
          AXIL_RINGB_G        => false,
+         TPGMINI_G           => TPGMINI_G, -- seems unused
+         USE_TPGMINI_G       => TPGMINI_G,
          ASYNC_G             => false,
          AXIL_BASE_ADDR_G    => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_COR_INDEX_C).baseAddr
       )
@@ -547,6 +556,9 @@ begin
             asyncRst         => timingRxStatus.resetDone,
             syncRst          => timingRecRstLoc
          );
+         
+      txRstStat <= timingTxStatus.resetDone;
+      rxRstStat <= timingRxStatus.resetDone;
 
       U_TXCLK_RST : entity work.RstSync
          generic map (
