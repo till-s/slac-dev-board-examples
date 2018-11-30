@@ -143,7 +143,10 @@ set_property IOSTANDARD LVDS_25 [get_ports {diffOutP[1]}]
 set_property PACKAGE_PIN AA14 [get_ports {diffOutN[1]}]
 set_property IOSTANDARD LVDS_25 [get_ports {diffOutN[1]}]
 
-set_property PACKAGE_PIN AB21    [get_ports {trigSE[0]}]
+#PMOD
+#set_property PACKAGE_PIN AB21    [get_ports {trigSE[0]}]
+#SMA
+set_property PACKAGE_PIN AD18    [get_ports {trigSE[0]}]
 set_property IOSTANDARD LVCMOS25 [get_ports {trigSE[0]}]
 set_property IOB TRUE            [get_ports {trigSE[0]}]
 
