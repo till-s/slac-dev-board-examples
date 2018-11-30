@@ -441,7 +441,6 @@ begin
          rxDispErr          => timingRxPhy.dspErr,
          rxDecErr           => timingRxPhy.decErr,
          rxOutClk           => timingRecClkLoc,
-         rxPolInvert        => '1',
 
          txControl          => timingTxPhyLoc.control,
          txStatus           => timingTxStatus,
