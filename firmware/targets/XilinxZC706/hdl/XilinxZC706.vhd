@@ -37,6 +37,7 @@ entity XilinxZC706 is
       SIMULATION_G  : boolean := false;
       PS_EN_G       : boolean := true;
       NUM_TRIGS_G   : natural := 3;
+      CLK_FEEDTHRU_G: boolean := true;
       XVC_EN_G      : boolean := false);
    port (
       DDR_addr          : inout STD_LOGIC_VECTOR ( 14 downto 0 );
@@ -70,7 +71,7 @@ entity XilinxZC706 is
       diffOutN          : out slv(NUM_TRIGS_G - 2 downto 0);
       diffInpP          : in  slv(0 downto 0) := (others => '0');
       diffInpN          : in  slv(0 downto 0) := (others => '1');
-      trigSE            : out slv(0 downto 0) := (others => '0');
+      trigSE            : out slv(1 downto 0) := (others => '0');
       timingRecClkP     : out sl;
       timingRecClkN     : out sl;
       uartTx            : out sl;
@@ -91,6 +92,8 @@ architecture top_level of XilinxZC706 is
 
   constant GEN_IC_C    : boolean          := true;
 
+  constant FEEDTHRU_C  : natural          := ite( CLK_FEEDTHRU_G, 1, 0 );
+
   signal   diffInp     : slv(diffInpP'range);
 
   signal   uartTx_i    : sl;
@@ -103,7 +106,7 @@ architecture top_level of XilinxZC706 is
   signal   rxDiv       : unsigned(27 downto 0) := to_unsigned(0, 28);
 
 component Ila_256 is
-    Port ( 
+    Port (
       clk : in STD_LOGIC;
       probe0 : in STD_LOGIC_VECTOR ( 63 downto 0 );
       probe1 : in STD_LOGIC_VECTOR ( 63 downto 0 );
@@ -224,12 +227,16 @@ COMPONENT processing_system7_0
    signal   timingTrig      : TimingTrigType;
    signal   timingRecClk    : sl;
    signal   timingRecClkLoc : sl;
+
    signal   timingTxClk     : sl;
 
    signal   trigReg         : slv(NUM_TRIGS_G - 1 downto 0);
+   signal   recClk2         : slv(1 downto 0) := "00";
 
    attribute IOB : string;
    attribute IOB of trigReg : signal is "TRUE";
+   attribute IOB of recClk2 : signal is "TRUE";
+
 
 begin
 
@@ -337,7 +344,7 @@ begin
           axi4_arregion               => REG_C,
           axi4_arsize                 => axiReadMaster.arsize( 2 downto 0 ),
           axi4_arvalid                => axiReadMaster.arvalid,
-          
+
           axi4_awaddr                 => axiWriteMaster.awaddr( 31 downto 0 ),
           axi4_awburst                => axiWriteMaster.awburst ( 1 downto 0 ),
           axi4_awcache                => axiWritemaster.awcache( 3 downto 0 ),
@@ -350,19 +357,19 @@ begin
           axi4_awregion               => REG_C,
           axi4_awsize                 => axiWriteMaster.awsize( 2 downto 0 ),
           axi4_awvalid                => axiWriteMaster.awvalid,
-          
+
           axi4_bid                    => axiWriteSlave.bid(11 to 0 ),
           axi4_bready                 => axiWriteMaster.bready,
           axi4_bresp                  => axiWriteSlave.bresp( 1 downto 0 ),
           axi4_bvalid                 => axiWriteSlave.bvalid,
-          
+
           axi4_rdata                  => axiReadSlave.rdata( 31 downto 0 ),
           axi4_rid                    => axiReadSlave.rid(11 downto 0 ),
           axi4_rlast                  => axiReadSlave.rlast,
           axi4_rready                 => axiReadMaster.rready,
           axi4_rresp                  => axiReadSlave.rresp( 1 downto 0 ),
           axi4_rvalid                 => axiReadSlave.rvalid,
-          
+
           axi4_wdata                  => axiWriteMaster.wdata( 31 downto 0 ),
           axi4_wlast                  => axiWriteMaster.wlast,
           axi4_wready                 => axiWriteSlave.wready,
@@ -402,12 +409,12 @@ begin
          port map (
             axiClk           => sysClk,
             axiClkRst        => sysRst,
-   
+
             axiReadMaster    => axiReadMaster,
             axiReadSlave     => axiReadSlave,
             axiWriteMaster   => axiWriteMaster,
             axiWriteSlave    => axiWriteSlave,
-   
+
             axilReadMaster   => axilReadMaster,
             axilReadSlave    => axilReadSlave,
             axilWriteMaster  => axilWriteMaster,
@@ -415,7 +422,7 @@ begin
          );
 
    end generate;
- 
+
       enableSFP <= '1';
 
    end generate;
@@ -549,8 +556,7 @@ begin
 
    end generate;
 
-   GEN_OUTBUFDS : for i in diffOutP'range generate
-      signal trig_i : sl;
+   GEN_OUTBUFDS : for i in diffOutP'left - FEEDTHRU_C downto 0 generate
    begin
       U_OBUFDS : component OBUFDS
          port map (
@@ -579,7 +585,8 @@ begin
    P_DIV_RX : process (timingRecClk) is
    begin
       if rising_edge( timingRecClk ) then
-         rxDiv <= rxDiv + 1;
+         rxDiv   <= rxDiv + 1;
+         recClk2 <= not recClk2;
       end if;
    end process P_DIV_RX;
 
@@ -595,7 +602,9 @@ begin
    led(2) <= sl(txDiv(27));
 
 --   trigSE <= trigReg(trigReg'high downto diffOutP'high + 1);
-   trigSE <= timingTrig.trigPulse(trigReg'high downto diffOutP'high + 1);
+--   trigSE <= timingTrig.trigPulse(trigReg'high downto diffOutP'high + 1);
+   trigSE(0)       <= timingRecClk;
+   trigSE(1)       <= recClk2(1);
 
    P_TRIG_REG : process ( timingTrig ) is
    begin
@@ -611,8 +620,8 @@ begin
       port map (
          C   => timingRecClk,
          CE  => '1',
-         D1  => '1',
-         D2  => '0',
+         D1  => '0', -- sample on negative clock edge; FIXME should use MMCM and variable phase shift!
+         D2  => '1',
          Q   => timingRecClkLoc,
          S   => '0',
          R   => '0'
@@ -625,6 +634,17 @@ begin
          OB => timingRecClkN
       );
 
+   GEN_CLK_FEEDTHRU : if ( CLK_FEEDTHRU_G ) generate
+   begin
+
+   U_RECCLKBUF1 : component OBUFDS
+      port map (
+         I  => recClk2(0),
+         O  => diffOutP(diffOutP'left),
+         OB => diffOutN(diffOutN'left)
+      );
+
+   end generate;
    ----------------
    -- Misc. Signals
    ----------------

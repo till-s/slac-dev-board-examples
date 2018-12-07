@@ -68,33 +68,33 @@ set_property PACKAGE_PIN A17     [get_ports {led[3]}]
 set_property IOSTANDARD LVCMOS15 [get_ports {led[3]}]
 
 ## SFP MGT (Quad 111)
-#set_property PACKAGE_PIN W4      [get_ports {timingTxP}]
-#set_property PACKAGE_PIN W3      [get_ports {timingTxN}]
-#set_property PACKAGE_PIN Y6      [get_ports {timingRxP}]
-#set_property PACKAGE_PIN Y5      [get_ports {timingRxN}]
+set_property PACKAGE_PIN W4      [get_ports {timingTxP}]
+set_property PACKAGE_PIN W3      [get_ports {timingTxN}]
+set_property PACKAGE_PIN Y6      [get_ports {timingRxP}]
+set_property PACKAGE_PIN Y5      [get_ports {timingRxN}]
 ## MGTREFCLK1 (Quad 110) -- Si5324
-#set_property PACKAGE_PIN AC8     [get_ports {timingRefClkP}]
-#set_property PACKAGE_PIN AC7     [get_ports {timingRefClkN}]
+set_property PACKAGE_PIN AC8     [get_ports {timingRefClkP}]
+set_property PACKAGE_PIN AC7     [get_ports {timingRefClkN}]
 ## FMC_LPC_GBTCLK0_M2C_C_P/N
-#set_property PACKAGE_PIN U8      [get_ports {diffInpP[0]}]
-#set_property PACKAGE_PIN U7      [get_ports {diffInpN[0]}]
+set_property PACKAGE_PIN U8      [get_ports {diffInpP[0]}]
+set_property PACKAGE_PIN U7      [get_ports {diffInpN[0]}]
 #
 # FMC_LPC_DP0_C2M_P/N
-set_property PACKAGE_PIN AB2     [get_ports {timingTxP}]
-set_property PACKAGE_PIN AB1     [get_ports {timingTxN}]
-# FMC_LPC_DP0_M2C_P/N
-set_property PACKAGE_PIN AC4     [get_ports {timingRxP}]
-set_property PACKAGE_PIN AC3     [get_ports {timingRxN}]
+#set_property PACKAGE_PIN AB2     [get_ports {timingTxP}]
+#set_property PACKAGE_PIN AB1     [get_ports {timingTxN}]
+## FMC_LPC_DP0_M2C_P/N
+#set_property PACKAGE_PIN AC4     [get_ports {timingRxP}]
+#set_property PACKAGE_PIN AC3     [get_ports {timingRxN}]
 
 set_property PACKAGE_PIN AA18    [get_ports {enableSFP}]
 set_property IOSTANDARD LVCMOS25 [get_ports {enableSFP}]
 
 # MGTREFCLK1 (Quad 110) -- Si5324
-set_property PACKAGE_PIN AC8     [get_ports {diffInpP[0]}]
-set_property PACKAGE_PIN AC7     [get_ports {diffInpN[0]}]
+#set_property PACKAGE_PIN AC8     [get_ports {diffInpP[0]}]
+#set_property PACKAGE_PIN AC7     [get_ports {diffInpN[0]}]
 #FMC_LPC_GBTCLK0_M2C_C_P/N
-set_property PACKAGE_PIN U8      [get_ports {timingRefClkP}]
-set_property PACKAGE_PIN U7      [get_ports {timingRefClkN}]
+#set_property PACKAGE_PIN U8      [get_ports {timingRefClkP}]
+#set_property PACKAGE_PIN U7      [get_ports {timingRefClkN}]
 
 
 create_clock -name timingRefClk -period 5.3846 [get_ports {timingRefClkP}]
@@ -149,6 +149,11 @@ set_property IOSTANDARD LVDS_25 [get_ports {diffOutN[1]}]
 set_property PACKAGE_PIN AD18    [get_ports {trigSE[0]}]
 set_property IOSTANDARD LVCMOS25 [get_ports {trigSE[0]}]
 set_property IOB TRUE            [get_ports {trigSE[0]}]
+
+set_property PACKAGE_PIN AD19    [get_ports {trigSE[1]}]
+set_property IOSTANDARD LVCMOS25 [get_ports {trigSE[1]}]
+set_property IOB TRUE            [get_ports {trigSE[1]}]
+
 
 # FMC_LPC_LA24_P/N
 set_property PACKAGE_PIN AF30 [get_ports {timingRecClkP}]
