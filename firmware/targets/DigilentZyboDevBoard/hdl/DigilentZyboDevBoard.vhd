@@ -319,61 +319,16 @@ begin
    -- axiReadSlave  <= AXI_READ_SLAVE_FORCE_C;
    -- axiWriteSlave <= AXI_WRITE_SLAVE_FORCE_C;
    
-    U_Ila_Axi4 : entity work.ila_axi4_bd_wrapper
-         port map (
-           axiClk                      => sysClk,
-           axiRstN                     => sysRstN,
-           axi4_araddr                 => axiReadMaster.araddr(31 downto 0),
-           axi4_arburst                => axiReadMaster.arburst,
-           axi4_arcache                => axiReadMaster.arcache,
-           axi4_arid                   => axiReadMaster.arid(0 downto 0),
-           axi4_arlen                  => axiReadMaster.arlen(7 downto 0),
-           axi4_arlock                 => axiReadMaster.arlock(0 downto 0),
-           axi4_arprot                 => axiReadMaster.arprot(2 downto 0),
-           axi4_arqos                  => axiReadMaster.arqos(3 downto 0),
-           axi4_arready(0)             => axiReadSlave.arready,
-           axi4_arregion               => REG_C,
-           axi4_arsize                 => axiReadMaster.arsize( 2 downto 0 ),
-           axi4_arvalid(0)             => axiReadMaster.arvalid,
-           axi4_aruser(0)              => '0',
-           
-           axi4_awaddr                 => axiWriteMaster.awaddr( 31 downto 0 ),
-           axi4_awburst                => axiWriteMaster.awburst ( 1 downto 0 ),
-           axi4_awcache                => axiWritemaster.awcache( 3 downto 0 ),
-           axi4_awid                   => axiWritemaster.awid(0 to 0 ),
-           axi4_awlen                  => axiWriteMaster.awlen ( 7 downto 0 ),
-           axi4_awlock                 => axiWriteMaster.awlock( 0 to 0 ),
-           axi4_awprot                 => axiWritemaster.awprot( 2 downto 0 ),
-           axi4_awqos                  => axiWriteMaster.awqos( 3 downto 0 ),
-           axi4_awready(0)             => axiWriteSlave.awready,
-           axi4_awregion               => REG_C,
-           axi4_awsize                 => axiWriteMaster.awsize( 2 downto 0 ),
-           axi4_awvalid(0)             => axiWriteMaster.awvalid,
-           axi4_awuser(0)              => '0',
-
-           
-           axi4_bid                    => axiWriteSlave.bid(0 to 0 ),
-           axi4_bready(0)              => axiWriteMaster.bready,
-           axi4_bresp                  => axiWriteSlave.bresp( 1 downto 0 ),
-           axi4_bvalid(0)              => axiWriteSlave.bvalid,
-           axi4_buser(0)               => '0',
-
-           axi4_rdata                  => axiReadSlave.rdata( 31 downto 0 ),
-           axi4_rid                    => axiReadSlave.rid(0 downto 0 ),
-           axi4_rlast(0)               => axiReadSlave.rlast,
-           axi4_rready(0)              => axiReadMaster.rready,
-           axi4_rresp                  => axiReadSlave.rresp( 1 downto 0 ),
-           axi4_rvalid(0)              => axiReadSlave.rvalid,
-           axi4_ruser(0)               => '0',
-
-           axi4_wdata                  => axiWriteMaster.wdata( 31 downto 0 ),
-           axi4_wlast(0)               => axiWriteMaster.wlast,
-           axi4_wready(0)              => axiWriteSlave.wready,
-           axi4_wstrb                  => axiWriteMaster.wstrb( 3 downto 0 ),
-           axi4_wvalid(0)              => axiWriteMaster.wvalid,
-           axi4_wuser(0)               => '0'
-        );
-
+   U_Ila_Axi4 : entity work.IlaAxi4SurfWrapper
+      port map (
+         axiClk                      => sysClk,
+         axiRstN                     => sysRstN,
+         axiReadMaster               => axiReadMaster,
+         axiReadSlave                => axiReadSlave,
+         axiWriteMaster              => axiWriteMaster,
+         axiWriteSlave               => axiWriteSlave
+      );
+      
    GEN_INTERCONN : if ( GEN_I_C ) generate
    U_A2A : entity work.axi4_2_axil_wrapper
         port map (
