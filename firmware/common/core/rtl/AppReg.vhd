@@ -17,8 +17,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_arith.all;
-use ieee.std_logic_unsigned.all;
+use ieee.numeric_std.all;
 
 use work.StdRtlPkg.all;
 use work.AxiLitePkg.all;
@@ -117,11 +116,6 @@ architecture mapping of AppReg is
    signal axiWrValid : sl;
    signal axiWrAddr  : slv(SHARED_MEM_WIDTH_C-1 downto 0);
 
-   signal irqReq     : slv(7 downto 0);
-   signal irqCount   : slv(27 downto 0);
-
-   signal irq        : sl := '0';
-
    signal rstN       : sl;
 
    signal timingRefClk      : sl := '0';
@@ -133,6 +127,8 @@ architecture mapping of AppReg is
    signal timingLoopback    : slv(2 downto 0) := "000";
    signal timingClkSel      : sl;
    signal timingLoopbackSel : slv(2 downto 0) := "000";
+
+   signal timingRefCnt      : unsigned(31 downto 0) := x"0000_0000";
 
    signal timingTxPhy       : TimingPhyType;
    signal timingTxPhyLoc    : TimingPhyType;
@@ -149,58 +145,12 @@ architecture mapping of AppReg is
    signal appTimingClk      : sl;
    signal appTimingRst      : sl;
 
-
-   constant GEN_MB_C : boolean := false and FIFO_DEPTH_G = 0;
-
 begin
 
    rstN <= not rst;
 
-   GEN_MB : if ( GEN_MB_C ) generate
 
-   U_CPU : entity work.MicroblazeBasicCoreWrapper
-      generic map (
-         TPD_G => TPD_G)
-      port map (
-         -- Master AXI-Lite Interface: [0x00000000:0x7FFFFFFF]
-         mAxilWriteMaster => mAxilWriteMaster,
-         mAxilWriteSlave  => mAxilWriteSlave,
-         mAxilReadMaster  => mAxilReadMaster,
-         mAxilReadSlave   => mAxilReadSlave,
-         -- Streaming
-         mAxisMaster      => mbTxMaster,
-         mAxisSlave       => mbTxSlave,
-         -- IRQ
-         interrupt        => irqReq,
-         -- Clock and Reset
-         clk              => clk,
-         rst              => rst);
-
-   process (clk)
-   begin
-      if rising_edge(clk) then
-         irqReq <= (others => '0') after TPD_G;
-         if rst = '1' then
-            irqCount <= (others => '0') after TPD_G;
-         else
-            -- IRQ[0]
-            if irqCount = x"9502f90" then
-               irqReq(0) <= '1'             after TPD_G;
-               irqCount  <= (others => '0') after TPD_G;
-            else
-               irqCount <= irqCount + 1 after TPD_G;
-            end if;
-            -- IRQ[1]
-            if (axiWrValid = '1') and (axiWrAddr = IRQ_ADDR_C) then
-               irqReq(1) <= '1' after TPD_G;
-            end if;
-         end if;
-      end if;
-   end process;
-
-   end generate;
-
-   NOT_GEN_MB : if ( not GEN_MB_C and FIFO_DEPTH_G = 0 ) generate
+   NOT_GEN_MB : if ( FIFO_DEPTH_G = 0 ) generate
       mAxilWriteMaster <= AXI_LITE_WRITE_MASTER_INIT_C;
       mAxilReadMaster  <= AXI_LITE_READ_MASTER_INIT_C;
    end generate;
@@ -401,14 +351,57 @@ begin
    end generate;
 
    NOT_GEN_FIFO : if ( FIFO_DEPTH_G = 0 ) generate
-      mAxilReadSlaves(FIFO_INDEX_C).arready  <= '1';
-      mAxilWriteSlaves(FIFO_INDEX_C).awready <= '1';
-      mAxilWriteSlaves(FIFO_INDEX_C).wready  <= '1';
+      constant NUM_WRITE_REG_C : natural := 1;
+      constant NUM_READ_REG_C  : natural := 1;
+      signal writeRegsLoc : Slv32Array(NUM_WRITE_REG_C-1 downto 0);
+      signal readRegsLoc  : Slv32Array(NUM_READ_REG_C-1 downto 0) := (others => (others => '0'));
+      signal cntLoc       : slv(31 downto 0);
+   begin
+
+   cntLoc <= slv( timingRefCnt );
+
+   U_SYNC_CLK_CNT : entity work.SynchronizerVector
+      generic map (
+         WIDTH_G => 32
+      )
+      port map(
+         clk     => clk,
+         rst     => rst,
+         dataIn  => cntLoc,
+         dataOut => readRegsLoc(0)
+      );
+
+   U_LOC_REGS : entity work.AxiLiteRegs
+      generic map (
+         TPD_G            => TPD_G,
+         NUM_WRITE_REG_G  => NUM_WRITE_REG_C,
+         NUM_READ_REG_G   => NUM_READ_REG_C
+      )
+      port map (
+         -- AXI-Lite Bus
+         axiClk           => clk,
+         axiClkRst        => rst,
+         axiReadMaster    => mAxilReadMasters(FIFO_INDEX_C),
+         axiReadSlave     => mAxilReadSlaves(FIFO_INDEX_C),
+         axiWriteMaster   => mAxilWriteMasters(FIFO_INDEX_C),
+         axiWriteSlave    => mAxilWriteSlaves(FIFO_INDEX_C),
+         -- User Read/Write registers
+         writeRegister    => writeRegsLoc,
+         readRegister     => readRegsLoc
+     );
+
    end generate;
 
    GEN_TIMING : if ( GEN_TIMING_G ) generate
 
-   U_TimingGtx : entity work.TimingGtxCoreWrapper
+   P_TIMING_REF_CNT : process ( timingRefClk ) is
+   begin
+      if ( rising_edge( timingRefClk ) ) then
+         timingRefCnt <= timingRefCnt + 1;
+      end if;
+   end process P_TIMING_REF_CNT;
+
+   U_TimingGt : entity work.TimingGtCoreWrapper
       generic map (
          TPD_G              => TPD_G,
          AXIL_CLK_FREQ_G    => AXIL_CLK_FREQ_C,
@@ -555,7 +548,7 @@ begin
             asyncRst         => timingRxStatus.resetDone,
             syncRst          => timingRecRstLoc
          );
-         
+
       txRstStat <= timingTxStatus.resetDone;
       rxRstStat <= timingRxStatus.resetDone;
 
