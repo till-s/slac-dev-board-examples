@@ -145,9 +145,15 @@ architecture mapping of AppReg is
    signal appTimingClk      : sl;
    signal appTimingRst      : sl;
 
+   signal axilReadSlaveLoc  : AxiLiteReadSlaveType;
+   signal axilWriteSlaveLoc : AxiLiteWriteSlaveType;
+
 begin
 
    rstN <= not rst;
+
+   axilReadSlave  <= axilReadSlaveLoc;
+   axilWriteSlave <= axilWriteSlaveLoc;
 
 
    NOT_GEN_MB : if ( FIFO_DEPTH_G = 0 ) generate
@@ -167,11 +173,11 @@ begin
       port map (
          sAxiWriteMasters(0) => axilWriteMaster,
          sAxiWriteMasters(1) => mAxilWriteMaster,
-         sAxiWriteSlaves(0)  => axilWriteSlave,
+         sAxiWriteSlaves(0)  => axilWriteSlaveLoc,
          sAxiWriteSlaves(1)  => mAxilWriteSlave,
          sAxiReadMasters(0)  => axilReadMaster,
          sAxiReadMasters(1)  => mAxilReadMaster,
-         sAxiReadSlaves(0)   => axilReadSlave,
+         sAxiReadSlaves(0)   => axilReadSlaveLoc,
          sAxiReadSlaves(1)   => mAxilReadSlave,
          mAxiWriteMasters    => mAxilWriteMasters,
          mAxiWriteSlaves     => mAxilWriteSlaves,
@@ -179,6 +185,28 @@ begin
          mAxiReadSlaves      => mAxilReadSlaves,
          axiClk              => clk,
          axiClkRst           => rst);
+
+   U_Ila_0 : entity work.IlaAxilSurfWrapper
+      port map (
+         axilClk             => clk,
+         axilRst             => rst,
+
+         axilReadMaster      => axilReadMaster,
+         axilReadSlave       => axilReadSlaveLoc,
+         axilWriteMaster     => axilWriteMaster,
+         axilWriteSlave      => axilWriteSlaveLoc
+      );
+
+   U_Ila_1 : entity work.IlaAxilSurfWrapper
+      port map (
+         axilClk             => clk,
+         axilRst             => rst,
+
+         axilReadMaster      => mAxilReadMaster,
+         axilReadSlave       => mAxilReadSlave,
+         axilWriteMaster     => mAxilWriteMaster,
+         axilWriteSlave      => mAxilWriteSlave
+      );
 
    ---------------------------
    -- AXI-Lite: Version Module

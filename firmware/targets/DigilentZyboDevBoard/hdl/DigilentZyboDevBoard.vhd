@@ -322,7 +322,7 @@ begin
    U_Ila_Axi4 : entity work.IlaAxi4SurfWrapper
       port map (
          axiClk                      => sysClk,
-         axiRstN                     => sysRstN,
+         axiRst                      => sysRst,
          axiReadMaster               => axiReadMaster,
          axiReadSlave                => axiReadSlave,
          axiWriteMaster              => axiWriteMaster,
