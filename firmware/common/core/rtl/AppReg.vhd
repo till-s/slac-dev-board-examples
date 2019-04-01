@@ -187,7 +187,7 @@ begin
          axiClk              => clk,
          axiClkRst           => rst);
 
-   GEN_ILA_0 : if (USE_ILAS_G and "01" /= "00") generate
+   GEN_ILA_0 : if ( (USE_ILAS_G and "01") /= "00") generate
 
    U_Ila_0 : entity work.IlaAxilSurfWrapper
       port map (
@@ -201,7 +201,7 @@ begin
       );
    end generate;
 
-   GEN_ILA_1 : if (USE_ILAS_G and "10" /= "00") generate
+   GEN_ILA_1 : if ( (USE_ILAS_G and "10") /= "00") generate
 
    U_Ila_1 : entity work.IlaAxilSurfWrapper
       port map (
