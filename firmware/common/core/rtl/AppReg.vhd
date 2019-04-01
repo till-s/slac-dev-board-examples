@@ -421,7 +421,7 @@ begin
    end generate;
 
    GEN_TIMING : if ( GEN_TIMING_G ) generate
-      signal clkAlwaysActive : sl = '1';
+      signal clkAlwaysActive : sl := '1';
    begin
 
    P_TIMING_REF_CNT : process ( timingRefClk ) is
