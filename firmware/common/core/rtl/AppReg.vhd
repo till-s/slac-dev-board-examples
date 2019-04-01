@@ -421,6 +421,8 @@ begin
    end generate;
 
    GEN_TIMING : if ( GEN_TIMING_G ) generate
+      signal clkAlwaysActive : sl = '1';
+   begin
 
    P_TIMING_REF_CNT : process ( timingRefClk ) is
    begin
@@ -466,7 +468,7 @@ begin
          txControl          => timingTxPhyLoc.control,
          txStatus           => timingTxStatus,
          txUsrClk           => timingTxUsrClk,
-         txUsrClkActive     => '1',
+         txUsrClkActive     => clkAlwaysActive,
          txData             => timingTxPhyLoc.data,
          txDataK            => timingTxPhyLoc.dataK,
          txOutClk           => timingTxUsrClk,
