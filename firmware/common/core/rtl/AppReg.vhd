@@ -38,7 +38,8 @@ entity AppReg is
       NUM_TRIGS_G      : natural          := 8;
       FIFO_DEPTH_G     : natural          := 0;
       TPGMINI_G        : boolean          := true;
-      GEN_TIMING_G     : boolean          := true);
+      GEN_TIMING_G     : boolean          := true;
+      USE_ILAS_G       : slv(1 downto 0)  := "00");
    port (
       -- Clock and Reset
       clk             : in  sl;
@@ -64,8 +65,8 @@ entity AppReg is
       -- Timing
       timingRefClkP   : in  sl := '0';
       timingRefClkN   : in  sl := '1';
-      timingRecClk    : out sl;
-      timingRecRst    : out sl;
+      timingRecClk    : out sl := '0';
+      timingRecRst    : out sl := '0';
       timingRxP       : in  sl := '0';
       timingRxN       : in  sl := '1';
       timingTxP       : out sl;
@@ -186,6 +187,8 @@ begin
          axiClk              => clk,
          axiClkRst           => rst);
 
+   GEN_ILA_0 : generate if (USE_ILAS_G and "01" /= "00") generate
+
    U_Ila_0 : entity work.IlaAxilSurfWrapper
       port map (
          axilClk             => clk,
@@ -196,6 +199,9 @@ begin
          axilWriteMaster     => axilWriteMaster,
          axilWriteSlave      => axilWriteSlaveLoc
       );
+   end generate;
+
+   GEN_ILA_1 : generate if (USE_ILAS_G and "10" /= "00") generate
 
    U_Ila_1 : entity work.IlaAxilSurfWrapper
       port map (
@@ -207,6 +213,7 @@ begin
          axilWriteMaster     => mAxilWriteMaster,
          axilWriteSlave      => mAxilWriteSlave
       );
+   end generate;
 
    ---------------------------
    -- AXI-Lite: Version Module
