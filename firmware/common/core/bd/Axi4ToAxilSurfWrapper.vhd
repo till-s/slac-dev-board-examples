@@ -26,7 +26,8 @@ use work.AxiPkg.all;
 entity Axi4ToAxilSurfWrapper is
    generic (
       RESET_ACT_LOW_G : boolean := false;
-      AXI_REGION_G    : slv(3 downto 0) := "0000"
+      AXI_REGION_G    : slv(3 downto 0) := "0000";
+      ALEN_W_G        : natural := 8
    );
    port (
       axiClk          : in  sl;
@@ -46,6 +47,9 @@ end Axi4ToAxilSurfWrapper;
 architecture Mapping of Axi4ToAxilSurfWrapper is
 
    signal   rst            : sl;
+
+   constant ALOCK_W_C : natural := ite( ALEN_W_G = 4, 2, 1 );
+
 begin
 
    GEN_RSTB : if (RESET_ACT_LOW_G) generate
@@ -64,8 +68,8 @@ begin
          axi4_arburst                => axiReadMaster.arburst,
          axi4_arcache                => axiReadMaster.arcache,
          axi4_arid                   => axiReadMaster.arid(11 downto 0),
-         axi4_arlen                  => axiReadMaster.arlen(7 downto 0),
-         axi4_arlock                 => axiReadMaster.arlock(0 downto 0),
+         axi4_arlen                  => axiReadMaster.arlen(ALEN_W_G - 1 downto 0),
+         axi4_arlock                 => axiReadMaster.arlock(ALOCK_W_C - 1 downto 0),
          axi4_arprot                 => axiReadMaster.arprot(2 downto 0),
          axi4_arqos                  => axiReadMaster.arqos(3 downto 0),
          axi4_arready                => axiReadSlave.arready,
@@ -77,8 +81,8 @@ begin
          axi4_awburst                => axiWriteMaster.awburst ( 1 downto 0 ),
          axi4_awcache                => axiWritemaster.awcache( 3 downto 0 ),
          axi4_awid                   => axiWritemaster.awid(11 to 0 ),
-         axi4_awlen                  => axiWriteMaster.awlen ( 7 downto 0 ),
-         axi4_awlock                 => axiWriteMaster.awlock( 0 to 0 ),
+         axi4_awlen                  => axiWriteMaster.awlen (ALEN_W_G - 1 downto 0 ),
+         axi4_awlock                 => axiWriteMaster.awlock(ALOCK_W_C - 1 downto 0 ),
          axi4_awprot                 => axiWritemaster.awprot( 2 downto 0 ),
          axi4_awqos                  => axiWriteMaster.awqos( 3 downto 0 ),
          axi4_awready                => axiWriteSlave.awready,
@@ -103,6 +107,7 @@ begin
          axi4_wready                 => axiWriteSlave.wready,
          axi4_wstrb                  => axiWriteMaster.wstrb( 3 downto 0 ),
          axi4_wvalid                 => axiWriteMaster.wvalid,
+      --   axi4_wid                    => axiWriteMaster.wid( 11 downto 0 ),
 
          axil_araddr                 => axilReadMaster.araddr,
          axil_arprot                 => axilReadMaster.arprot,
