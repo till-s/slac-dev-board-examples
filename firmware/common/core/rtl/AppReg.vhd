@@ -36,7 +36,6 @@ entity AppReg is
       AXIL_BASE_ADDR_G : slv(31 downto 0) := x"00000000";
       USE_SLOWCLK_G    : boolean          := false;
       NUM_TRIGS_G      : natural          := 8;
-      FIFO_DEPTH_G     : natural          := 0;
       TPGMINI_G        : boolean          := true;
       GEN_TIMING_G     : boolean          := true;
       USE_ILAS_G       : slv(1 downto 0)  := "00");
@@ -72,8 +71,8 @@ entity AppReg is
       timingTxP       : out sl;
       timingTxN       : out sl;
       timingTrig      : out TimingTrigType;
-      txRstStat       : out sl;
-      rxRstStat       : out sl;
+      timingTxStat    : out TimingPhyStatusType;
+      timingRxStat    : out TimingPhyStatusType;
       timingTxClk     : out sl;
       -- IRQ
       irqOut          : out slv(7 downto 0)    := (others => '0'));
@@ -83,6 +82,8 @@ architecture mapping of AppReg is
 
    constant AXIL_CLK_FREQ_C    : real := 50.0E6;
    constant CLK_PERIOD_C       : real := 1.0/AXIL_CLK_FREQ_C;
+   constant NUM_WRITE_REG_C    : natural := 1;
+   constant NUM_READ_REG_C     : natural := 2;
 
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
@@ -103,12 +104,6 @@ architecture mapping of AppReg is
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) :=
       genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 24, 20 );
 
-
-   signal mAxilWriteMaster : AxiLiteWriteMasterType;
-   signal mAxilWriteSlave  : AxiLiteWriteSlaveType;
-   signal mAxilReadMaster  : AxiLiteReadMasterType;
-   signal mAxilReadSlave   : AxiLiteReadSlaveType;
-
    signal mAxilWriteMasters : AxiLiteWriteMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
    signal mAxilWriteSlaves  : AxiLiteWriteSlaveArray(NUM_AXI_MASTERS_C-1 downto 0) := ( others => AXI_LITE_WRITE_SLAVE_INIT_C );
    signal mAxilReadMasters  : AxiLiteReadMasterArray(NUM_AXI_MASTERS_C-1 downto 0);
@@ -119,11 +114,19 @@ architecture mapping of AppReg is
 
    signal rstN       : sl;
 
+   signal writeRegsLoc : Slv32Array(NUM_WRITE_REG_C-1 downto 0);
+   signal readRegsLoc  : Slv32Array(NUM_READ_REG_C-1 downto 0) := (others => (others => '0'));
+   signal cntLoc       : slv(31 downto 0);
+
+
    signal timingRefClk      : sl := '0';
    signal timingRecClkLoc   : sl := '0';
    signal timingRecRstLoc   : sl := '1';
    signal timingTxUsrClk    : sl := '0';
    signal timingTxUsrRst    : sl := '1';
+   signal timingTxUsrRstEnb : sl := '1';
+   signal timingTxRstAllAxi : sl;
+   signal timingTxRstAllTmg : sl;
    signal timingCdrStable   : sl;
    signal timingLoopback    : slv(2 downto 0) := "000";
    signal timingClkSel      : sl;
@@ -137,7 +140,7 @@ architecture mapping of AppReg is
    signal timingRxControl   : TimingPhyControlType;
    signal timingRxStatus    : TimingPhyStatusType := TIMING_PHY_STATUS_INIT_C;
    signal timingTxStatus    : TimingPhyStatusType := TIMING_PHY_STATUS_INIT_C;
-   signal timingTxRstAsync  : sl;
+   signal timingTxRstAsyn   : sl;
 
    signal timingBus         : TimingBusType;
    signal appTimingMode     : sl;
@@ -156,30 +159,20 @@ begin
    axilReadSlave  <= axilReadSlaveLoc;
    axilWriteSlave <= axilWriteSlaveLoc;
 
-
-   NOT_GEN_MB : if ( FIFO_DEPTH_G = 0 ) generate
-      mAxilWriteMaster <= AXI_LITE_WRITE_MASTER_INIT_C;
-      mAxilReadMaster  <= AXI_LITE_READ_MASTER_INIT_C;
-   end generate;
-
    ---------------------------
    -- AXI-Lite Crossbar Module
    ---------------------------
    U_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         NUM_SLAVE_SLOTS_G  => 2,
+         NUM_SLAVE_SLOTS_G  => 1,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
          MASTERS_CONFIG_G   => AXI_CROSSBAR_MASTERS_CONFIG_C)
       port map (
          sAxiWriteMasters(0) => axilWriteMaster,
-         sAxiWriteMasters(1) => mAxilWriteMaster,
          sAxiWriteSlaves(0)  => axilWriteSlaveLoc,
-         sAxiWriteSlaves(1)  => mAxilWriteSlave,
          sAxiReadMasters(0)  => axilReadMaster,
-         sAxiReadMasters(1)  => mAxilReadMaster,
          sAxiReadSlaves(0)   => axilReadSlaveLoc,
-         sAxiReadSlaves(1)   => mAxilReadSlave,
          mAxiWriteMasters    => mAxilWriteMasters,
          mAxiWriteSlaves     => mAxilWriteSlaves,
          mAxiReadMasters     => mAxilReadMasters,
@@ -198,20 +191,6 @@ begin
          axilReadSlave       => axilReadSlaveLoc,
          axilWriteMaster     => axilWriteMaster,
          axilWriteSlave      => axilWriteSlaveLoc
-      );
-   end generate;
-
-   GEN_ILA_1 : if ( (USE_ILAS_G and "10") /= "00") generate
-
-   U_Ila_1 : entity work.IlaAxilSurfWrapper
-      port map (
-         axilClk             => clk,
-         axilRst             => rst,
-
-         axilReadMaster      => mAxilReadMaster,
-         axilReadSlave       => mAxilReadSlave,
-         axilWriteMaster     => mAxilWriteMaster,
-         axilWriteSlave      => mAxilWriteSlave
       );
    end generate;
 
@@ -357,42 +336,6 @@ begin
          axiWriteMaster => mAxilWriteMasters(PRBS_RX_INDEX_C),
          axiWriteSlave  => mAxilWriteSlaves(PRBS_RX_INDEX_C));
 
-   GEN_FIFO : if ( FIFO_DEPTH_G > 0 ) generate
-
-   U_AxiStreamFifo : entity work.AxilFifoWrapper
-      generic map (
-         FIFO_DEPTH_G => FIFO_DEPTH_G
-      )
-      port map (
-         ACLK               => clk,
-         ARESETn            => rstN,
-
-         axiStreamMasterOb  => mbTxMaster,
-         axiStreamSlaveOb   => mbTxSlave,
-         axiStreamMasterIb  => mbRxMaster,
-         axiStreamSlaveIb   => mbRxSlave,
-
-         irq                => irqOut(0),
-
-         AXI_S_ACLK         => clk,
-         AXI_S_ARESETn      => rstN,
-
-         axiLiteReadMaster  => mAxilReadMasters(FIFO_INDEX_C),
-         axiLiteReadSlave   => mAxilReadSlaves(FIFO_INDEX_C),
-         axiLiteWriteMaster => mAxilWriteMasters(FIFO_INDEX_C),
-         axiLiteWriteSlave  => mAxilWriteSlaves(FIFO_INDEX_C)
-      );
-
-   end generate;
-
-   NOT_GEN_FIFO : if ( FIFO_DEPTH_G = 0 ) generate
-      constant NUM_WRITE_REG_C : natural := 1;
-      constant NUM_READ_REG_C  : natural := 1;
-      signal writeRegsLoc : Slv32Array(NUM_WRITE_REG_C-1 downto 0);
-      signal readRegsLoc  : Slv32Array(NUM_READ_REG_C-1 downto 0) := (others => (others => '0'));
-      signal cntLoc       : slv(31 downto 0);
-   begin
-
    cntLoc <= slv( timingRefCnt );
 
    U_SYNC_CLK_CNT : entity work.SynchronizerVector
@@ -404,6 +347,21 @@ begin
          rst     => rst,
          dataIn  => cntLoc,
          dataOut => readRegsLoc(0)
+      );
+
+   U_SYNC_RX_STAT : entity work.SynchronizerVector
+      generic map (
+         WIDTH_G => 5
+      )
+      port map(
+         clk        => clk,
+         rst        => rst,
+         dataIn(0)  => timingRxStatus.resetDone,
+         dataIn(1)  => timingRxStatus.locked,
+         dataIn(2)  => timingRxStatus.bufferByDone,
+         dataIn(3)  => timingRxStatus.bufferByErr,
+         dataIn(4)  => timingTxStatus.resetDone,
+         dataOut    => readRegsLoc(1)(4 downto 0)
       );
 
    U_LOC_REGS : entity work.AxiLiteRegs
@@ -425,7 +383,7 @@ begin
          readRegister     => readRegsLoc
      );
 
-   end generate;
+   timingTxRstAllAxi <= writeRegsLoc(0)(0);
 
    GEN_TIMING : if ( GEN_TIMING_G ) generate
       signal clkAlwaysActive : sl := '1';
@@ -484,14 +442,38 @@ begin
 
    timingTxClk <= timingTxUsrClk;
 
-   P_TIMING_PHY : process( timingTxPhy, timingRxControl ) is
+
+   P_TIMING_PHY : process( timingTxPhy, timingTxRstAllAxi, timingTxRstAsyn ) is
       variable v : TimingPhyType;
    begin
       v                  := timingTxPhy;
-      v.control.reset    := timingTxPhy.control.reset or timingRxControl.bufferByRst; -- hack!
+      v.control.reset    := timingTxPhy.control.reset or timingTxRstAsyn or timingTxRstAllAxi;
 
       timingTxPhyLoc     <= v;
    end process P_TIMING_PHY;
+
+   -- reset the timing core only when they request a 'full' reset from
+   -- the local register. The TPGMini core is UNRESPONSIVE while in reset!
+   -- When requesting a TX reset form the TPGMini core then we reset the
+   -- transmitter only (but not the TimingCore TX).
+
+   U_SYNC_TX_RST_ALL : entity work.Synchronizer
+      port map (
+         clk                 => timingTxUsrClk,
+         dataIn              => timingTxRstAllAxi,
+         dataOut             => timingTxRstAllTmg
+      );
+
+   P_TXRESET_GATE : process ( timingTxUsrClk ) is
+   begin
+      if ( rising_edge( timingTxUsrClk ) ) then
+         if ( timingTxRstAllTmg = '1' ) then
+            timingTxUsrRstEnb <= '1';
+         elsif ( timingTxStatus.resetDone = '1' ) then
+            timingTxUsrRstEnb <= '0';
+         end if;
+      end if;
+   end process P_TXRESET_GATE;
 
 
    U_TimingCore : entity work.TimingCore
@@ -515,7 +497,7 @@ begin
          gtRxDecErr          => timingRxPhy.decErr,
          gtRxControl         => timingRxControl,
          gtRxStatus          => timingRxStatus,
-         gtTxReset           => open, -- not useful; if the TX is reset the TPGMini regs dont' work
+         gtTxReset           => timingTxRstAsyn, -- axi clock domain
          gtLoopback          => timingLoopbackSel,
 
          timingPhy           => timingTxPhy,
@@ -586,19 +568,7 @@ begin
             syncRst          => timingRecRstLoc
          );
 
-      txRstStat <= timingTxStatus.resetDone;
-      rxRstStat <= timingRxStatus.resetDone;
-
-      U_TXCLK_RST : entity work.RstSync
-         generic map (
-            TPD_G            => TPD_G,
-            IN_POLARITY_G    => '0'
-         )
-         port map (
-            clk              => timingTxUsrClk,
-            asyncRst         => timingTxStatus.resetDone,
-            syncRst          => timingTxUsrRst
-         );
+      timingTxUsrRst <= not timingTxStatus.resetDone and timingTxUsrRstEnb;
 
       U_IBUF_GTX : IBUFDS_GTE2
          generic map (
@@ -615,5 +585,11 @@ begin
          );
 
    end generate;
+
+   timingTxStat <= timingTxStatus;
+   timingRxStat <= timingRxStatus;
+
+   -- should probably be edge-triggered both ways...
+   irqOut(1)    <= timingRxStatus.locked;
 
 end mapping;
