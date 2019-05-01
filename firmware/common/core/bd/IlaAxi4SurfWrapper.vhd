@@ -4,7 +4,7 @@
 -- Created    : 2015-04-08
 -- Last update: 2017-02-16
 -------------------------------------------------------------------------------
--- Description: Example using 1000BASE-SX Protocol
+-- Description: ILA Wrapper for Axi-4
 -------------------------------------------------------------------------------
 -- This file is part of 'Example Project Firmware'.
 -- It is subject to the license terms in the LICENSE.txt file found in the
