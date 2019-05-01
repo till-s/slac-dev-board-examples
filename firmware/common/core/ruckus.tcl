@@ -20,7 +20,7 @@ if { [llength [get_ips Ila_256]] == 0 } {
 # Load Source Code
 loadSource -dir  "$::DIR_PATH/rtl/"
 # Load Block Designs and HDL Wrapper
-loadBlockDesign -dir "$::DIR_PATH/bd/"
+#loadBlockDesign -dir "$::DIR_PATH/bd/"
 #loadBlockDesign -path "$::DIR_PATH/bd/system_no_ila/system.bd" 
-loadSource      -dir  "$::DIR_PATH/bd/"
+#loadSource      -dir  "$::DIR_PATH/bd/"
 

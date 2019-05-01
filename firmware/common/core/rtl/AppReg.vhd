@@ -24,6 +24,7 @@ use work.AxiLitePkg.all;
 use work.AxiStreamPkg.all;
 use work.SsiPkg.all;
 use work.TimingPkg.all;
+use work.EthMacPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
@@ -38,44 +39,50 @@ entity AppReg is
       NUM_TRIGS_G      : natural          := 8;
       TPGMINI_G        : boolean          := true;
       GEN_TIMING_G     : boolean          := true;
+      TIMING_UDP_MSG_G : boolean          := false;
       USE_ILAS_G       : slv(1 downto 0)  := "00");
    port (
       -- Clock and Reset
-      clk             : in  sl;
-      rst             : in  sl;
+      clk                  : in  sl;
+      rst                  : in  sl;
       -- AXI-Lite interface
-      axilWriteMaster : in  AxiLiteWriteMasterType;
-      axilWriteSlave  : out AxiLiteWriteSlaveType;
-      axilReadMaster  : in  AxiLiteReadMasterType;
-      axilReadSlave   : out AxiLiteReadSlaveType;
+      axilWriteMaster      : in  AxiLiteWriteMasterType;
+      axilWriteSlave       : out AxiLiteWriteSlaveType;
+      axilReadMaster       : in  AxiLiteReadMasterType;
+      axilReadSlave        : out AxiLiteReadSlaveType;
       -- PBRS Interface
-      pbrsTxMaster    : out AxiStreamMasterType;
-      pbrsTxSlave     : in  AxiStreamSlaveType;
-      pbrsRxMaster    : in  AxiStreamMasterType;
-      pbrsRxSlave     : out AxiStreamSlaveType;
+      pbrsTxMaster         : out AxiStreamMasterType;
+      pbrsTxSlave          : in  AxiStreamSlaveType;
+      pbrsRxMaster         : in  AxiStreamMasterType;
+      pbrsRxSlave          : out AxiStreamSlaveType;
       -- MB Interface
-      mbTxMaster      : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
-      mbTxSlave       : in  AxiStreamSlaveType;
-      mbRxMaster      : in  AxiStreamMasterType;
-      mbRxSlave       : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      mbTxMaster           : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      mbTxSlave            : in  AxiStreamSlaveType;
+      mbRxMaster           : in  AxiStreamMasterType;
+      mbRxSlave            : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- ADC Ports
-      vPIn            : in  sl;
-      vNIn            : in  sl;
+      vPIn                 : in  sl;
+      vNIn                 : in  sl;
       -- Timing
-      timingRefClkP   : in  sl := '0';
-      timingRefClkN   : in  sl := '1';
-      timingRecClk    : out sl := '0';
-      timingRecRst    : out sl := '0';
-      timingRxP       : in  sl := '0';
-      timingRxN       : in  sl := '1';
-      timingTxP       : out sl;
-      timingTxN       : out sl;
-      timingTrig      : out TimingTrigType;
-      timingTxStat    : out TimingPhyStatusType;
-      timingRxStat    : out TimingPhyStatusType;
-      timingTxClk     : out sl;
+      timingRefClkP        : in  sl := '0';
+      timingRefClkN        : in  sl := '1';
+      timingRecClk         : out sl := '0';
+      timingRecRst         : out sl := '0';
+      timingRxP            : in  sl := '0';
+      timingRxN            : in  sl := '1';
+      timingTxP            : out sl;
+      timingTxN            : out sl;
+      timingTrig           : out TimingTrigType;
+      timingTxStat         : out TimingPhyStatusType;
+      timingRxStat         : out TimingPhyStatusType;
+      timingTxClk          : out sl;
+      ibTimingEthMsgMaster : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      ibTimingEthMsgSlave  : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      obTimingEthMsgMaster : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      obTimingEthMsgSlave  : in  AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- IRQ
-      irqOut          : out slv(7 downto 0)    := (others => '0'));
+      irqOut               : out slv(7 downto 0)    := (others => '0')
+   );
 end AppReg;
 
 architecture mapping of AppReg is
@@ -182,15 +189,14 @@ begin
 
    GEN_ILA_0 : if ( (USE_ILAS_G and "01") /= "00") generate
 
-   U_Ila_0 : entity work.IlaAxilSurfWrapper
+   U_Ila_0 : entity work.IlaAxiLite
       port map (
-         axilClk             => clk,
-         axilRst             => rst,
+         axilClk        => clk,
 
-         axilReadMaster      => axilReadMaster,
-         axilReadSlave       => axilReadSlaveLoc,
-         axilWriteMaster     => axilWriteMaster,
-         axilWriteSlave      => axilWriteSlaveLoc
+         mAxilRead      => axilReadMaster,
+         sAxilRead      => axilReadSlaveLoc,
+         mAxilWrite     => axilWriteMaster,
+         sAxilWrite     => axilWriteSlaveLoc
       );
    end generate;
 
@@ -479,7 +485,8 @@ begin
    U_TimingCore : entity work.TimingCore
       generic map (
          TPD_G               => TPD_G,
-         STREAM_L1_G         => false,
+         STREAM_L1_G         => TIMING_UDP_MSG_G,
+         ETHMSG_AXIS_CFG_G   => EMAC_AXIS_CONFIG_C,
          AXIL_RINGB_G        => false,
          TPGMINI_G           => TPGMINI_G, -- seems unused
          USE_TPGMINI_G       => TPGMINI_G,
@@ -513,13 +520,13 @@ begin
          axilReadMaster      => mAxilReadMasters (TIM_COR_INDEX_C),
          axilReadSlave       => mAxilReadSlaves  (TIM_COR_INDEX_C),
          axilWriteMaster     => mAxilWriteMasters(TIM_COR_INDEX_C),
-         axilWriteSlave      => mAxilWriteSlaves (TIM_COR_INDEX_C)
+         axilWriteSlave      => mAxilWriteSlaves (TIM_COR_INDEX_C),
 
---         ibEthMsgMaster      => ibTimingEthMaster,
---         ibEthMsgSlave       => ibTimingEthSlave,
+         ibEthMsgMaster      => ibTimingEthMsgMaster,
+         ibEthMsgSlave       => ibTimingEthMsgSlave,
 
---         obEthMsgMaster      => obTimingEthMaster,
---         obEthMsgSlave       => obTimingEthSlave
+         obEthMsgMaster      => obTimingEthMsgMaster,
+         obEthMsgSlave       => obTimingEthMsgSlave
       );
 
    U_EvrV2 : entity work.EvrV2CoreTriggers

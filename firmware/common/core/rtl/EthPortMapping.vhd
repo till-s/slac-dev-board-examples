@@ -4,14 +4,14 @@
 -- Created    : 2015-01-30
 -- Last update: 2017-03-17
 -------------------------------------------------------------------------------
--- Description: 
+-- Description:
 -------------------------------------------------------------------------------
 -- This file is part of 'Example Project Firmware'.
--- It is subject to the license terms in the LICENSE.txt file found in the 
--- top-level directory of this distribution and at: 
---    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'Example Project Firmware', including this file, 
--- may be copied, modified, propagated, or distributed except according to 
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Example Project Firmware', including this file,
+-- may be copied, modified, propagated, or distributed except according to
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
 
@@ -28,10 +28,13 @@ entity EthPortMapping is
    generic (
       TPD_G           : time             := 1 ns;
       CLK_FREQUENCY_G : real             := 125.0E+6;
-      MAC_ADDR_G      : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)   
+      MAC_ADDR_G      : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)
       IP_ADDR_G       : slv(31 downto 0) := x"0A02A8C0";  -- 192.168.2.10 (ETH only)
       DHCP_G          : boolean          := true;
-      JUMBO_G         : boolean          := false);
+      JUMBO_G         : boolean          := false;
+      USE_RSSI_G      : boolean          := true;
+      USE_JTAG_G      : boolean          := true;
+      USER_UDP_PORT_G : natural          := 0);
    port (
       -- Clock and Reset
       clk             : in  sl;
@@ -41,25 +44,31 @@ entity EthPortMapping is
       txSlave         : in  AxiStreamSlaveType;
       rxMaster        : in  AxiStreamMasterType;
       rxSlave         : out AxiStreamSlaveType;
-      rxCtrl          : out AxiStreamCtrlType;
+      rxCtrl          : out AxiStreamCtrlType   := AXI_STREAM_CTRL_UNUSED_C;
       -- PBRS Interface
-      pbrsTxMaster    : in  AxiStreamMasterType;
-      pbrsTxSlave     : out AxiStreamSlaveType;
-      pbrsRxMaster    : out AxiStreamMasterType;
-      pbrsRxSlave     : in  AxiStreamSlaveType;
+      pbrsTxMaster    : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      pbrsTxSlave     : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      pbrsRxMaster    : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      pbrsRxSlave     : in  AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- HLS Interface
-      hlsTxMaster     : in  AxiStreamMasterType;
-      hlsTxSlave      : out AxiStreamSlaveType;
-      hlsRxMaster     : out AxiStreamMasterType;
-      hlsRxSlave      : in  AxiStreamSlaveType;
+      hlsTxMaster     : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      hlsTxSlave      : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      hlsRxMaster     : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      hlsRxSlave      : in  AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- MB Interface
-      mbTxMaster      : in  AxiStreamMasterType;
-      mbTxSlave       : out AxiStreamSlaveType;
+      mbTxMaster      : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      mbTxSlave       : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      -- raw UDP Interface
+      udpTxMaster     : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      udpTxSlave      : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      udpRxMaster     : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      udpRxSlave      : in  AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- AXI-Lite Interface
-      axilWriteMaster : out AxiLiteWriteMasterType;
-      axilWriteSlave  : in  AxiLiteWriteSlaveType;
-      axilReadMaster  : out AxiLiteReadMasterType;
-      axilReadSlave   : in  AxiLiteReadSlaveType);
+      axilWriteMaster : out AxiLiteWriteMasterType := AXI_LITE_WRITE_MASTER_INIT_C;
+      axilWriteSlave  : in  AxiLiteWriteSlaveType  := AXI_LITE_WRITE_SLAVE_INIT_C;
+      axilReadMaster  : out AxiLiteReadMasterType  := AXI_LITE_READ_MASTER_INIT_C;
+      axilReadSlave   : in  AxiLiteReadSlaveType   := AXI_LITE_READ_SLAVE_INIT_C
+   );
 end EthPortMapping;
 
 architecture mapping of EthPortMapping is
@@ -82,8 +91,33 @@ architecture mapping of EthPortMapping is
       TUSER_BITS_C  => 0,
       TUSER_MODE_C  => TUSER_NONE_C);
 
-   constant NUM_SERVERS_C  : integer                                 := 2;
-   constant SERVER_PORTS_C : PositiveArray(NUM_SERVERS_C-1 downto 0) := (0 => 8192, 1 => 2542);
+   constant NUM_SERVERS_C  : integer                                 := ite(USE_RSSI_G, 1, 0) + ite(USE_JTAG_G, 1, 0) + ite(USER_UDP_PORT_G /= 0, 1, 0);
+
+   constant RSSI_UDP_IDX_C : natural := 0;
+   constant JTAG_UDP_IDX_C : natural := RSSI_UDP_IDX_C + ite(USE_RSSI_G, 1, 0);
+   constant USER_UDP_IDX_C : natural := JTAG_UDP_IDX_C + ite(USE_JTAG_G, 1, 0);
+
+   function udpServerPorts return PositiveArray is
+   variable rval : PositiveArray(NUM_SERVERS_C - 1 downto 0);
+   variable idx  : natural;
+   begin
+      idx := 0;
+      if ( USE_RSSI_G ) then
+         rval(idx) := 8192;
+         idx       := idx + 1;
+      end if;
+      if ( USE_JTAG_G ) then
+         rval(idx) := 2542;
+         idx       := idx + 1;
+      end if;
+      if ( USER_UDP_PORT_G /= 0 ) then
+         rval(idx) := USER_UDP_PORT_G;
+         idx       := idx + 1;
+      end if;
+      return rval;
+   end function udpServerPorts;
+
+   constant SERVER_PORTS_C : PositiveArray(NUM_SERVERS_C-1 downto 0) := udpServerPorts;
 
    constant RSSI_SIZE_C : positive := 4;
    constant AXIS_CONFIG_C : AxiStreamConfigArray(RSSI_SIZE_C-1 downto 0) := (
@@ -103,8 +137,6 @@ architecture mapping of EthPortMapping is
    signal rssiObSlaves    : AxiStreamSlaveArray(RSSI_SIZE_C-1 downto 0);
 
    signal spliceSOF       : AxiStreamMasterType;
-
-   constant USE_JTAG_C    : boolean := true;
 
 begin
 
@@ -143,6 +175,8 @@ begin
          clk             => clk,
          rst             => rst);
 
+   GEN_RSSI : if (USE_RSSI_G) generate
+
    ------------------------------------------
    -- Software's RSSI Server Interface @ 8192
    ------------------------------------------
@@ -166,7 +200,8 @@ begin
          PIPE_STAGES_G       => 1,
          APP_AXIS_CONFIG_G   => AXIS_CONFIG_C,
          TSP_AXIS_CONFIG_G   => EMAC_AXIS_CONFIG_C,
-         INIT_SEQ_N_G        => 16#80#)
+         INIT_SEQ_N_G        => 16#80#
+      )
       port map (
          clk_i             => clk,
          rst_i             => rst,
@@ -177,22 +212,24 @@ begin
          mAppAxisMasters_o => rssiObMasters,
          mAppAxisSlaves_i  => rssiObSlaves,
          -- Transport Layer Interface
-         sTspAxisMaster_i  => obServerMasters(0),
-         sTspAxisSlave_o   => obServerSlaves(0),
-         mTspAxisMaster_o  => ibServerMasters(0),
-         mTspAxisSlave_i   => ibServerSlaves(0));
+         sTspAxisMaster_i  => obServerMasters(RSSI_UDP_IDX_C),
+         sTspAxisSlave_o   => obServerSlaves (RSSI_UDP_IDX_C),
+         mTspAxisMaster_o  => ibServerMasters(RSSI_UDP_IDX_C),
+         mTspAxisSlave_i   => ibServerSlaves (RSSI_UDP_IDX_C)
+      );
 
    ---------------------------------------
-   -- TDEST = 0x0: Register access control   
+   -- TDEST = 0x0: Register access control
    ---------------------------------------
    U_SRPv3 : entity work.SrpV3AxiLite
       generic map (
          TPD_G               => TPD_G,
          SLAVE_READY_EN_G    => true,
          GEN_SYNC_FIFO_G     => true,
-         AXI_STREAM_CONFIG_G => AXIS_CONFIG_C(0))
+         AXI_STREAM_CONFIG_G => AXIS_CONFIG_C(0)
+      )
       port map (
-         -- Streaming Slave (Rx) Interface (sAxisClk domain) 
+         -- Streaming Slave (Rx) Interface (sAxisClk domain)
          sAxisClk         => clk,
          sAxisRst         => rst,
          sAxisMaster      => rssiObMasters(0),
@@ -208,10 +245,11 @@ begin
          mAxilReadMaster  => axilReadMaster,
          mAxilReadSlave   => axilReadSlave,
          mAxilWriteMaster => axilWriteMaster,
-         mAxilWriteSlave  => axilWriteSlave);
+         mAxilWriteSlave  => axilWriteSlave
+      );
 
    --------------------------
-   -- TDEST = 0x1: TX/RX PBRS   
+   -- TDEST = 0x1: TX/RX PBRS
    --------------------------
    rssiIbMasters(1) <= pbrsTxMaster;
    pbrsTxSlave      <= rssiIbSlaves(1);
@@ -227,53 +265,55 @@ begin
    rssiObSlaves(2)  <= hlsRxSlave;
 
    --------------------------
-   -- TDEST = 0x3: TX/RX PBRS   
+   -- TDEST = 0x3: TX/RX PBRS
    --------------------------
    rssiIbMasters(3) <= mbTxMaster;
    mbTxSlave        <= rssiIbSlaves(3);
 
    ------------------------------
-   -- Terminate Unused interfaces  
+   -- Terminate Unused interfaces
    ------------------------------
    rssiObSlaves(3) <= AXI_STREAM_SLAVE_FORCE_C;
-   rxCtrl          <= AXI_STREAM_CTRL_UNUSED_C;
+
+   end generate; -- if USE_RSSI_G
+
+
+   GEN_JTAG : if ( USE_JTAG_G ) generate
 
    P_SPLICE : process(spliceSOF)
       variable v : AxiStreamMasterType;
    begin
       v                   := spliceSOF;
       v.tUser(1 downto 0) := "10";
-      ibServerMasters(1)  <= v;
+      ibServerMasters(JTAG_UDP_IDX_C)  <= v;
    end process P_SPLICE;
 
-   NO_JTAG  : if ( not USE_JTAG_C ) generate
 
-   spliceSOF          <= AXI_STREAM_MASTER_INIT_C;
-   obServerSlaves(1)  <= AXI_STREAM_SLAVE_FORCE_C;
-
-   end generate;
-
-   GEN_JTAG : if ( USE_JTAG_C ) generate
-
-   U_AxisBscan : entity work.AxisDebugBridge
+   U_AxisBscan : entity work.AxisJtagDebugBridge
       generic map (
          TPD_G        => TPD_G,
          AXIS_WIDTH_G => EMAC_AXIS_CONFIG_C.TDATA_BYTES_C,
          AXIS_FREQ_G  => CLK_FREQUENCY_G,
          CLK_DIV2_G   => 5,
-         MEM_DEPTH_G  => (2048/EMAC_AXIS_CONFIG_C.TDATA_BYTES_C) 
+         MEM_DEPTH_G  => (2048/EMAC_AXIS_CONFIG_C.TDATA_BYTES_C)
       )
       port map (
          axisClk      => clk,
          axisRst      => rst,
 
-         mAxisReq     => obServerMasters(1),
-         sAxisReq     => obServerSlaves(1),
- 
-         mAxisTdo     => spliceSOF,
-         sAxisTdo     => ibServerSlaves(1)
-      );
+         mAxisReq     => obServerMasters(JTAG_UDP_IDX_C),
+         sAxisReq     => obServerSlaves (JTAG_UDP_IDX_C),
 
-   end generate;
+         mAxisTdo     => spliceSOF,
+         sAxisTdo     => ibServerSlaves (JTAG_UDP_IDX_C)
+      );
+   end generate; -- if USE_JTAG_G
+
+   GEN_USER_UDP : if ( USER_UDP_PORT_G /= 0 ) generate
+      ibServerMasters(USER_UDP_IDX_C) <= udpTxMaster;
+      udpTxSlave                      <= ibServerSlaves (USER_UDP_IDX_C);
+      udpRxMaster                     <= obServerMasters(USER_UDP_IDX_C);
+      obServerSlaves (USER_UDP_IDX_C) <= udpRxSlave;
+   end generate; -- if USER_UDP_PORT_G /= 0
 
 end mapping;
