@@ -333,8 +333,6 @@ begin
          sAxisRst       => rst,
          sAxisMaster    => pbrsRxMaster,
          sAxisSlave     => pbrsRxSlave,
-         mAxisClk       => clk,
-         mAxisRst       => rst,
          axiClk         => clk,
          axiRst         => rst,
          axiReadMaster  => mAxilReadMasters(PRBS_RX_INDEX_C),
