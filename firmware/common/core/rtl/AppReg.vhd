@@ -40,6 +40,7 @@ entity AppReg is
       TPGMINI_G        : boolean          := true;
       GEN_TIMING_G     : boolean          := true;
       TIMING_UDP_MSG_G : boolean          := false;
+      NUM_EXT_SLAVES_G : natural          := 1;
       USE_ILAS_G       : slv(1 downto 0)  := "00");
    port (
       -- Clock and Reset
@@ -81,7 +82,12 @@ entity AppReg is
       obTimingEthMsgMaster : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       obTimingEthMsgSlave  : in  AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- IRQ
-      irqOut               : out slv(7 downto 0)    := (others => '0')
+      irqOut               : out slv(7 downto 0)    := (others => '0');
+      -- AXI Lite (external slaves)
+      axilReadMasters      : out AxiLiteReadMasterArray (NUM_EXT_SLAVES_G - 1 downto 0);
+      axilReadSlaves       : in  AxiLiteReadSlaveArray  (NUM_EXT_SLAVES_G - 1 downto 0);
+      axilWriteMasters     : out AxiLiteWriteMasterArray(NUM_EXT_SLAVES_G - 1 downto 0);
+      axilWriteSlaves      : in  AxiLiteWriteSlaveArray (NUM_EXT_SLAVES_G - 1 downto 0)
    );
 end AppReg;
 
@@ -95,7 +101,7 @@ architecture mapping of AppReg is
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 10;
+   constant NUM_AXI_MASTERS_C : natural := 10 + NUM_EXT_SLAVES_G;
 
    constant VERSION_INDEX_C : natural := 0;
    constant XADC_INDEX_C    : natural := 1;
@@ -107,6 +113,7 @@ architecture mapping of AppReg is
    constant TIM_GTX_INDEX_C : natural := 7;
    constant TIM_COR_INDEX_C : natural := 8;
    constant TIM_TRG_INDEX_C : natural := 9;
+   constant EXT_SLV_INDEX_C : natural :=10;
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) :=
       genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 24, 20 );
@@ -165,6 +172,11 @@ begin
 
    axilReadSlave  <= axilReadSlaveLoc;
    axilWriteSlave <= axilWriteSlaveLoc;
+
+   axilReadMasters (NUM_EXT_SLAVES_G - 1 downto 0) <= mAxilReadMasters (NUM_EXT_SLAVES_G + EXT_SLV_INDEX_C - 1 downto EXT_SLV_INDEX_C);
+   axilWriteMasters(NUM_EXT_SLAVES_G - 1 downto 0) <= mAxilWriteMasters(NUM_EXT_SLAVES_G + EXT_SLV_INDEX_C - 1 downto EXT_SLV_INDEX_C);
+   mAxilReadSlaves (NUM_EXT_SLAVES_G + EXT_SLV_INDEX_C - 1 downto EXT_SLV_INDEX_C) <= axilReadSlaves (NUM_EXT_SLAVES_G - 1 downto 0);
+   mAxilWriteSlaves(NUM_EXT_SLAVES_G + EXT_SLV_INDEX_C - 1 downto EXT_SLV_INDEX_C) <= axilWriteSlaves(NUM_EXT_SLAVES_G - 1 downto 0);
 
    ---------------------------
    -- AXI-Lite Crossbar Module
