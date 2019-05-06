@@ -74,6 +74,7 @@ entity AppReg is
       timingTxP            : out sl;
       timingTxN            : out sl;
       timingTrig           : out TimingTrigType;
+      timingTrigInvert     : in  slv(NUM_TRIGS_G - 1 downto 0) := (others => '0');
       timingTxStat         : out TimingPhyStatusType;
       timingRxStat         : out TimingPhyStatusType;
       timingTxClk          : out sl;
@@ -561,6 +562,7 @@ begin
          evrRst              => appTimingRst,
          evrBus              => timingBus,
          -- Trigger and Sync Port
+         invertPolarity      => timingTrigInvert,
          trigOut             => appTimingTrig,
          evrModeSel          => appTimingMode
       );
