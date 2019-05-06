@@ -41,6 +41,7 @@ entity AppReg is
       GEN_TIMING_G     : boolean          := true;
       TIMING_UDP_MSG_G : boolean          := false;
       NUM_EXT_SLAVES_G : natural          := 1;
+      INVERT_POLARITY_G: slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
       USE_ILAS_G       : slv(1 downto 0)  := "00");
    port (
       -- Clock and Reset
@@ -74,7 +75,6 @@ entity AppReg is
       timingTxP            : out sl;
       timingTxN            : out sl;
       timingTrig           : out TimingTrigType;
-      timingTrigInvert     : in  slv(NUM_TRIGS_G - 1 downto 0) := (others => '0');
       timingTxStat         : out TimingPhyStatusType;
       timingRxStat         : out TimingPhyStatusType;
       timingTxClk          : out sl;
@@ -545,6 +545,7 @@ begin
          TPD_G               => TPD_G,
          NCHANNELS_G         => NUM_TRIGS_G, -- event selectors
          NTRIGGERS_G         => NUM_TRIGS_G,
+         INVERT_POLARITY_G   => INVERT_POLARITY_G,
          TRIG_DEPTH_G        => 19,
          COMMON_CLK_G        => false,
          AXIL_BASEADDR_G     => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_TRG_INDEX_C).baseAddr
@@ -562,7 +563,6 @@ begin
          evrRst              => appTimingRst,
          evrBus              => timingBus,
          -- Trigger and Sync Port
-         invertPolarity      => timingTrigInvert,
          trigOut             => appTimingTrig,
          evrModeSel          => appTimingMode
       );
