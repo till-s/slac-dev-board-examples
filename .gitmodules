@@ -6,7 +6,7 @@
 	url = https://github.com/slaclab/ruckus
 [submodule "firmware/submodules/lcls-timing-core"]
 	path = firmware/submodules/lcls-timing-core
-	url = https://github.com/slaclab/lcls-timing-core
+	url = https://github.com/till-s/lcls-timing-core
 [submodule "firmware/submodules/ila-wrappers-for-surf"]
 	path = firmware/submodules/ila-wrappers-for-surf
 	url = https://github.com/slaclab/ila-wrappers-for-surf
