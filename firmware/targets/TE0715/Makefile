@@ -1,6 +1,6 @@
 
 # Define target output
-target: prom
+target: prom bin
 
 # Define Firmware Version Number
 export PRJ_VERSION = 0x00000001
