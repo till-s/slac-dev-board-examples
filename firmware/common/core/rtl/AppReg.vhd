@@ -94,10 +94,12 @@ end AppReg;
 
 architecture mapping of AppReg is
 
+   constant NUM_LOC_IRQS_C     : natural := 2;
+
    constant AXIL_CLK_FREQ_C    : real := 50.0E6;
    constant CLK_PERIOD_C       : real := 1.0/AXIL_CLK_FREQ_C;
-   constant NUM_WRITE_REG_C    : natural := 1;
-   constant NUM_READ_REG_C     : natural := 2;
+   constant NUM_WRITE_REG_C    : natural := 2;
+   constant NUM_READ_REG_C     : natural := 3;
 
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
@@ -166,6 +168,8 @@ architecture mapping of AppReg is
 
    signal axilReadSlaveLoc  : AxiLiteReadSlaveType;
    signal axilWriteSlaveLoc : AxiLiteWriteSlaveType;
+
+   signal locIrqs           : slv(NUM_LOC_IRQS_C - 1 downto 0);
 
 begin
 
@@ -608,7 +612,22 @@ begin
    timingTxStat <= timingTxStatus;
    timingRxStat <= timingRxStatus;
 
+   locIrqs(0)   <= timingClkSel;
+   locIrqs(1)   <= timingRxStatus.locked;
+
    -- should probably be edge-triggered both ways...
-   irqOut(1)    <= timingRxStatus.locked;
+   U_IRQ : entity work.AppEdgeIrqCtrl
+      generic map (
+         NUM_IRQS_G => NUM_LOC_IRQS_C
+      )
+      port map (
+         clk        => clk,
+         rst        => rst,
+         irqEnb     => writeRegsLoc(1)(NUM_LOC_IRQS_C - 1 downto 0), 
+         irqOut     => irqOut(0),
+         irqPend    => readRegsLoc(2) (NUM_LOC_IRQS_C - 1 downto 0),
+         -- irqIn is synchronized into 'clk' domain
+         irqIn      => locIrqs
+      );
 
 end mapping;
