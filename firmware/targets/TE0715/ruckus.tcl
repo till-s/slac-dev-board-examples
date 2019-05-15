@@ -9,7 +9,7 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
     create_ip -name processing_system7 -vendor xilinx.com -library ip -module_name processing_system7_0
 
     # generated from Trenz reference design with vivado/gui
-	set_property -dict [ list \
+	set_property -dict [list \
 		CONFIG.PCW_ACT_APU_PERIPHERAL_FREQMHZ {666.666687} \
 		CONFIG.PCW_ACT_CAN_PERIPHERAL_FREQMHZ {10.000000} \
 		CONFIG.PCW_ACT_DCI_PERIPHERAL_FREQMHZ {10.158730} \
@@ -421,6 +421,72 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 #if { [llength [get_ips ProcSysReset]] == 0 } {
 #	create_ip -name proc_sys_reset -vendor xilinx.com -library ip -module_name ProcSysReset
 #}
+
+if { [info exists ::env(IBERT_IMAGE)] == 1 &&
+     $::env(IBERT_IMAGE) == "true"         &&
+     [llength [get_ips ibert_7series_gtx]] == 0 } {
+
+	create_ip -name ibert_7series_gtx -vendor xilinx.com -library ip -version 3.0 -module_name ibert_7series_gtx_0
+
+	set_property -dict [list \
+		CONFIG.Component_Name {ibert_7series_gtx_0} \
+		CONFIG.C_PROTOCOL_USE_QUAD_PLL_1 {false} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_0 {MGTREFCLK1_112} \
+		CONFIG.C_SYSCLK_FREQUENCY {50.0} \
+		CONFIG.C_PROTOCOL_1 {Custom_1} \
+		CONFIG.C_PROTOCOL_MAXLINERATE_1 {3.125} \
+		CONFIG.C_PROTOCOL_RXREFCLK_FREQUENCY_1 {125.000} \
+		CONFIG.C_PROTOCOL_QUAD0 {Custom_1_/_3.125_Gbps} \
+		CONFIG.C_PROTOCOL_QUAD1 {None} \
+		CONFIG.C_PROTOCOL_QUAD2 {None} \
+		CONFIG.C_PROTOCOL_QUAD3 {None} \
+		CONFIG.C_PROTOCOL_QUAD4 {None} \
+		CONFIG.C_PROTOCOL_QUAD5 {None} \
+		CONFIG.C_PROTOCOL_QUAD6 {None} \
+		CONFIG.C_PROTOCOL_QUAD7 {None} \
+		CONFIG.C_PROTOCOL_QUAD8 {None} \
+		CONFIG.C_PROTOCOL_QUAD9 {None} \
+		CONFIG.C_PROTOCOL_QUAD10 {None} \
+		CONFIG.C_PROTOCOL_QUAD11 {None} \
+		CONFIG.C_PROTOCOL_QUAD12 {None} \
+		CONFIG.C_PROTOCOL_QUAD13 {None} \
+		CONFIG.C_PROTOCOL_QUAD14 {None} \
+		CONFIG.C_PROTOCOL_QUAD15 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_1 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_2 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_3 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_4 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_5 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_6 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_7 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_8 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_9 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_10 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_11 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_12 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_13 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_14 {None} \
+		CONFIG.C_REFCLK_SOURCE_QUAD_15 {None} \
+		CONFIG.C_CHANNEL_QUAD_0 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_1 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_2 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_3 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_4 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_5 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_6 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_7 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_8 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_9 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_10 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_11 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_12 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_13 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_14 {Channel_0} \
+		CONFIG.C_CHANNEL_QUAD_15 {Channel_0} \
+		CONFIG.C_SYSCLOCK_SOURCE_INT {External} \
+	] [get_ips ibert_7series_gtx_0]
+
+}
 
 # Load local source Code and constraints
 loadSource      -dir "$::DIR_PATH/hdl/"

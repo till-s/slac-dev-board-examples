@@ -19,5 +19,12 @@ export REMOVE_UNUSED_CODE = 1
 # which requires me to define the TOP_DIR path
 export TOP_DIR = $(abspath $(PWD)/../..)
 
+export IBERT_IMAGE = false
+
+PROJECT_true  = TE0715-tb7-ibert
+PROJECT_false = TE0715-tb7
+
+export PROJECT = $(PROJECT_$(IBERT_IMAGE))
+
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
