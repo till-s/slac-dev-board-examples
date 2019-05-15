@@ -35,6 +35,8 @@ entity AppReg is
       BUILD_INFO_G     : BuildInfoType;
       XIL_DEVICE_G     : string           := "7SERIES";
       AXIL_BASE_ADDR_G : slv(31 downto 0) := x"00000000";
+      IP_ADDR_G        : slv(31 downto 0) := x"410AA8C0";      -- 192.168.2.10 (ETH only)
+      MAC_ADDR_G       : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)
       USE_SLOWCLK_G    : boolean          := false;
       NUM_TRIGS_G      : natural          := 8;
       TPGMINI_G        : boolean          := true;
@@ -88,7 +90,9 @@ entity AppReg is
       axilReadMasters      : out AxiLiteReadMasterArray (NUM_EXT_SLAVES_G - 1 downto 0);
       axilReadSlaves       : in  AxiLiteReadSlaveArray  (NUM_EXT_SLAVES_G - 1 downto 0);
       axilWriteMasters     : out AxiLiteWriteMasterArray(NUM_EXT_SLAVES_G - 1 downto 0);
-      axilWriteSlaves      : in  AxiLiteWriteSlaveArray (NUM_EXT_SLAVES_G - 1 downto 0)
+      axilWriteSlaves      : in  AxiLiteWriteSlaveArray (NUM_EXT_SLAVES_G - 1 downto 0);
+      macAddrOut           : out slv(47 downto 0);
+      ipAddrOut            : out slv(31 downto 0)
    );
 end AppReg;
 
@@ -98,13 +102,33 @@ architecture mapping of AppReg is
 
    constant AXIL_CLK_FREQ_C    : real := 50.0E6;
    constant CLK_PERIOD_C       : real := 1.0/AXIL_CLK_FREQ_C;
-   constant NUM_WRITE_REG_C    : natural := 2;
-   constant NUM_READ_REG_C     : natural := 3;
+
 
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
    constant IRQ_ADDR_C         : slv(SHARED_MEM_WIDTH_C-1 downto 0) := (others => '1');
 
-   constant NUM_AXI_MASTERS_C : natural := 10 + NUM_EXT_SLAVES_G;
+   constant NUM_WRITE_REG_C    : natural := 5;
+
+   constant MISC_CTL_IDX_C  : natural := 0;
+   constant IRQ_CTL_IDX_C   : natural := 1;
+   constant IP_ADDR_IDX_C   : natural := 2;
+   constant MAC_ADDR_IDX_C  : natural := 3;
+
+   constant INI_WRITE_REG_C : Slv32Array(NUM_WRITE_REG_C - 1 downto 0) := (
+      MiSC_CTL_IDX_C     => x"0000_0000",
+      IRQ_CTL_IDX_C      => x"0000_0000",
+      IP_ADDR_IDX_C      => IP_ADDR_G,
+      MAC_ADDR_IDX_C     => MAC_ADDR_G(31 downto 0),
+      MAC_ADDR_IDX_C + 1 => (x"0000" & MAC_ADDR_G(47 downto 32))
+   );
+
+   constant NUM_READ_REG_C     : natural := 3;
+
+   constant TX_CLK_CNT_IDX_C   : natural := 0;
+   constant TIMING_STA_IDX_C   : natural := 1;
+   constant IRQ_STA_IDX_C      : natural := 2;
+
+   constant NUM_AXI_MASTERS_C  : natural := 10 + NUM_EXT_SLAVES_G;
 
    constant VERSION_INDEX_C : natural := 0;
    constant XADC_INDEX_C    : natural := 1;
@@ -117,6 +141,7 @@ architecture mapping of AppReg is
    constant TIM_COR_INDEX_C : natural := 8;
    constant TIM_TRG_INDEX_C : natural := 9;
    constant EXT_SLV_INDEX_C : natural :=10;
+
 
    constant AXI_CROSSBAR_MASTERS_CONFIG_C : AxiLiteCrossbarMasterConfigArray(NUM_AXI_MASTERS_C-1 downto 0) :=
       genAxiLiteConfig( NUM_AXI_MASTERS_C, AXIL_BASE_ADDR_G, 24, 20 );
@@ -367,7 +392,7 @@ begin
          clk     => clk,
          rst     => rst,
          dataIn  => cntLoc,
-         dataOut => readRegsLoc(0)
+         dataOut => readRegsLoc(TX_CLK_CNT_IDX_C)
       );
 
    U_SYNC_RX_STAT : entity work.SynchronizerVector
@@ -382,13 +407,14 @@ begin
          dataIn(2)  => timingRxStatus.bufferByDone,
          dataIn(3)  => timingRxStatus.bufferByErr,
          dataIn(4)  => timingTxStatus.resetDone,
-         dataOut    => readRegsLoc(1)(4 downto 0)
+         dataOut    => readRegsLoc(TIMING_STA_IDX_C)(4 downto 0)
       );
 
    U_LOC_REGS : entity work.AxiLiteRegs
       generic map (
          TPD_G            => TPD_G,
          NUM_WRITE_REG_G  => NUM_WRITE_REG_C,
+         INI_WRITE_REG_G  => INI_WRITE_REG_C,
          NUM_READ_REG_G   => NUM_READ_REG_C
       )
       port map (
@@ -404,7 +430,11 @@ begin
          readRegister     => readRegsLoc
      );
 
-   timingTxRstAllAxi <= writeRegsLoc(0)(0);
+   timingTxRstAllAxi <= writeRegsLoc(MISC_CTL_IDX_C)(0);
+
+   ipAddrOut                <= writeRegsLoc(IP_ADDR_IDX_C);
+   macAddrOut(31 downto  0) <= writeRegsLoc(MAC_ADDR_IDX_C    )(31 downto 0);
+   macAddrOut(47 downto 32) <= writeRegsLoc(MAC_ADDR_IDX_C + 1)(15 downto 0);
 
    GEN_TIMING : if ( GEN_TIMING_G ) generate
       signal clkAlwaysActive : sl := '1';
@@ -623,9 +653,9 @@ begin
       port map (
          clk        => clk,
          rst        => rst,
-         irqEnb     => writeRegsLoc(1)(NUM_LOC_IRQS_C - 1 downto 0), 
+         irqEnb     => writeRegsLoc(IRQ_CTL_IDX_C)(NUM_LOC_IRQS_C - 1 downto 0),
          irqOut     => irqOut(0),
-         irqPend    => readRegsLoc(2) (NUM_LOC_IRQS_C - 1 downto 0),
+         irqPend    => readRegsLoc(IRQ_STA_IDX_C) (NUM_LOC_IRQS_C - 1 downto 0),
          -- irqIn is synchronized into 'clk' domain
          irqIn      => locIrqs
       );

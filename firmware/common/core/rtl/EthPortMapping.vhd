@@ -39,6 +39,9 @@ entity EthPortMapping is
       -- Clock and Reset
       clk             : in  sl;
       rst             : in  sl;
+      -- Networking Addresses
+      ipAddrIn        : in  slv(31 downto 0) := IP_ADDR_G;
+      macAddrIn       : in  slv(47 downto 0) := MAC_ADDR_G;
       -- ETH interface
       txMaster        : out AxiStreamMasterType;
       txSlave         : in  AxiStreamSlaveType;
@@ -159,8 +162,8 @@ begin
          COMM_TIMEOUT_G => 30)
       port map (
          -- Local Configurations
-         localMac        => MAC_ADDR_G,
-         localIp         => IP_ADDR_G,
+         localMac        => macAddrIn,
+         localIp         => ipAddrIn,
          -- Interface to Ethernet Media Access Controller (MAC)
          obMacMaster     => rxMaster,
          obMacSlave      => rxSlave,
