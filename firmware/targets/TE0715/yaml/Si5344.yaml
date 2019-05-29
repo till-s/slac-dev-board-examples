@@ -1,0 +1,1886 @@
+#schemaversion 3.0.0
+
+Si5344: &Si5344
+  class: MMIODev
+  size:  0x1000
+  at:
+    nelms:       1
+    byteOrder:   LE
+    pageShift:   8
+    pageReg:     0x001
+  children:
+    DIE_REV:
+      class:     IntField
+      sizeBits:  4
+      mode:      RO
+      at: { offset: 0x000 }
+    PAGE:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x001 }
+    PN_BASE:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x002 }
+    GRADE:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x004 }
+    DEVICE_REV:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x005 }
+    TOOL_VERSION:
+      class:     IntField
+      sizeBits:  24
+      at: { offset: 0x006 }
+    TEMP_GRADE:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x009 }
+    PKG_ID:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x00a }
+    I2C_ADDR:
+      class:     IntField
+      sizeBits:  7
+      at: { offset: 0x00b }
+    SYSINCAL:
+      class:     IntField
+      sizeBits:  1
+      mode:      RO
+      at: { offset: 0x00c }
+    LOSXAXB:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x00c }
+    SMBUS_TIMEOUT:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      mode:      RO
+      at: { offset: 0x00c }
+    LOS:
+      class:     IntField
+      sizeBits:  4
+      mode:      RO
+      at: { offset: 0x00d }
+    OOF:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      mode:      RO
+      at: { offset: 0x00d }
+    LOL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x00e }
+    HOLD:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      mode:      RO
+      at: { offset: 0x00e }
+    CAL_PLL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      mode:      RO
+      at: { offset: 0x00f }
+    SYSINCAL_FLG:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x011 }
+    LOSXAXB_FLG:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x011 }
+    SMBUS_TIMEOUT_FLG:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x011 }
+    LOS_FLG:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x012 }
+    OOF_FLG:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x012 }
+    LOL_FLG:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x013 }
+    HOLD_FLG:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x013 }
+    CAL_FLG_PLL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x014 }
+    LOL_ON_HOLD:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x016 }
+    SYSINCAL_INTR_MSK:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x017 }
+    LOSXAXB_INTR_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x017 }
+    SMB_TMOUT_INTR_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x017 }
+    LOS_INTR_MSK:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x018 }
+    OOF_INTR_MSK:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x018 }
+    LOL_INTR_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x019 }
+    HOLD_INTR_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x019 }
+    CAL_INTR_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x01a }
+    SOFT_RST:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x01c }
+    SOFT_RST_ALL:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x01c }
+    SOFTCAL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x01c }
+    FINC:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x01d }
+    FDEC:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x01d }
+    PDN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x01e }
+    HARD_RST:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x01e }
+    SYNC:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x01e }
+    SPI_3WIRE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x02b }
+    AUTO_NDIV_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x02b }
+    LOS_EN:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x02c }
+    LOSXAXB_DIS:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x02c }
+    LOS0_VAL_TIME:
+      class:     IntField
+      sizeBits:  2
+      at: { offset: 0x02d }
+    LOS1_VAL_TIME:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     2
+      at: { offset: 0x02d }
+    LOS2_VAL_TIME:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x02d }
+    LOS3_VAL_TIME:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x02d }
+    LOS0_TRG_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x02e }
+    LOS1_TRG_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x030 }
+    LOS2_TRG_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x032 }
+    LOS3_TRG_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x034 }
+    LOS0_CLR_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x036 }
+    LOS1_CLR_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x038 }
+    LOS2_CLR_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x03a }
+    LOS3_CLR_THR:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x03c }
+    OOF_EN:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x03f }
+    FAST_OOF_EN:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x03f }
+    OOF_REF_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x040 }
+    OOF0_DIV_SEL:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x041 }
+    OOF1_DIV_SEL:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x042 }
+    OOF2_DIV_SEL:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x043 }
+    OOF3_DIV_SEL:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x044 }
+    OOFXO_DIV_SEL:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x045 }
+    OOF0_SET_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x046 }
+    OOF1_SET_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x047 }
+    OOF2_SET_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x048 }
+    OOF3_SET_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x049 }
+    OOF0_CLR_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x04a }
+    OOF1_CLR_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x04b }
+    OOF2_CLR_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x04c }
+    OOF3_CLR_THR:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x04d }
+    OOF0_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x04e }
+    OOF1_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x04e }
+    OOF2_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x04f }
+    OOF3_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x04f }
+    OOF_ON_LOS:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x050 }
+    FAST_OOF0_SET_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x051 }
+    FAST_OOF1_SET_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x052 }
+    FAST_OOF2_SET_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x053 }
+    FAST_OOF3_SET_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x054 }
+    FAST_OOF0_CLR_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x055 }
+    FAST_OOF1_CLR_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x056 }
+    FAST_OOF2_CLR_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x057 }
+    FAST_OOF3_CLR_THR:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x058 }
+    FAST_OOF0_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  2
+      at: { offset: 0x059 }
+    FAST_OOF1_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     2
+      at: { offset: 0x059 }
+    FAST_OOF2_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x059 }
+    FAST_OOF3_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x059 }
+    OOF0_RATIO_REF:
+      class:     IntField
+      sizeBits:  26
+      at: { offset: 0x05a }
+    OOF1_RATIO_REF:
+      class:     IntField
+      sizeBits:  26
+      at: { offset: 0x05e }
+    OOF2_RATIO_REF:
+      class:     IntField
+      sizeBits:  26
+      at: { offset: 0x062 }
+    OOF3_RATIO_REF:
+      class:     IntField
+      sizeBits:  26
+      at: { offset: 0x066 }
+    LOL_FST_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x092 }
+    LOL_FST_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x093 }
+    LOL_FST_VALWIN_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     2
+      at: { offset: 0x095 }
+    LOL_FST_SET_THR_SEL:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x096 }
+    LOL_FST_CLR_THR_SEL:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x098 }
+    LOL_SLOW_EN_PLL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x09a }
+    LOL_SLW_DETWIN_SEL:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x09b }
+    LOL_SLW_VALWIN_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     2
+      at: { offset: 0x09d }
+    LOL_SLW_SET_THR:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x09e }
+    LOL_SLW_CLR_THR:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x0a0 }
+    LOL_TIMER_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x0a2 }
+    LOL_CLR_DELAY_DIV256:
+      class:     IntField
+      sizeBits:  29
+      at: { offset: 0x0a9 }
+    ACTIVE_NVM_BANK:
+      class:     IntField
+      sizeBits:  8
+      mode:      RO
+      at: { offset: 0x0e2 }
+    FASTLOCK_EXTEND_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x0e5 }
+    FASTLOCK_EXTEND:
+      class:     IntField
+      sizeBits:  29
+      at: { offset: 0x0ea }
+    REG_0XF7_INTR:
+      class:     IntField
+      sizeBits:  1
+      mode:      RO
+      at: { offset: 0x0f6 }
+    REG_0XF8_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x0f6 }
+    REG_0XF9_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      mode:      RO
+      at: { offset: 0x0f6 }
+    SYSINCAL_INTR:
+      class:     IntField
+      sizeBits:  1
+      mode:      RO
+      at: { offset: 0x0f7 }
+    LOSXAXB_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x0f7 }
+    LOSREF_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      mode:      RO
+      at: { offset: 0x0f7 }
+    LOSVCO_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      mode:      RO
+      at: { offset: 0x0f7 }
+    SMBUS_TIME_OUT_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      mode:      RO
+      at: { offset: 0x0f7 }
+    LOS_INTR:
+      class:     IntField
+      sizeBits:  4
+      mode:      RO
+      at: { offset: 0x0f8 }
+    OOF_INTR:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      mode:      RO
+      at: { offset: 0x0f8 }
+    LOL_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x0f9 }
+    HOLD_INTR:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      mode:      RO
+      at: { offset: 0x0f9 }
+    OUTALL_DISABLE_LOW:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x102 }
+    OUT0_PDN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x112 }
+    OUT0_OE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x112 }
+    OUT0_RDIV_FORCE2:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x112 }
+    OUT0_FORMAT:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x113 }
+    OUT0_SYNC_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x113 }
+    OUT0_DIS_STATE:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x113 }
+    OUT0_CMOS_DRV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x113 }
+    OUT0_CM:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x114 }
+    OUT0_AMPL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x114 }
+    OUT0_MUX_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x115 }
+    OUT0_VDD_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x115 }
+    OUT0_VDD_SEL_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x115 }
+    OUT0_INV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x115 }
+    OUT1_PDN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x117 }
+    OUT1_OE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x117 }
+    OUT1_RDIV_FORCE2:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x117 }
+    OUT1_FORMAT:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x118 }
+    OUT1_SYNC_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x118 }
+    OUT1_DIS_STATE:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x118 }
+    OUT1_CMOS_DRV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x118 }
+    OUT1_CM:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x119 }
+    OUT1_AMPL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x119 }
+    OUT1_MUX_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x11a }
+    OUT1_VDD_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x11a }
+    OUT1_VDD_SEL_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x11a }
+    OUT1_INV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x11a }
+    OUT2_PDN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x126 }
+    OUT2_OE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x126 }
+    OUT2_RDIV_FORCE2:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x126 }
+    OUT2_FORMAT:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x127 }
+    OUT2_SYNC_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x127 }
+    OUT2_DIS_STATE:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x127 }
+    OUT2_CMOS_DRV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x127 }
+    OUT2_CM:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x128 }
+    OUT2_AMPL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x128 }
+    OUT2_MUX_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x129 }
+    OUT2_VDD_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x129 }
+    OUT2_VDD_SEL_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x129 }
+    OUT2_INV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x129 }
+    OUT3_PDN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x12b }
+    OUT3_OE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x12b }
+    OUT3_RDIV_FORCE2:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x12b }
+    OUT3_FORMAT:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x12c }
+    OUT3_SYNC_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x12c }
+    OUT3_DIS_STATE:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x12c }
+    OUT3_CMOS_DRV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x12c }
+    OUT3_CM:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x12d }
+    OUT3_AMPL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x12d }
+    OUT3_MUX_SEL:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x12e }
+    OUT3_VDD_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     4
+      at: { offset: 0x12e }
+    OUT3_VDD_SEL_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x12e }
+    OUT3_INV:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     6
+      at: { offset: 0x12e }
+    OUTX_ALWAYS_ON:
+      class:     IntField
+      sizeBits:  12
+      at: { offset: 0x13f }
+    OUT_DIS_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x141 }
+    OUT_DIS_LOL_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x141 }
+    OUT_DIS_LOSXAXB_MSK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     6
+      at: { offset: 0x141 }
+    OUT_DIS_MSK_LOS_PFD:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     7
+      at: { offset: 0x141 }
+    OUT_DIS_MSK_LOL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x142 }
+    OUT_DIS_MSK_HOLD:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x142 }
+    OUT_PDN_ALL:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x145 }
+    DRV_RST:
+      class:     IntField
+      sizeBits:  12
+      at: { offset: 0x146 }
+    DRV_DIV_RST:
+      class:     IntField
+      sizeBits:  12
+      at: { offset: 0x148 }
+    PXAXB:
+      class:     IntField
+      sizeBits:  2
+      at: { offset: 0x206 }
+    P0_NUM:
+      class:     IntField
+      sizeBits:  48
+      at: { offset: 0x208 }
+    P0_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x20e }
+    P1_NUM:
+      class:     IntField
+      sizeBits:  48
+      at: { offset: 0x212 }
+    P1_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x218 }
+    P2_NUM:
+      class:     IntField
+      sizeBits:  48
+      at: { offset: 0x21c }
+    P2_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x222 }
+    P3_NUM:
+      class:     IntField
+      sizeBits:  48
+      at: { offset: 0x226 }
+    P3_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x22c }
+    P0_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x230 }
+    P1_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x230 }
+    P2_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x230 }
+    P3_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x230 }
+    P0_FRACN_MODE:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x231 }
+    P0_FRACN_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x231 }
+    P1_FRACN_MODE:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x232 }
+    P1_FRACN_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x232 }
+    P2_FRACN_MODE:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x233 }
+    P2_FRACN_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x233 }
+    P3_FRACN_MODE:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x234 }
+    P3_FRACN_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x234 }
+    MXAXB_NUM:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x235 }
+    MXAXB_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x23b }
+    MXAXB_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x23f }
+    R0_REG:
+      class:     IntField
+      sizeBits:  24
+      at: { offset: 0x250 }
+    R1_REG:
+      class:     IntField
+      sizeBits:  24
+      at: { offset: 0x253 }
+    R2_REG:
+      class:     IntField
+      sizeBits:  24
+      at: { offset: 0x25c }
+    R3_REG:
+      class:     IntField
+      sizeBits:  24
+      at: { offset: 0x25f }
+    DESIGN_ID0:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x26b }
+    DESIGN_ID1:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x26c }
+    DESIGN_ID2:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x26d }
+    DESIGN_ID3:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x26e }
+    DESIGN_ID4:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x26f }
+    DESIGN_ID5:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x270 }
+    DESIGN_ID6:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x271 }
+    DESIGN_ID7:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x272 }
+    OPN_ID0:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x278 }
+    OPN_ID1:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x279 }
+    OPN_ID2:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x27a }
+    OPN_ID3:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x27b }
+    OPN_ID4:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x27c }
+    OPN_REVISION:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x27d }
+    BASELINE_ID:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x27e }
+    OOF0_TRG_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x28a }
+    OOF1_TRG_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x28b }
+    OOF2_TRG_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x28c }
+    OOF3_TRG_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x28d }
+    OOF0_CLR_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x28e }
+    OOF1_CLR_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x28f }
+    OOF2_CLR_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x290 }
+    OOF3_CLR_THR_EXT:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x291 }
+    FASTLOCK_EXTEND_SCL:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x294 }
+    LOL_SLW_VALWIN_SELX:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x296 }
+    FASTLOCK_DLY_ONSW_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x297 }
+    FASTLOCK_DLY_ONLOL_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x299 }
+    FASTLOCK_DLY_ONLOL:
+      class:     IntField
+      sizeBits:  20
+      at: { offset: 0x29d }
+    FASTLOCK_DLY_ONSW:
+      class:     IntField
+      sizeBits:  20
+      at: { offset: 0x2a9 }
+    LOL_NOSIG_TIME:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     2
+      at: { offset: 0x2b7 }
+    LOL_LOS_REFCLK:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x2b8 }
+    N0_NUM:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x302 }
+    N0_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x308 }
+    N0_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x30c }
+    N1_NUM:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x30d }
+    N1_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x313 }
+    N1_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x317 }
+    N2_NUM:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x318 }
+    N2_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x31e }
+    N2_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x322 }
+    N3_NUM:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x323 }
+    N3_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x329 }
+    N3_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x32d }
+    N_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x338 }
+    N_FSTEP_MSK:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x339 }
+    N0_FSTEPW:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x33b }
+    N1_FSTEPW:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x341 }
+    N2_FSTEPW:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x347 }
+    N3_FSTEPW:
+      class:     IntField
+      sizeBits:  44
+      at: { offset: 0x34d }
+    N0_DELAY:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x359 }
+    N1_DELAY:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x35b }
+    N2_DELAY:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x35d }
+    N3_DELAY:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x35f }
+    ZDM_EN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x487 }
+    ZDM_IN_SEL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     1
+      at: { offset: 0x487 }
+    ZDM_AUTOSW_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x487 }
+    BW0_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x508 }
+    BW1_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x509 }
+    BW2_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x50a }
+    BW3_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x50b }
+    BW4_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x50c }
+    BW5_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x50d }
+    FASTLOCK_BW0_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x50e }
+    FASTLOCK_BW1_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x50f }
+    FASTLOCK_BW2_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x510 }
+    FASTLOCK_BW3_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x511 }
+    FASTLOCK_BW4_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x512 }
+    FASTLOCK_BW5_PLL:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x513 }
+    BW_UPDATE_PLL:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x514 }
+    M_NUM:
+      class:     IntField
+      sizeBits:  56
+      at: { offset: 0x515 }
+    M_DEN:
+      class:     IntField
+      sizeBits:  32
+      at: { offset: 0x51c }
+    M_UPDATE:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x520 }
+    M_FRAC_MODE:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x521 }
+    M_FRAC_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x521 }
+    PLL_OUT_RATE_SEL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x521 }
+    IN_SEL_REGCTRL:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x52a }
+    IN_SEL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     1
+      at: { offset: 0x52a }
+    FASTLOCK_AUTO_EN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x52b }
+    FASTLOCK_MAN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x52b }
+    HOLD_EN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x52c }
+    HOLD_RAMP_BYP:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x52c }
+    HOLDEXIT_BW_SEL1:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x52c }
+    RAMP_STEP_INTERVAL:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     5
+      at: { offset: 0x52c }
+    HOLD_RAMPBYP_NOHIST:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x52d }
+    HOLD_HIST_LEN:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x52e }
+    HOLD_HIST_DELAY:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x52f }
+    HOLD_REF_COUNT_FRC:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x531 }
+    HOLD_15M_CYC_COUNT:
+      class:     IntField
+      sizeBits:  24
+      at: { offset: 0x532 }
+    FORCE_HOLD:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x535 }
+    CLK_SWITCH_MODE:
+      class:     IntField
+      sizeBits:  2
+      at: { offset: 0x536 }
+    HSW_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      at: { offset: 0x536 }
+    IN_LOS_MSK:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x537 }
+    IN_OOF_MSK:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x537 }
+    IN0_PRIORITY:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x538 }
+    IN1_PRIORITY:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x538 }
+    IN2_PRIORITY:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x539 }
+    IN3_PRIORITY:
+      class:     IntField
+      sizeBits:  3
+      lsBit:     4
+      at: { offset: 0x539 }
+    HSW_MODE:
+      class:     IntField
+      sizeBits:  2
+      at: { offset: 0x53a }
+    HSW_PHMEAS_CTRL:
+      class:     IntField
+      sizeBits:  2
+      lsBit:     2
+      at: { offset: 0x53a }
+    HSW_PHMEAS_THR:
+      class:     IntField
+      sizeBits:  10
+      at: { offset: 0x53b }
+    HSW_COARSE_PM_LEN:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x53d }
+    HSW_COARSE_PM_DLY:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0x53e }
+    HOLD_HIST_VALID:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      mode:      RO
+      at: { offset: 0x53f }
+    FASTLOCK_STATUS:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     2
+      mode:      RO
+      at: { offset: 0x53f }
+    PFD_EN_DELAY:
+      class:     IntField
+      sizeBits:  13
+      at: { offset: 0x589 }
+    INIT_LP_CLOSE_HO:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     1
+      at: { offset: 0x59b }
+    HOLD_PRESERVE_HIST:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     4
+      at: { offset: 0x59b }
+    HOLD_FRZ_WITH_INTONLY:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0x59b }
+    HOLDEXIT_BW_SEL0:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     6
+      at: { offset: 0x59b }
+    HOLDEXIT_STD_BO:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     7
+      at: { offset: 0x59b }
+    HOLDEXIT_BW0:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x59d }
+    HOLDEXIT_BW1:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x59e }
+    HOLDEXIT_BW2:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x59f }
+    HOLDEXIT_BW3:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x5a0 }
+    HOLDEXIT_BW4:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x5a1 }
+    HOLDEXIT_BW5:
+      class:     IntField
+      sizeBits:  6
+      at: { offset: 0x5a2 }
+    RAMP_STEP_SIZE:
+      class:     IntField
+      sizeBits:  3
+      at: { offset: 0x5a6 }
+    RAMP_SWITCH_EN:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0x5a6 }
+    FIXREGSA0:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x802 }
+    FIXREGSD0:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x804 }
+    FIXREGSA1:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x805 }
+    FIXREGSD1:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x807 }
+    FIXREGSA2:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x808 }
+    FIXREGSD2:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x80a }
+    FIXREGSA3:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x80b }
+    FIXREGSD3:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x80d }
+    FIXREGSA4:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x80e }
+    FIXREGSD4:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x810 }
+    FIXREGSA5:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x811 }
+    FIXREGSD5:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x813 }
+    FIXREGSA6:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x814 }
+    FIXREGSD6:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x816 }
+    FIXREGSA7:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x817 }
+    FIXREGSD7:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x819 }
+    FIXREGSA8:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x81a }
+    FIXREGSD8:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x81c }
+    FIXREGSA9:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x81d }
+    FIXREGSD9:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x81f }
+    FIXREGSA10:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x820 }
+    FIXREGSD10:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x822 }
+    FIXREGSA11:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x823 }
+    FIXREGSD11:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x825 }
+    FIXREGSA12:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x826 }
+    FIXREGSD12:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x828 }
+    FIXREGSA13:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x829 }
+    FIXREGSD13:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x82b }
+    FIXREGSA14:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x82c }
+    FIXREGSD14:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x82e }
+    FIXREGSA15:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x82f }
+    FIXREGSD15:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x831 }
+    FIXREGSA16:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x832 }
+    FIXREGSD16:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x834 }
+    FIXREGSA17:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x835 }
+    FIXREGSD17:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x837 }
+    FIXREGSA18:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x838 }
+    FIXREGSD18:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x83a }
+    FIXREGSA19:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x83b }
+    FIXREGSD19:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x83d }
+    FIXREGSA20:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x83e }
+    FIXREGSD20:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x840 }
+    FIXREGSA21:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x841 }
+    FIXREGSD21:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x843 }
+    FIXREGSA22:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x844 }
+    FIXREGSD22:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x846 }
+    FIXREGSA23:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x847 }
+    FIXREGSD23:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x849 }
+    FIXREGSA24:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x84a }
+    FIXREGSD24:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x84c }
+    FIXREGSA25:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x84d }
+    FIXREGSD25:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x84f }
+    FIXREGSA26:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x850 }
+    FIXREGSD26:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x852 }
+    FIXREGSA27:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x853 }
+    FIXREGSD27:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x855 }
+    FIXREGSA28:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x856 }
+    FIXREGSD28:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x858 }
+    FIXREGSA29:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x859 }
+    FIXREGSD29:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x85b }
+    FIXREGSA30:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x85c }
+    FIXREGSD30:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x85e }
+    FIXREGSA31:
+      class:     IntField
+      sizeBits:  16
+      at: { offset: 0x85f }
+    FIXREGSD31:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x861 }
+    XAXB_EXTCLK_EN:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x90e }
+    IO_VDD_SEL:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x943 }
+    IN_EN:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x949 }
+    IN_PULSED_CMOS_EN:
+      class:     IntField
+      sizeBits:  4
+      lsBit:     4
+      at: { offset: 0x949 }
+    INX_TO_PFD_EN:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0x94a }
+    REFCLK_HYS_SEL:
+      class:     IntField
+      sizeBits:  12
+      at: { offset: 0x94e }
+    MXAXB_INTEGER:
+      class:     IntField
+      sizeBits:  1
+      at: { offset: 0x95e }
+    N_ADD_0P5:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xa02 }
+    N_CLK_TO_OUTX_EN:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xa03 }
+    N_PIBYP:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xa04 }
+    N_PDNB:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xa05 }
+    N0_HIGH_FREQ:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0xa14 }
+    N1_HIGH_FREQ:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0xa1a }
+    N2_HIGH_FREQ:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0xa20 }
+    N3_HIGH_FREQ:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     3
+      at: { offset: 0xa26 }
+    PDIV_FRACN_CLK_DIS:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0xb44 }
+    FRACN_CLK_DIS_PLL:
+      class:     IntField
+      sizeBits:  1
+      lsBit:     5
+      at: { offset: 0xb44 }
+    LOS_CLK_DIS:
+      class:     IntField
+      sizeBits:  4
+      at: { offset: 0xb46 }
+    OOF_CLK_DIS:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xb47 }
+    OOF_DIV_CLK_DIS:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xb48 }
+    N_CLK_DIS:
+      class:     IntField
+      sizeBits:  5
+      at: { offset: 0xb4a }
+    VCO_RESET_CALCODE:
+      class:     IntField
+      sizeBits:  12
+      at: { offset: 0xb57 }
+    R_B24:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0xb24 }
+    R_B25:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0xb25 }
+    R_540:
+      class:     IntField
+      sizeBits:  8
+      at: { offset: 0x540 }
+    Preamble:
+      class:        SequenceCommand
+      description:  Execute before making changes to PLL
+      at:           { offset: 0x0 }
+      sequence:
+      - entry:      R_B24
+        value:      0xc0
+      - entry:      R_B25
+        value:      0x00
+      - entry:      R_540
+        value:      0x01
+      - entry:      usleep
+        value:      300000
+    Postamble:
+      class:        SequenceCommand
+      description:  Execute after making changes to PLL
+      at:           { offset: 0x0 }
+      sequence:
+      - entry:      BW_UPDATE_PLL
+        value:      0x01
+      - entry:      SOFT_RST_ALL
+        value:      0x01
+      - entry:      R_540
+        value:      0x00
+      - entry:      R_B24
+        value:      0xc3
+      - entry:      R_B25
+        value:      0x02

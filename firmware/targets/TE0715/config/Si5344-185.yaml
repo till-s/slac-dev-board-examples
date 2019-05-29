@@ -1,0 +1,13 @@
+      - Preamble:
+      - OOF2_DIV_SEL:          !<value> 0x0E
+      - OOF3_DIV_SEL:          !<value> 0x0E
+      - OOF2_RATIO_REF:        !<value> 0x0F79E79
+      - LOL_CLR_DELAY_DIV256:  !<value> 0x00006185
+      - P2_NUM:                !<value> 0x00000000005F
+      - P3_NUM:                !<value> 0x00000000005F
+      - MXAXB_NUM:             !<value> 0x0FD5BF70B69
+      - MXAXB_DEN:             !<value> 0xE8D4A510
+      - N0_NUM:                !<value> 0x01200000000
+      - M_NUM:                 !<value> 0x0002AC00000000
+      - HOLD_15M_CYC_COUNT:    !<value> 0x000355
+      - Postamble:

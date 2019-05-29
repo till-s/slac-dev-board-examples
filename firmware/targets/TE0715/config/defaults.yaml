@@ -1,0 +1,10 @@
+- mmio/AmcCarrierCore/AmcCarrierTiming:
+  - TPGMiniCore/TxPolarity: !<value> 1
+  - TPGMiniCore/TxLoopback: !<value> 0
+- i2c-2/Si5344:
+  - FORCE_HOLD:             !<value> 0
+- mmio/AmcCarrierCore/AmcCarrierTiming:
+  - EvrV2CoreTriggers:
+    - EvrV2ChannelReg/DestSelMode: !<value> "Dont_Care"
+    - EvrV2ChannelReg/Enable:      !<value> 1
+    - EvrV2TriggerReg/Width:       !<value> 10

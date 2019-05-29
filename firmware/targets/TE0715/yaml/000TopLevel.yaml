@@ -1,0 +1,267 @@
+##############################################################################
+## This file is part of 'LCLS2 Common Carrier Core'.
+## It is subject to the license terms in the LICENSE.txt file found in the
+## top-level directory of this distribution and at:
+##    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+## No part of 'LCLS2 Common Carrier Core', including this file,
+## may be copied, modified, propagated, or distributed except according to
+## the terms contained in the LICENSE.txt file.
+##############################################################################
+#schemaversion 3.0.0
+#once 000TopLevel.yaml
+#
+#include AxiVersion.yaml
+#include AxiXadc.yaml
+#include TimingFrameRx.yaml
+#include TPGMiniCore.yaml
+#include GthRxAlignCheck.yaml
+#include EvrV2CoreTriggers.yaml
+#include Si5344.yaml
+#include GigEthReg.yaml
+
+GuiBlacklist:
+  - "(.*/EvrV2ChannelReg.*/(Dest|Rate)Sel([0])?$)|(^/irq$)"
+
+
+#MMIO range, will be attached to FPGA
+mmio: &mmio
+  size: 0x01000000 # 4GB of address space
+  class: MMIODev
+  configPrio: 1
+  ########
+  children:
+  ########
+    AmcCarrierCore:
+      size: 0x01000000
+      class: MMIODev
+      at: { offset: 0x00000000 }
+      children:
+        AxiVersion:
+          <<: *AxiVersion
+          at:
+            offset: 0x000000
+        AxiXadc:
+          <<: *AxiXadc
+          at:
+            offset: 0x100000
+        LocRegs:
+          class: MMIODev
+          size:  0x200
+          at:
+            offset: 0x600000
+          children:
+            TxRefClkCnt:
+              class: IntField
+              mode:  RO
+              at:
+                offset: 0x000
+            RxStatusResetDone:
+              class: IntField
+              mode:  RO
+              sizeBits: 1
+              lsBit:    0
+              at:
+                offset: 0x004
+            RxStatusLocked:
+              class: IntField
+              mode:  RO
+              sizeBits: 1
+              lsBit:    1
+              at:
+                offset: 0x004
+            TxStatusResetDone:
+              class: IntField
+              mode:  RO
+              sizeBits: 1
+              lsBit:    4
+              at:
+                offset: 0x004
+            IrqsPending:
+              class: IntField
+              mode:  RO
+              at:
+                offset: 0x008
+            ClkSelIrqPending:
+              class: IntField
+              mode:  RO
+              sizeBits: 1
+              lsBit:    0
+              at:
+                offset: 0x008
+            RxLockedIrqPending:
+              class: IntField
+              mode:  RO
+              sizeBits: 1
+              lsBit:    1
+              at:
+                offset: 0x008
+            TxResetFull:
+              class: IntField
+              sizeBits: 1
+              lsBit:   0
+              description: "Reset TX AND TPGMini; NOTE: TPGMini UNRESPONSIVE while in reset (bus errors)"
+              enums:
+                - { name: Run  , value: 0 }
+                - { name: Reset, value: 1 }
+              at:
+                offset: 0x100
+            IrqsEnable:
+              class: IntField
+              at:
+                offset: 0x104
+            ClkSelIrqEnable:
+              class: IntField
+              sizeBits: 1
+              lsBit:    0
+              description: "Enable or Clear IRQ when LCLS-1/-2 clock selection changes"
+              enums: &IrqEnbMenu
+                - { name: Clear , value: 0 }
+                - { name: Enable, value: 1 }
+              at:
+                offset: 0x104
+            RxLockedIrqEnable:
+              class: IntField
+              sizeBits: 1
+              lsBit:    1
+              description: "Enable or Clear IRQ when RX lock state changes"
+              enums:
+                - { name: Clear , value: 0 }
+                - { name: Enable, value: 1 }
+              at:
+                offset: 0x104
+            TimingEthIpAddr:
+              class: IntField
+              sizeBits: 32
+              description: "IP Address of Timing Ethernet (if DHCP not active)"
+              at:
+                offset: 0x108
+            TimingEthMacAddr:
+              class: IntField
+              sizeBits: 48
+              description: "MAC Address of Timing Ethernet (make sure it's unique on LAN!)"
+              at:
+                offset: 0x10c
+        AmcCarrierTiming:
+          class: MMIODev
+          size:  0x300000
+          at:
+            offset: 0x700000
+          children:
+            TimingFrameRx:
+              <<: *TimingFrameRx
+              at:
+                offset: 0x100000
+            TPGMiniCore:
+              <<: *TPGMiniCore
+              at:
+                offset: 0x130000
+            GthRxAlignCheck:
+              <<: *GthRxAlignCheck
+              at:
+                offset: 0x000000
+            EvrV2CoreTriggers:
+              <<: *EvrV2CoreTriggers
+              at:
+                offset: 0x200000
+# FIXME: adjust size of AmcCarrierTiming
+#            Gthe3Channel:
+#              <<: *Gthe3Channel
+#              at:
+#                offset: 0x010000
+        GigEthMac:
+          <<: *GigEthReg
+          at:
+            offset: 0xA00000
+
+IpAddr: &IpAddr 192.168.10.30
+
+NetIODbg:
+  ipAddr: *IpAddr
+  class: NetIODev
+  configPrio: 1
+  children:
+    mmio:
+      <<: *mmio
+      at:
+        SRP:
+          protocolVersion: SRP_UDP_V2
+          dynTimeout:      true
+          timeoutUS:       800000
+        UDP:
+          port: 8192
+
+NetIODev:
+  ipAddr: *IpAddr
+  class: NetIODev
+  configPrio: 1
+  children:
+    mmio:
+      <<: *mmio
+      at:
+        SRP:
+          protocolVersion: SRP_UDP_V3
+          dynTimeout:      false
+          timeoutUS:       800000
+        TCP:
+          port: 8190
+
+root: &root
+  size: 0x01000000
+  class:     MemDev
+  fileName:  "/dev/uio0"
+  offset: 0x00000000
+  children:
+    mmio:
+      <<: *mmio
+      at:
+        nelms: 1
+        align: 4
+    i2c-2:
+      class: [LnxI2CDev, NullDev]
+      fileName: /dev/i2c-2
+      at:
+        nelms: 1
+      children:
+        Si5344:
+          <<: *Si5344
+          at:
+            i2cAddr: 0x68
+    irq:
+      class:     IntField
+      instantiate: True
+      sizeBits:  32
+      byteOrder: LE
+      singleInterfaceOnly: True
+      at:
+        { fileName: "/dev/uio0", seekable: False }
+    LoopBackMode:
+      class:     [DrvTimingLoopback, SequenceCommand]
+      description: "Loop-back the Mini-TPG to the TimingRX; note that the clock-recovery PLL is frozen in loopback mode (cannot lock to itself)."
+      at:
+        nelms: 1
+      enums:
+        - { name: "Loopback Off",       value: 0 }
+        - { name: "Internal Loopback",  value: 1 }
+        - { name: "External Loopback",  value: 2 }
+      sequence:
+        - 
+          - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxLoopback"
+            value: 0
+          - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxPolarity"
+            value: 1
+          - entry: "i2c-2/Si5344/FORCE_HOLD"
+            value: 0
+        - 
+          - entry: "i2c-2/Si5344/FORCE_HOLD"
+            value: 1
+          - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxPolarity"
+            value: 0
+          - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxLoopback"
+            value: 2
+        - 
+          - entry: "i2c-2/Si5344/FORCE_HOLD"
+            value: 1
+          - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxPolarity"
+            value: 1
+          - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxLoopback"
+            value: 0
