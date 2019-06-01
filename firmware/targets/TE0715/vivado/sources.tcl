@@ -7,4 +7,6 @@ if { [info exists ::env(IBERT_IMAGE)] == 1 } {
 	lappend genericArgList "IBERT_G=$::env(IBERT_IMAGE)"
 }
 
+lappend genericArgList "PRJ_PART_G=$::env(PRJ_PART)"
+
 set_property generic ${genericArgList} -objects [current_fileset]
