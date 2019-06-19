@@ -6,8 +6,7 @@ use     work.TimingPkg.all;
 package TimingConnectorPkg is
 
    type TimingWireIbType is record
-      refClkP        : sl;
-      refClkN        : sl;
+      refClk         : sl;
       rxP            : sl;
       rxN            : sl;
       -- GTP signals (must use external common block)
@@ -20,8 +19,7 @@ package TimingConnectorPkg is
    end record TimingWireIbType;
 
    constant TIMING_WIRE_IB_INIT_C : TimingWireIbType := (
-      refClkP        => '0',
-      refClkN        => '1',
+      refClk         => '0',
       rxP            => '0',
       rxN            => '1',
       rxPllSel       => "00",

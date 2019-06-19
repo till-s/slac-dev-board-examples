@@ -18,9 +18,21 @@ if { [llength [get_ips Ila_256]] == 0 } {
 }
 
 # Load Source Code
-loadSource -dir  "$::DIR_PATH/rtl/"
+loadSource -path "$::DIR_PATH/rtl/AppCore.vhd"
+loadSource -path "$::DIR_PATH/rtl/AppEdgeIrqCtrl.vhd"
+loadSource -path "$::DIR_PATH/rtl/AppReg.vhd"
+loadSource -path "$::DIR_PATH/rtl/EthPortMapping.vhd"
+loadSource -path "$::DIR_PATH/rtl/Ila_256Pkg.vhd"
+loadSource -path "$::DIR_PATH/rtl/TimingConnectorPkg.vhd"
+if { [ regexp "XC7Z(015|012).*" [string toupper "$::env(PRJ_PART)"] ] } {
+  loadSource -path "$::DIR_PATH/rtl/TimingGtpCoreWrapperAdv.vhd"
+} else {
+  loadSource -path "$::DIR_PATH/rtl/TimingGtCoreWrapperAdv.vhd"
+}
+
 # Load Block Designs and HDL Wrapper
 #loadBlockDesign -dir "$::DIR_PATH/bd/"
 #loadBlockDesign -path "$::DIR_PATH/bd/system_no_ila/system.bd" 
 #loadSource      -dir  "$::DIR_PATH/bd/"
+
 

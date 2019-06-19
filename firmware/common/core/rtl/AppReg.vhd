@@ -159,7 +159,6 @@ architecture mapping of AppReg is
    signal cntLoc       : slv(31 downto 0);
 
 
-   signal timingRefClk      : sl := '0';
    signal timingRecClkLoc   : sl := '0';
    signal timingRecRstLoc   : sl := '1';
    signal timingTxUsrClk    : sl := '0';
@@ -419,14 +418,14 @@ begin
       signal clkAlwaysActive : sl := '1';
    begin
 
-   P_TIMING_REF_CNT : process ( timingRefClk ) is
+   P_TIMING_REF_CNT : process ( timingIb.refClk ) is
    begin
-      if ( rising_edge( timingRefClk ) ) then
+      if ( rising_edge( timingIb.refClk ) ) then
          timingRefCnt <= timingRefCnt + 1;
       end if;
    end process P_TIMING_REF_CNT;
 
-   U_TimingGt : entity work.TimingGtCoreWrapper
+   U_TimingGt : entity work.TimingGtCoreWrapperAdv
       generic map (
          TPD_G              => TPD_G,
          AXIL_CLK_FREQ_G    => AXIL_CLK_FREQ_G,
@@ -443,7 +442,17 @@ begin
 
          stableClk          => clk,
 
-         gtRefClk           => timingRefClk,
+         gtRefClk           => timingIb.refClk,
+
+         gtRxPllSel         => timingIb.rxPllSel,
+         gtTxPllSel         => timingIb.txPllSel,
+
+         pllOutClk          => timingIb.pllClk,
+         pllOutRefClk       => timingIb.pllRefClk,
+         pllLocked          => timingIb.pllLocked,
+         pllRefClkLost      => timingIb.refClkLost,
+
+         pllRst             => timingOb.pllRst,
 
          gtRxP              => timingIb.rxP,
          gtRxN              => timingIb.rxN,
@@ -601,20 +610,6 @@ begin
          );
 
       timingTxUsrRst <= not timingTxStatus.resetDone and timingTxUsrRstEnb;
-
-      U_IBUF_GTX : IBUFDS_GTE2
-         generic map (
-            CLKRCV_TRST      => true, -- ug476
-            CLKCM_CFG        => true, -- ug476
-            CLKSWING_CFG     => "11"  -- ug476
-         )
-         port map (
-            I                => timingIb.refClkP,
-            IB               => timingIb.refClkN,
-            CEB              => '0',
-            O                => timingRefClk,
-            ODIV2            => open
-         );
 
    end generate;
 
