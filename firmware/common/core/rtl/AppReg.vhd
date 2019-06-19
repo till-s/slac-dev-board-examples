@@ -25,40 +25,47 @@ use work.AxiStreamPkg.all;
 use work.SsiPkg.all;
 use work.TimingPkg.all;
 use work.EthMacPkg.all;
+use work.TimingConnectorPkg.all;
 
 library unisim;
 use unisim.vcomponents.all;
 
 entity AppReg is
    generic (
-      TPD_G            : time             := 1 ns;
-      BUILD_INFO_G     : BuildInfoType;
-      XIL_DEVICE_G     : string           := "7SERIES";
-      AXIL_BASE_ADDR_G : slv(31 downto 0) := x"00000000";
-      IP_ADDR_G        : slv(31 downto 0) := x"410AA8C0";      -- 192.168.2.10 (ETH only)
-      MAC_ADDR_G       : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)
-      USE_SLOWCLK_G    : boolean          := false;
-      NUM_TRIGS_G      : natural          := 8;
-      TPGMINI_G        : boolean          := true;
-      GEN_TIMING_G     : boolean          := true;
-      TIMING_UDP_MSG_G : boolean          := false;
-      NUM_EXT_SLAVES_G : natural          := 1;
-      INVERT_POLARITY_G: slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
-      USE_ILAS_G       : slv(1 downto 0)  := "00");
+      TPD_G                  : time             := 1 ns;
+      BUILD_INFO_G           : BuildInfoType;
+      XIL_DEVICE_G           : string           := "7SERIES";
+      AXIL_BASE_ADDR_G       : slv(31 downto 0) := x"00000000";
+      AXIL_CLK_FREQ_G        : real             := 50.0E6;
+      IP_ADDR_G              : slv(31 downto 0) := x"410AA8C0";      -- 192.168.2.10 (ETH only)
+      MAC_ADDR_G             : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)
+      USE_SLOWCLK_G          : boolean          := false;
+      NUM_TRIGS_G            : natural          := 8;
+      TPGMINI_G              : boolean          := true;
+      GEN_TIMING_G           : boolean          := true;
+      TIMING_UDP_MSG_G       : boolean          := false;
+      NUM_EXT_SLAVES_G       : natural          := 1;
+      INVERT_TRIG_POLARITY_G : slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
+      USE_ILAS_G             : slv(1 downto 0)  := "00");
    port (
       -- Clock and Reset
       clk                  : in  sl;
       rst                  : in  sl;
       -- AXI-Lite interface
-      axilWriteMaster      : in  AxiLiteWriteMasterType;
-      axilWriteSlave       : out AxiLiteWriteSlaveType;
-      axilReadMaster       : in  AxiLiteReadMasterType;
-      axilReadSlave        : out AxiLiteReadSlaveType;
+      sAxilWriteMasters    : in  AxiLiteWriteMasterArray(1 downto 0) := (others => AXI_LITE_WRITE_MASTER_INIT_C);
+      sAxilWriteSlaves     : out AxiLiteWriteSlaveArray (1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_INIT_C );
+      sAxilReadMasters     : in  AxiLiteReadMasterArray (1 downto 0) := (others => AXI_LITE_READ_MASTER_INIT_C );
+      sAxilReadSlaves      : out AxiLiteReadSlaveArray  (1 downto 0) := (others => AXI_LITE_READ_SLAVE_INIT_C  );
       -- PBRS Interface
       pbrsTxMaster         : out AxiStreamMasterType;
       pbrsTxSlave          : in  AxiStreamSlaveType;
       pbrsRxMaster         : in  AxiStreamMasterType;
       pbrsRxSlave          : out AxiStreamSlaveType;
+      -- HLS/User Interface
+      hlsTxMaster          : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      hlsTxSlave           : in  AxiStreamSlaveType;
+      hlsRxMaster          : in  AxiStreamMasterType;
+      hlsRxSlave           : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- MB Interface
       mbTxMaster           : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       mbTxSlave            : in  AxiStreamSlaveType;
@@ -67,19 +74,11 @@ entity AppReg is
       -- ADC Ports
       vPIn                 : in  sl;
       vNIn                 : in  sl;
+
       -- Timing
-      timingRefClkP        : in  sl := '0';
-      timingRefClkN        : in  sl := '1';
-      timingRecClk         : out sl := '0';
-      timingRecRst         : out sl := '0';
-      timingRxP            : in  sl := '0';
-      timingRxN            : in  sl := '1';
-      timingTxP            : out sl;
-      timingTxN            : out sl;
-      timingTrig           : out TimingTrigType;
-      timingTxStat         : out TimingPhyStatusType;
-      timingRxStat         : out TimingPhyStatusType;
-      timingTxClk          : out sl;
+      timingIb             : in  TimingWireIbType := TIMING_WIRE_IB_INIT_C;
+      timingOb             : out TimingWireObType := TIMING_WIRE_OB_INIT_C;
+
       ibTimingEthMsgMaster : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       ibTimingEthMsgSlave  : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       obTimingEthMsgMaster : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
@@ -87,10 +86,10 @@ entity AppReg is
       -- IRQ
       irqOut               : out slv(7 downto 0)    := (others => '0');
       -- AXI Lite (external slaves)
-      axilReadMasters      : out AxiLiteReadMasterArray (NUM_EXT_SLAVES_G - 1 downto 0);
-      axilReadSlaves       : in  AxiLiteReadSlaveArray  (NUM_EXT_SLAVES_G - 1 downto 0);
-      axilWriteMasters     : out AxiLiteWriteMasterArray(NUM_EXT_SLAVES_G - 1 downto 0);
-      axilWriteSlaves      : in  AxiLiteWriteSlaveArray (NUM_EXT_SLAVES_G - 1 downto 0);
+      axilReadMasters      : out AxiLiteReadMasterArray (NUM_EXT_SLAVES_G - 1 downto 0) := (others => AXI_LITE_READ_MASTER_INIT_C);
+      axilReadSlaves       : in  AxiLiteReadSlaveArray  (NUM_EXT_SLAVES_G - 1 downto 0) := (others => AXI_LITE_READ_SLAVE_INIT_C);
+      axilWriteMasters     : out AxiLiteWriteMasterArray(NUM_EXT_SLAVES_G - 1 downto 0) := (others => AXI_LITE_WRITE_MASTER_INIT_C);
+      axilWriteSlaves      : in  AxiLiteWriteSlaveArray (NUM_EXT_SLAVES_G - 1 downto 0) := (others => AXI_LITE_WRITE_SLAVE_INIT_C);
       macAddrOut           : out slv(47 downto 0);
       ipAddrOut            : out slv(31 downto 0)
    );
@@ -100,8 +99,7 @@ architecture mapping of AppReg is
 
    constant NUM_LOC_IRQS_C     : natural := 2;
 
-   constant AXIL_CLK_FREQ_C    : real := 50.0E6;
-   constant CLK_PERIOD_C       : real := 1.0/AXIL_CLK_FREQ_C;
+   constant CLK_PERIOD_C       : real := 1.0/AXIL_CLK_FREQ_G;
 
 
    constant SHARED_MEM_WIDTH_C : positive                           := 10;
@@ -191,17 +189,11 @@ architecture mapping of AppReg is
    signal appTimingClk      : sl;
    signal appTimingRst      : sl;
 
-   signal axilReadSlaveLoc  : AxiLiteReadSlaveType;
-   signal axilWriteSlaveLoc : AxiLiteWriteSlaveType;
-
    signal locIrqs           : slv(NUM_LOC_IRQS_C - 1 downto 0);
 
 begin
 
    rstN <= not rst;
-
-   axilReadSlave  <= axilReadSlaveLoc;
-   axilWriteSlave <= axilWriteSlaveLoc;
 
    axilReadMasters (NUM_EXT_SLAVES_G - 1 downto 0) <= mAxilReadMasters (NUM_EXT_SLAVES_G + EXT_SLV_INDEX_C - 1 downto EXT_SLV_INDEX_C);
    axilWriteMasters(NUM_EXT_SLAVES_G - 1 downto 0) <= mAxilWriteMasters(NUM_EXT_SLAVES_G + EXT_SLV_INDEX_C - 1 downto EXT_SLV_INDEX_C);
@@ -214,33 +206,20 @@ begin
    U_XBAR : entity work.AxiLiteCrossbar
       generic map (
          TPD_G              => TPD_G,
-         NUM_SLAVE_SLOTS_G  => 1,
+         NUM_SLAVE_SLOTS_G  => 2,
          NUM_MASTER_SLOTS_G => NUM_AXI_MASTERS_C,
          MASTERS_CONFIG_G   => AXI_CROSSBAR_MASTERS_CONFIG_C)
       port map (
-         sAxiWriteMasters(0) => axilWriteMaster,
-         sAxiWriteSlaves(0)  => axilWriteSlaveLoc,
-         sAxiReadMasters(0)  => axilReadMaster,
-         sAxiReadSlaves(0)   => axilReadSlaveLoc,
+         sAxiWriteMasters    => sAxilWriteMasters,
+         sAxiWriteSlaves     => sAxilWriteSlaves,
+         sAxiReadMasters     => sAxilReadMasters,
+         sAxiReadSlaves      => sAxilReadSlaves,
          mAxiWriteMasters    => mAxilWriteMasters,
          mAxiWriteSlaves     => mAxilWriteSlaves,
          mAxiReadMasters     => mAxilReadMasters,
          mAxiReadSlaves      => mAxilReadSlaves,
          axiClk              => clk,
          axiClkRst           => rst);
-
-   GEN_ILA_0 : if ( (USE_ILAS_G and "01") /= "00") generate
-
-   U_Ila_0 : entity work.IlaAxiLite
-      port map (
-         axilClk        => clk,
-
-         mAxilRead      => axilReadMaster,
-         sAxilRead      => axilReadSlaveLoc,
-         mAxilWrite     => axilWriteMaster,
-         sAxilWrite     => axilWriteSlaveLoc
-      );
-   end generate;
 
    ---------------------------
    -- AXI-Lite: Version Module
@@ -450,7 +429,7 @@ begin
    U_TimingGt : entity work.TimingGtCoreWrapper
       generic map (
          TPD_G              => TPD_G,
-         AXIL_CLK_FREQ_G    => AXIL_CLK_FREQ_C,
+         AXIL_CLK_FREQ_G    => AXIL_CLK_FREQ_G,
          AXIL_BASE_ADDR_G   => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_GTX_INDEX_C).baseAddr
       )
       port map (
@@ -466,11 +445,11 @@ begin
 
          gtRefClk           => timingRefClk,
 
-         gtRxP              => timingRxP,
-         gtRxN              => timingRxN,
+         gtRxP              => timingIb.rxP,
+         gtRxN              => timingIb.rxN,
 
-         gtTxP              => timingTxP,
-         gtTxN              => timingTxN,
+         gtTxP              => timingOb.txP,
+         gtTxN              => timingOb.txN,
 
          rxControl          => timingRxControl,
          rxStatus           => timingRxStatus,
@@ -491,7 +470,7 @@ begin
          loopback           => timingLoopbackSel
       );
 
-   timingTxClk <= timingTxUsrClk;
+   timingOb.txClk <= timingTxUsrClk;
 
 
    P_TIMING_PHY : process( timingTxPhy, timingTxRstAllAxi, timingTxRstAsyn ) is
@@ -579,7 +558,7 @@ begin
          TPD_G               => TPD_G,
          NCHANNELS_G         => NUM_TRIGS_G, -- event selectors
          NTRIGGERS_G         => NUM_TRIGS_G,
-         INVERT_POLARITY_G   => INVERT_POLARITY_G,
+         INVERT_POLARITY_G   => INVERT_TRIG_POLARITY_G,
          TRIG_DEPTH_G        => 19,
          COMMON_CLK_G        => false,
          AXIL_BASEADDR_G     => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_TRG_INDEX_C).baseAddr
@@ -602,13 +581,13 @@ begin
       );
 
 
-      appTimingClk <= timingRecClkLoc;
-      appTimingRst <= timingRecRstLoc;
+      appTimingClk    <= timingRecClkLoc;
+      appTimingRst    <= timingRecRstLoc;
 
-      timingRecClk <= timingRecClkLoc;
-      timingRecRst <= timingRecRstLoc;
+      timingOb.recClk <= timingRecClkLoc;
+      timingOb.recRst <= timingRecRstLoc;
 
-      timingTrig   <= appTimingTrig;
+      timingOb.trig   <= appTimingTrig;
 
       U_RXCLK_RST : entity work.RstSync
          generic map (
@@ -630,8 +609,8 @@ begin
             CLKSWING_CFG     => "11"  -- ug476
          )
          port map (
-            I                => timingRefClkP,
-            IB               => timingRefClkN,
+            I                => timingIb.refClkP,
+            IB               => timingIb.refClkN,
             CEB              => '0',
             O                => timingRefClk,
             ODIV2            => open
@@ -639,11 +618,11 @@ begin
 
    end generate;
 
-   timingTxStat <= timingTxStatus;
-   timingRxStat <= timingRxStatus;
+   timingOb.txStat <= timingTxStatus;
+   timingOb.rxStat <= timingRxStatus;
 
-   locIrqs(0)   <= timingClkSel;
-   locIrqs(1)   <= timingRxStatus.locked;
+   locIrqs(0)      <= timingClkSel;
+   locIrqs(1)      <= timingRxStatus.locked;
 
    -- should probably be edge-triggered both ways...
    U_IRQ : entity work.AppEdgeIrqCtrl

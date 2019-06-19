@@ -61,6 +61,8 @@ entity EthPortMapping is
       -- MB Interface
       mbTxMaster      : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       mbTxSlave       : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
+      mbRxMaster      : out AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
+      mbRxSlave       : in  AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
       -- raw UDP Interface
       udpTxMaster     : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       udpTxSlave      : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
@@ -140,6 +142,7 @@ architecture mapping of EthPortMapping is
    signal rssiObSlaves    : AxiStreamSlaveArray(RSSI_SIZE_C-1 downto 0);
 
    signal spliceSOF       : AxiStreamMasterType;
+   signal SOF             : sl := '1';
 
 begin
 
@@ -276,7 +279,8 @@ begin
    ------------------------------
    -- Terminate Unused interfaces
    ------------------------------
-   rssiObSlaves(3) <= AXI_STREAM_SLAVE_FORCE_C;
+   mbRxMaster      <= rssiObMasters(3);
+   rssiObSlaves(3) <= mbRxSlave;
 
    end generate; -- if USE_RSSI_G
 
@@ -287,10 +291,22 @@ begin
       variable v : AxiStreamMasterType;
    begin
       v                   := spliceSOF;
-      v.tUser(1 downto 0) := "10";
+      v.tUser(1)          := SOF;
       ibServerMasters(JTAG_UDP_IDX_C)  <= v;
    end process P_SPLICE;
 
+   P_SOF : process ( clk ) is
+   begin
+      if ( rising_edge( clk ) ) then
+         if ( rst = '1' ) then
+            SOF <= '1';
+         else
+            if ( (spliceSOF.tValid and ibServerSlaves( JTAG_UDP_IDX_C ).tReady) = '1' ) then
+               SOF <= spliceSOF.tLast;
+            end if;
+         end if;
+      end if;
+   end process P_SOF; 
 
    U_AxisBscan : entity work.AxisJtagDebugBridge
       generic map (
