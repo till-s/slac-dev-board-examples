@@ -422,8 +422,7 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 #	create_ip -name proc_sys_reset -vendor xilinx.com -library ip -module_name ProcSysReset
 #}
 
-if { [info exists ::env(IBERT_IMAGE)] == 1 &&
-     $::env(IBERT_IMAGE) == "true"         &&
+if { $::env(IMAGE_VARIANT) == "ibert"         &&
      [llength [get_ips ibert_7series_gtx]] == 0 } {
 
 	create_ip -name ibert_7series_gtx -vendor xilinx.com -library ip -version 3.0 -module_name ibert_7series_gtx_0
@@ -489,8 +488,14 @@ if { [info exists ::env(IBERT_IMAGE)] == 1 &&
 }
 
 # Load local source Code and constraints
-loadSource      -dir "$::DIR_PATH/hdl/"
-loadConstraints -dir "$::DIR_PATH/hdl/"
+loadSource      -dir  "$::DIR_PATH/hdl/"
+loadConstraints -path "$::DIR_PATH/hdl/TE0715.xdc"
+loadConstraints -path "$::DIR_PATH/hdl/clock_groups.xdc"
+if       { $::env(IMAGE_VARIANT) == "devbd" } {
+	loadConstraints -path "$::DIR_PATH/hdl/pins-B13-devbrd.xdc"
+} else {
+	loadConstraints -path "$::DIR_PATH/hdl/pins-B13.xdc"
+}
 
 # some submodule ruckus.tcl's already set the strategy
 # (too late for our properties.tcl).

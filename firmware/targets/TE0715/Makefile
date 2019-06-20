@@ -6,8 +6,8 @@ target: prom bin
 export PRJ_VERSION = 0x00000001
 
 # Define target part
-export PRJ_PART = XC7Z015CLG485-2
-#export PRJ_PART = XC7Z030SBG485-1
+#export PRJ_PART = XC7Z015CLG485-2
+export PRJ_PART = XC7Z030SBG485-1
 #export PRJ_PART = XC7Z012SCLG485-1
 
 # Define the Microblaze source path
@@ -19,12 +19,17 @@ export REMOVE_UNUSED_CODE = 1
 # which requires me to define the TOP_DIR path
 export TOP_DIR = $(abspath $(PWD)/../..)
 
-export IBERT_IMAGE = false
+# Image variant:
+#
+# deflt, ibert, devbd
 
-PROJECT_true  = TE0715-tb7-ibert
-PROJECT_false = TE0715-tb7
+export IMAGE_VARIANT = deflt
 
-export PROJECT = $(PROJECT_$(IBERT_IMAGE))
+PROJECT_ibert = TE0715-tb7-ibert
+PROJECT_deflt = TE0715-tb7
+PROJECT_devbd = TE0715-tb7-devbd
+
+export PROJECT = $(PROJECT_$(IMAGE_VARIANT))
 
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
