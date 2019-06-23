@@ -60,11 +60,12 @@ entity DigilentZyboDevBoard is
       FIXED_IO_ps_clk   : inout STD_LOGIC;
       FIXED_IO_ps_porb  : inout STD_LOGIC;
       FIXED_IO_ps_srstb : inout STD_LOGIC;
-      btn               : in STD_LOGIC_VECTOR ( 3 downto 0 );
+      btn               : in    STD_LOGIC_VECTOR ( 3 downto 0 );
       iic_scl_io        : inout STD_LOGIC;
       iic_sda_io        : inout STD_LOGIC;
-      led               : out STD_LOGIC_VECTOR ( 3 downto 0 );
-      sw         :        in STD_LOGIC_VECTOR ( 3 downto 0 )
+      led               : out   STD_LOGIC_VECTOR ( 3 downto 0 );
+      sw                : in    STD_LOGIC_VECTOR ( 3 downto 0 );
+      pmodE             : inout STD_LOGIC_VECTOR ( 7 downto 0 )
    );
 end DigilentZyboDevBoard;
 
@@ -309,16 +310,9 @@ end component system_wrapper;
    signal   axiWriteSlave   : AxiWriteSlaveType      := AXI_WRITE_SLAVE_INIT_C;
    signal   axiReadSlave    : AxiReadSlaveType       := AXI_READ_SLAVE_INIT_C;
 
-   signal   dbgTxMaster     : AxiStreamMasterType    := AXI_STREAM_MASTER_INIT_C;
-   signal   dbgTxSlave      : AxiStreamSlaveType     := AXI_STREAM_SLAVE_FORCE_C;
-   signal   dbgRxMaster     : AxiStreamMasterType    := AXI_STREAM_MASTER_INIT_C;
-   signal   dbgRxSlave      : AxiStreamSlaveType     := AXI_STREAM_SLAVE_FORCE_C;
-
    signal   cnt             : unsigned(25 downto 0) := (others => '0');
    
    constant GEN_I_C   : boolean := false;
-   
-   constant REG_C   : slv(3 downto 0) := "0000";
    
 begin
 
@@ -487,19 +481,6 @@ begin
          USB0_VBUS_PWRSELECT           => open
       );
       
-   -- axiReadSlave  <= AXI_READ_SLAVE_FORCE_C;
-   -- axiWriteSlave <= AXI_WRITE_SLAVE_FORCE_C;
-      
-   U_Ila_Axi4 : entity work.IlaAxi4SurfWrapper
-      port map (
-         axiClk                        => sysClk,
-         axiRst                        => sysRst,
-         axiReadMaster                 => axiReadMaster,
-         axiReadSlave                  => axiReadSlave,
-         axiWriteMaster                => axiWriteMaster,
-         axiWriteSlave                 => axiWriteSlave
-      );
-      
    end generate;
       
    GEN_INTERCONN : if ( GEN_I_C and (GEN_SYS_C = 2) ) generate
@@ -612,39 +593,31 @@ begin
    -------------------
    -- AXI-Lite Modules
    -------------------
-   U_Reg : entity work.AppReg
+   U_Reg : entity work.AppCore
       generic map (
-         TPD_G            => TPD_G,
-         BUILD_INFO_G     => BUILD_INFO_G,
-         XIL_DEVICE_G     => "7SERIES",
-         AXIL_BASE_ADDR_G => x"40000000",
-         USE_SLOWCLK_G    => true,
-         FIFO_DEPTH_G     => FIFO_DEPTH_C,
-         GEN_TIMING_G     => false,
-         USE_ILAS_G       => "01")
+         TPD_G                => TPD_G,
+         BUILD_INFO_G         => BUILD_INFO_G,
+         XIL_DEVICE_G         => "7SERIES",
+         AXIL_BASE_ADDR_G     => x"40000000",
+         APP_TYPE_G           => "NONE", -- no ethernet
+         AXIL_CLK_FREQUENCY_G => CLK_FREQ_C,
+         TPGMINI_G            => false,
+         GEN_TIMING_G         => false
+      )
       port map (
          -- Clock and Reset
-         clk              => sysClk,
-         rst              => sysRst,
+         clk                  => sysClk,
+         rst                  => sysRst,
          -- AXI-Lite interface
-         axilWriteMaster  => axilWriteMaster,
-         axilWriteSlave   => axilWriteSlave,
-         axilReadMaster   => axilReadMaster,
-         axilReadSlave    => axilReadSlave,
-         -- PBRS Interface
-         pbrsTxMaster     => open,
-         pbrsTxSlave      => AXI_STREAM_SLAVE_FORCE_C,
-         pbrsRxMaster     => AXI_STREAM_MASTER_INIT_C,
-         pbrsRxSlave      => open,
-         -- Microblaze stream
-         mbTxMaster       => dbgTxMaster,
-         mbTxSlave        => dbgTxSlave,
-         mbRxMaster       => dbgRxMaster,
-         mbRxSlave        => dbgRxSlave,
+         sAxilWriteMaster     => axilWriteMaster,
+         sAxilWriteSlave      => axilWriteSlave,
+         sAxilReadMaster      => axilReadMaster,
+         sAxilReadSlave       => axilReadSlave,
          -- ADC Ports
-         vPIn             => '0',
-         vNIn             => '1',
-         irqOut           => appIrqs);
+         vPIn                 => '0',
+         vNIn                 => '1',
+         irqOut               => appIrqs
+      );
 
 --   GEN_HACK_1 : if (true) generate
 --      U_EMPTY : entity work.AxiLiteRegs
@@ -667,29 +640,6 @@ begin
 
    cpuIrqs(IRQ_MAX_C - 1 downto 0) <= appIrqs(IRQ_MAX_C - 1 downto 0);
 
---   GEN_XVC : if XVC_EN_G generate
-
---   U_AxisBscan : entity work.AxisDebugBridge
---      generic map (
---         TPD_G        => TPD_G,
---         AXIS_WIDTH_G => 4,
---         AXIS_FREQ_G  => CLK_FREQ_C,
---         CLK_DIV2_G   => 5,
---         MEM_DEPTH_G  => (2048/EMAC_AXIS_CONFIG_C.TDATA_BYTES_C)
---      )
---      port map (
---         axisClk      => sysClk,
---         axisRst      => sysRst,
-
---         mAxisReq     => dbgTxMaster,
---         sAxisReq     => dbgTxSlave,
-
---         mAxisTdo     => dbgRxMaster,
---         sAxisTdo     => dbgRxSlave
---      );
-
---   end generate;
-
    P_CNT : process (sysClk) is
    begin
       if ( rising_edge( sysClk ) ) then
@@ -704,6 +654,5 @@ begin
    led(2) <= '0';
    led(1) <= '0';
    led(0) <= cnt(25);
-
 
 end top_level;
