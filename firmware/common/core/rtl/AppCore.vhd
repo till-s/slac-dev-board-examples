@@ -45,7 +45,7 @@ entity AppCore is
       TIMING_GTP_HAS_COMMON_G : boolean          := true;
       NUM_TRIGS_G             : natural          := 8;
       TIMING_TRIG_INVERT_G    : slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
-      NUM_AXIL_SLAVES_G       : natural          := 0
+      NUM_AXIL_SLAVES_G       : natural          := 1
    );
    port (
       -- Clock and Reset
@@ -53,8 +53,8 @@ entity AppCore is
       rst              : in  sl;
       -- AXIS interface
       txMasters        : out AxiStreamMasterArray(AXIS_SIZE_G-1 downto 0);
-      txSlaves         : in  AxiStreamSlaveArray (AXIS_SIZE_G-1 downto 0);
-      rxMasters        : in  AxiStreamMasterArray(AXIS_SIZE_G-1 downto 0);
+      txSlaves         : in  AxiStreamSlaveArray (AXIS_SIZE_G-1 downto 0) := (others => AXI_STREAM_SLAVE_FORCE_C);
+      rxMasters        : in  AxiStreamMasterArray(AXIS_SIZE_G-1 downto 0) := (others => AXI_STREAM_MASTER_INIT_C);
       rxSlaves         : out AxiStreamSlaveArray (AXIS_SIZE_G-1 downto 0);
       rxCtrl           : out AxiStreamCtrlArray  (AXIS_SIZE_G-1 downto 0);
 
