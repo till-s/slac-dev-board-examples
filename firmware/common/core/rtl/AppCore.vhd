@@ -25,26 +25,27 @@ use work.TimingConnectorPkg.all;
 
 entity AppCore is
    generic (
-      TPD_G                : time             := 1 ns;
-      BUILD_INFO_G         : BuildInfoType;
-      XIL_DEVICE_G         : string           := "7SERIES";
-      AXIL_BASE_ADDR_G     : slv(31 downto 0) := x"00000000";
-      APP_TYPE_G           : string           := "ETH";
-      AXIS_SIZE_G          : positive         := 1;
-      MAC_ADDR_G           : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)
-      IP_ADDR_G            : slv(31 downto 0) := x"0A02A8C0";  -- 192.168.2.10 (ETH only)
-      DHCP_G               : boolean          := true;
-      JUMBO_G              : boolean          := false;
-      USE_RSSI_G           : boolean          := true;
-      USE_JTAG_G           : boolean          := true;
-      USER_UDP_PORT_G      : natural          := 0;
-      AXIL_CLK_FREQUENCY_G : real             := 50.0E6;
-      TPGMINI_G            : boolean          := true;
-      GEN_TIMING_G         : boolean          := true;
-      TIMING_UDP_MSG_G     : boolean          := true;
-      NUM_TRIGS_G          : natural          := 8;
-      TIMING_TRIG_INVERT_G : slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
-      NUM_AXIL_SLAVES_G    : natural          := 0
+      TPD_G                   : time             := 1 ns;
+      BUILD_INFO_G            : BuildInfoType;
+      XIL_DEVICE_G            : string           := "7SERIES";
+      AXIL_BASE_ADDR_G        : slv(31 downto 0) := x"00000000";
+      APP_TYPE_G              : string           := "ETH";
+      AXIS_SIZE_G             : positive         := 1;
+      MAC_ADDR_G              : slv(47 downto 0) := x"010300564400";  -- 00:44:56:00:03:01 (ETH only)
+      IP_ADDR_G               : slv(31 downto 0) := x"0A02A8C0";  -- 192.168.2.10 (ETH only)
+      DHCP_G                  : boolean          := true;
+      JUMBO_G                 : boolean          := false;
+      USE_RSSI_G              : boolean          := true;
+      USE_JTAG_G              : boolean          := true;
+      USER_UDP_PORT_G         : natural          := 0;
+      AXIL_CLK_FREQUENCY_G    : real             := 50.0E6;
+      TPGMINI_G               : boolean          := true;
+      GEN_TIMING_G            : boolean          := true;
+      TIMING_UDP_MSG_G        : boolean          := true;
+      TIMING_GTP_HAS_COMMON_G : boolean          := true;
+      NUM_TRIGS_G             : natural          := 8;
+      TIMING_TRIG_INVERT_G    : slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
+      NUM_AXIL_SLAVES_G       : natural          := 0
    );
    port (
       -- Clock and Reset
@@ -179,20 +180,21 @@ begin
    -------------------
    U_Reg : entity work.AppReg
       generic map (
-         TPD_G                  => TPD_G,
-         BUILD_INFO_G           => BUILD_INFO_G,
-         XIL_DEVICE_G           => XIL_DEVICE_G,
-         AXIL_BASE_ADDR_G       => AXIL_BASE_ADDR_G,
-         AXIL_CLK_FREQ_G        => AXIL_CLK_FREQUENCY_G,
-         MAC_ADDR_G             => MAC_ADDR_G,
-         IP_ADDR_G              => IP_ADDR_G,
-         USE_SLOWCLK_G          => true,
-         TPGMINI_G              => TPGMINI_G,
-         GEN_TIMING_G           => GEN_TIMING_G,
-         TIMING_UDP_MSG_G       => TIMING_UDP_MSG_G,
-         INVERT_TRIG_POLARITY_G => TIMING_TRIG_INVERT_G,
-         NUM_EXT_SLAVES_G       => NUM_AXIL_SLAVES_G,
-         NUM_TRIGS_G            => NUM_TRIGS_G
+         TPD_G                   => TPD_G,
+         BUILD_INFO_G            => BUILD_INFO_G,
+         XIL_DEVICE_G            => XIL_DEVICE_G,
+         AXIL_BASE_ADDR_G        => AXIL_BASE_ADDR_G,
+         AXIL_CLK_FREQ_G         => AXIL_CLK_FREQUENCY_G,
+         MAC_ADDR_G              => MAC_ADDR_G,
+         IP_ADDR_G               => IP_ADDR_G,
+         USE_SLOWCLK_G           => true,
+         TPGMINI_G               => TPGMINI_G,
+         GEN_TIMING_G            => GEN_TIMING_G,
+         TIMING_UDP_MSG_G        => TIMING_UDP_MSG_G,
+         TIMING_GTP_HAS_COMMON_G => TIMING_GTP_HAS_COMMON_G,
+         INVERT_TRIG_POLARITY_G  => TIMING_TRIG_INVERT_G,
+         NUM_EXT_SLAVES_G        => NUM_AXIL_SLAVES_G,
+         NUM_TRIGS_G             => NUM_TRIGS_G
       )
       port map (
          -- Clock and Reset

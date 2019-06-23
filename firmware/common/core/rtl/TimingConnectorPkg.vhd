@@ -14,6 +14,8 @@ package TimingConnectorPkg is
       txPllSel       : slv(1 downto 0);
       pllClk         : slv(1 downto 0);
       pllRefClk      : slv(1 downto 0);
+      pllRstRequest  : slv(1 downto 0);
+      debug          : slv(7 downto 0);
       pllLocked      : sl;
       refClkLost     : sl;
    end record TimingWireIbType;
@@ -26,6 +28,8 @@ package TimingConnectorPkg is
       txPllSel       => "00",
       pllClk         => "00",
       pllRefClk      => "00",
+      pllRstRequest  => "00",
+      debug          => x"00",
       pllLocked      => '0',
       refClkLost     => '0'
    );

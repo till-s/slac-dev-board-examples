@@ -44,6 +44,7 @@ entity AppReg is
       TPGMINI_G              : boolean          := true;
       GEN_TIMING_G           : boolean          := true;
       TIMING_UDP_MSG_G       : boolean          := false;
+      TIMING_GTP_HAS_COMMON_G: boolean          := true;
       NUM_EXT_SLAVES_G       : natural          := 1;
       INVERT_TRIG_POLARITY_G : slv              := ""; -- slv(NUM_TRIGS_G - 1 downto 0) -- defaults to all '0' when empty
       USE_ILAS_G             : slv(1 downto 0)  := "00");
@@ -375,7 +376,7 @@ begin
 
    U_SYNC_RX_STAT : entity work.SynchronizerVector
       generic map (
-         WIDTH_G => 5
+         WIDTH_G => 17
       )
       port map(
          clk        => clk,
@@ -385,7 +386,13 @@ begin
          dataIn(2)  => timingRxStatus.bufferByDone,
          dataIn(3)  => timingRxStatus.bufferByErr,
          dataIn(4)  => timingTxStatus.resetDone,
-         dataOut    => readRegsLoc(TIMING_STA_IDX_C)(4 downto 0)
+
+         dataIn(5)  => timingIb.pllRstRequest(0),
+         dataIn(6)  => timingIb.pllRstRequest(1),
+         dataIn(7)  => timingIb.pllLocked,
+         dataIn(8)  => timingIb.refClkLost,
+         dataIn(16 downto 9) => timingIb.debug,
+         dataOut    => readRegsLoc(TIMING_STA_IDX_C)(16 downto 0)
       );
 
    U_LOC_REGS : entity work.AxiLiteRegs
@@ -429,6 +436,7 @@ begin
       generic map (
          TPD_G              => TPD_G,
          AXIL_CLK_FREQ_G    => AXIL_CLK_FREQ_G,
+         WITH_COMMON_G      => TIMING_GTP_HAS_COMMON_G,
          AXIL_BASE_ADDR_G   => AXI_CROSSBAR_MASTERS_CONFIG_C(TIM_GTX_INDEX_C).baseAddr
       )
       port map (
