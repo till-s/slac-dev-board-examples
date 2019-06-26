@@ -7,11 +7,11 @@
 -- Description: Example using 1000BASE-SX Protocol
 -------------------------------------------------------------------------------
 -- This file is part of 'Example Project Firmware'.
--- It is subject to the license terms in the LICENSE.txt file found in the 
--- top-level directory of this distribution and at: 
---    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html. 
--- No part of 'Example Project Firmware', including this file, 
--- may be copied, modified, propagated, or distributed except according to 
+-- It is subject to the license terms in the LICENSE.txt file found in the
+-- top-level directory of this distribution and at:
+--    https://confluence.slac.stanford.edu/display/ppareg/LICENSE.html.
+-- No part of 'Example Project Firmware', including this file,
+-- may be copied, modified, propagated, or distributed except according to
 -- the terms contained in the LICENSE.txt file.
 -------------------------------------------------------------------------------
 
@@ -73,6 +73,11 @@ architecture top_level of DigilentZyboDevBoard is
 
   constant NUM_IRQS_C  : natural          := 16;
   constant CLK_FREQ_C  : real             := 100.0E6;
+
+  constant NUM_AXIL_SLAVES_C : natural    := 3;
+
+  constant IQS_PS_IIC_C      : boolean    := true;
+
 component system_ps_wrapper is
   port (
     DDR_addr : inout STD_LOGIC_VECTOR ( 14 downto 0 );
@@ -292,6 +297,11 @@ end component system_wrapper;
 
    constant IRQ_MAX_C       : natural := ite( NUM_IRQS_C > 8, 8, NUM_IRQS_C );
 
+   constant NUM_READ_REGS_C : natural    := 2;
+   constant NUM_WRITE_REGS_C: natural    := 2;
+   constant MEM_ADDR_WIDTH_C: positive := 10;
+
+
    signal   gpioI, gpioO, gpioT : slv(31 downto 0);
 
    signal   iicSclI, iicSclO, iicSclT : sl;
@@ -310,18 +320,62 @@ end component system_wrapper;
    signal   axiWriteSlave   : AxiWriteSlaveType      := AXI_WRITE_SLAVE_INIT_C;
    signal   axiReadSlave    : AxiReadSlaveType       := AXI_READ_SLAVE_INIT_C;
 
+   signal   axilReadMasters : AxiLiteReadMasterArray ( NUM_AXIL_SLAVES_C - 1 downto 0 );
+   signal   axilReadSlaves  : AxiLiteReadSlaveArray  ( NUM_AXIL_SLAVES_C - 1 downto 0 );
+   signal   axilWriteMasters: AxiLiteWriteMasterArray( NUM_AXIL_SLAVES_C - 1 downto 0 );
+   signal   axilWriteSlaves : AxiLiteWriteSlaveArray ( NUM_AXIL_SLAVES_C - 1 downto 0 );
+
    signal   cnt             : unsigned(25 downto 0) := (others => '0');
-   
+
+   signal   ledMux          : sl;
+   signal   muxPwm          : sl;
+   signal   ledPwm          : sl;
+   signal   iqsPwr          : sl;
+
+   signal   iqsSdaI         : sl;
+   signal   iqsSdaO         : sl := '0';
+   signal   iqsSdaT         : sl := '1';
+
+   signal   iqsSclI         : sl;
+   signal   iqsSclO         : sl := '0';
+   signal   iqsSclT         : sl := '0';
+
+   signal   readRegs        : Slv32Array( NUM_READ_REGS_C - 1 downto 0) := (others => (others => '0'));
+   signal   writeRegs       : Slv32Array( NUM_WRITE_REGS_C - 1 downto 0);
+
+
+   signal   wordsWritten    : unsigned( MEM_ADDR_WIDTH_C - 1 downto 0);
+
    constant GEN_I_C   : boolean := false;
-   
+
 begin
 
+   pmodE(0) <= ledMux;
+   pmodE(1) <= iqsPwr;
+   pmodE(5) <= ledPwm;
+
+   U_IqsSda : component IOBUF
+      port map (
+         IO => pmodE( 3 ),
+         I  => iqsSdaO,
+         T  => iqsSdaT,
+         O  => iqsSdaI
+      );
+
+   U_IqsScl : component IOBUF
+      port map (
+         IO => pmodE( 7 ),
+         I  => iqsSclO,
+         T  => iqsSclT,
+         O  => iqsSclI
+      );
+
    gpioI  <= (others => '0');
-  
+
 
    sysRst <= not sysRstN;
 
-   G_IICBUF : if ( GEN_SYS_C = 0 ) generate 
+   G_IICBUF : if ( GEN_SYS_C = 0 and not IQS_PS_IIC_C ) generate
    U_Scl : component IOBUF
       port map (
          IO => iic_scl_io,
@@ -338,7 +392,17 @@ begin
          T  => iicSdaT
       );
    end generate;
-   
+
+   GEN_PS_IIC : if ( IQS_PS_IIC_C ) generate
+      iqsSdaO <= iicSdaO;
+      iqsSdaT <= iicSdaT;
+      iicSdaI <= iqsSdaI;
+
+      iqsSclO <= iicSclO;
+      iqsSclT <= iicSclT;
+      iicSclI <= iqsSclI;
+   end generate;
+
    GEN_SYS_1 : if (GEN_SYS_C = 1) generate
    U_Sys : component system_wrapper
       port map (
@@ -389,7 +453,7 @@ begin
          FIXED_IO_PS_SRSTB        => FIXED_IO_ps_srstb
       );
    end generate;
-   
+
    NO_GEN_SYS : if ( GEN_SYS_C = 0 ) generate
      U_Sys : component ProcessingSystem
       port map (
@@ -480,9 +544,9 @@ begin
          USB0_VBUS_PWRFAULT            => '0',
          USB0_VBUS_PWRSELECT           => open
       );
-      
+
    end generate;
-      
+
    GEN_INTERCONN : if ( GEN_I_C and (GEN_SYS_C = 2) ) generate
       U_A2A : entity work.Axi4ToAxilSurfWrapper
          port map (
@@ -500,7 +564,7 @@ begin
             axilWriteSlave             => axilWriteSlave
         );
    end generate;
-   
+
    GEN_BOTH : if ( GEN_SYS_C = 2 ) generate
        U_Sys : entity work.system_ps_wrapper
       port map (
@@ -567,9 +631,9 @@ begin
          iic_scl_io                    => iic_scl_io,
          iic_sda_io                    => iic_sda_io
    );
-      
+
    end generate;
-   
+
    GEN_A2A : if ( not GEN_I_C ) generate
    U_A2A : entity work.AxiToAxiLite
       generic map (
@@ -578,7 +642,7 @@ begin
       port map (
          axiClk               => sysClk,
          axiClkRst            => sysRst,
-         
+
          axiReadMaster        => axiReadMaster,
          axiReadSlave         => axiReadSlave,
          axiWriteMaster       => axiWriteMaster,
@@ -602,7 +666,8 @@ begin
          APP_TYPE_G           => "NONE", -- no ethernet
          AXIL_CLK_FREQUENCY_G => CLK_FREQ_C,
          TPGMINI_G            => false,
-         GEN_TIMING_G         => false
+         GEN_TIMING_G         => false,
+         NUM_AXIL_SLAVES_G    => NUM_AXIL_SLAVES_C
       )
       port map (
          -- Clock and Reset
@@ -613,30 +678,82 @@ begin
          sAxilWriteSlave      => axilWriteSlave,
          sAxilReadMaster      => axilReadMaster,
          sAxilReadSlave       => axilReadSlave,
+
+         mAxilReadMasters     => axilReadMasters,
+         mAxilReadSlaves      => axilReadSlaves,
+         mAxilWriteMasters    => axilWriteMasters,
+         mAxilWriteSlaves     => axilWriteSlaves,
          -- ADC Ports
          vPIn                 => '0',
          vNIn                 => '1',
          irqOut               => appIrqs
       );
 
---   GEN_HACK_1 : if (true) generate
---      U_EMPTY : entity work.AxiLiteRegs
---         generic map (
---            TPD_G           => TPD_G,
---            NUM_WRITE_REG_G => 32,
---            NUM_READ_REG_G  => 32
---         )
---         port map (
---            axiClk          => sysClk,
---            axiClkRst       => sysRst,
---            axiReadMaster   => axilReadMaster,
---            axiReadSlave    => axilReadSlave,
---            axiWriteMaster  => axilWriteMaster,
---            axiWriteSlave   => axilWriteSlave,
---            writeRegister   => open,
---            readRegister    => (others => x"dead_beef")
---         );
---   end generate;
+   U_EMPTY : entity work.AxiLiteRegs
+      generic map (
+         TPD_G           => TPD_G,
+         NUM_WRITE_REG_G => NUM_WRITE_REGS_C,
+         NUM_READ_REG_G  => NUM_READ_REGS_C
+      )
+      port map (
+         axiClk          => sysClk,
+         axiClkRst       => sysRst,
+         axiReadMaster   => axilReadMasters (0),
+         axiReadSlave    => axilReadSlaves  (0),
+         axiWriteMaster  => axilWriteMasters(0),
+         axiWriteSlave   => axilWriteSlaves (0),
+         writeRegister   => writeRegs,
+         readRegister    => readRegs
+      );
+
+   I_I2C_SNIF : entity work.AxilI2CSniffer
+      generic map (
+         ADDR_WIDTH_G    => MEM_ADDR_WIDTH_C
+      )
+      port map (
+         axilClk         => sysClk,
+         axilRst         => sysRst,
+         axilReadMasters => axilReadMasters (2 downto 1),
+         axilReadSlaves  => axilReadSlaves  (2 downto 1),
+         axilWriteMasters=> axilWriteMasters(2 downto 1),
+         axilWriteSlaves => axilWriteSlaves (2 downto 1),
+         run             => writeRegs(0)(18),
+         sclIn           => iqsSclI,
+         sdaIn           => iqsSdaI,
+         len             => wordsWritten
+      );
+
+   readRegs(1)(MEM_ADDR_WIDTH_C - 1 downto 0) <= slv( wordsWritten );
+
+   U_MUX_PWM : entity work.LEDPWM
+      generic map (
+         CLK_FREQ_G => CLK_FREQ_C,
+         WIDTH_G    => 8
+      )
+      port map (
+         clk        => sysClk,
+         rst        => sysRst,
+         pw         => writeRegs(0)( 7 downto 0 ),
+         pwm        => muxPwm
+      );
+
+   ledMux <= muxPwm when writeRegs(0)(16) = '0' else not ledPwm;
+   iqsPwr <= writeRegs(0)(17);
+
+   readRegs(0)(0) <= iqsSdaI;
+   readRegs(0)(1) <= iqsSclI;
+
+   U_LED_PWM : entity work.LEDPWM
+      generic map (
+         CLK_FREQ_G => CLK_FREQ_C,
+         WIDTH_G    => 8
+      )
+      port map (
+         clk        => sysClk,
+         rst        => sysRst,
+         pw         => writeRegs(0)(15 downto 8),
+         pwm        => ledPwm
+      );
 
    cpuIrqs(IRQ_MAX_C - 1 downto 0) <= appIrqs(IRQ_MAX_C - 1 downto 0);
 
