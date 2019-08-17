@@ -422,9 +422,8 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 #	create_ip -name proc_sys_reset -vendor xilinx.com -library ip -module_name ProcSysReset
 #}
 
-if { [info exists ::env(IBERT_IMAGE)] == 1 &&
-     $::env(IBERT_IMAGE) == "true"         &&
-     [llength [get_ips ibert_7series_gtx]] == 0 } {
+if { $::env(IMAGE_TYPE) == "ibert"         &&
+     [llength [get_ips ibert_7series_gtx_0]] == 0 } {
 
 	create_ip -name ibert_7series_gtx -vendor xilinx.com -library ip -version 3.0 -module_name ibert_7series_gtx_0
 

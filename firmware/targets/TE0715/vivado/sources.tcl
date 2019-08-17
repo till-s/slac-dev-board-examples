@@ -3,8 +3,6 @@ set_property top TE0715 [current_fileset]
 
 set genericArgList [get_property generic [current_fileset]]
 
-if { [info exists ::env(IBERT_IMAGE)] == 1 } {
-	lappend genericArgList "IBERT_G=$::env(IBERT_IMAGE)"
-}
+lappend genericArgList "IMAGE_TYPE_G=$::env(IMAGE_TYPE)"
 
 set_property generic ${genericArgList} -objects [current_fileset]
