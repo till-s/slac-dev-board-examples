@@ -65,7 +65,9 @@ entity DigilentZyboDevBoard is
       iic_sda_io        : inout STD_LOGIC;
       led               : out   STD_LOGIC_VECTOR ( 3 downto 0 );
       sw                : in    STD_LOGIC_VECTOR ( 3 downto 0 );
-      pmodE             : inout STD_LOGIC_VECTOR ( 7 downto 0 )
+      pmodE             : inout STD_LOGIC_VECTOR ( 7 downto 0 );
+      vPIn              : in    STD_LOGIC;
+      vNIn              : in    STD_LOGIC
    );
 end DigilentZyboDevBoard;
 
@@ -345,6 +347,8 @@ end component system_wrapper;
 
 
    signal   wordsWritten    : unsigned( MEM_ADDR_WIDTH_C - 1 downto 0);
+
+   signal   tck, tms, tdi, tdo : sl;
 
    constant GEN_I_C   : boolean := false;
 
@@ -684,8 +688,8 @@ begin
          mAxilWriteMasters    => axilWriteMasters,
          mAxilWriteSlaves     => axilWriteSlaves,
          -- ADC Ports
-         vPIn                 => '0',
-         vNIn                 => '1',
+         vPIn                 => vPIn,
+         vNIn                 => vNIn,
          irqOut               => appIrqs
       );
 
@@ -708,7 +712,8 @@ begin
 
    I_I2C_SNIF : entity work.AxilI2CSniffer
       generic map (
-         ADDR_WIDTH_G    => MEM_ADDR_WIDTH_C
+         ADDR_WIDTH_G    => MEM_ADDR_WIDTH_C,
+         FILT_STAGES_G   => 100
       )
       port map (
          axilClk         => sysClk,
@@ -717,7 +722,7 @@ begin
          axilReadSlaves  => axilReadSlaves  (2 downto 1),
          axilWriteMasters=> axilWriteMasters(2 downto 1),
          axilWriteSlaves => axilWriteSlaves (2 downto 1),
-         run             => writeRegs(0)(18),
+         run             => writeRegs(0)(20),
          sclIn           => iqsSclI,
          sdaIn           => iqsSdaI,
          len             => wordsWritten
@@ -737,8 +742,21 @@ begin
          pwm        => muxPwm
       );
 
-   ledMux <= muxPwm when writeRegs(0)(16) = '0' else not ledPwm;
-   iqsPwr <= writeRegs(0)(17);
+   P_LEDMUX : process( writeRegs(0), ledPwm, iqsSclI, muxPwm ) is
+      variable v : sl;
+   begin
+      case ( writeRegs(0)(17 downto 16) ) is
+         when "01" =>
+            v := not ledPwm;
+         when "10" =>
+            v := iqsSclI;
+         when others =>
+            v := muxPwm;
+      end case;
+      ledMux <= v;
+   end process P_LEDMUX;
+
+   iqsPwr <= writeRegs(0)(18);
 
    readRegs(0)(0) <= iqsSdaI;
    readRegs(0)(1) <= iqsSclI;
