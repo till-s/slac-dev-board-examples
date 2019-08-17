@@ -21,13 +21,14 @@ export TOP_DIR = $(abspath $(PWD)/../..)
 
 # Image variant:
 #
-# deflt, ibert, devbd
+# deflt, ibert, devbd, toggle
 
-export IMAGE_VARIANT = devbd
+export IMAGE_VARIANT = deflt
 
 PROJECT_ibert = TE0715-tb7-ibert
 PROJECT_deflt = TE0715-tb7
 PROJECT_devbd = TE0715-tb7-devbd
+PROJECT_toggle= TE0715-tb7-toggle
 
 export PROJECT = $(PROJECT_$(IMAGE_VARIANT))
 
