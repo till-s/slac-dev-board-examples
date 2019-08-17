@@ -11,4 +11,5 @@ if { [VersionCheck 2016.4] < 0 } {
 loadRuckusTcl "$::DIR_PATH/submodules/surf"
 loadRuckusTcl "$::DIR_PATH/submodules/lcls-timing-core"
 loadRuckusTcl "$::DIR_PATH/submodules/ila-wrappers-for-surf"
+loadRuckusTcl "$::DIR_PATH/submodules/axi4"
 loadRuckusTcl "$::DIR_PATH/common"
