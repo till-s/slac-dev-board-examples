@@ -423,68 +423,44 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 #}
 
 if { $::env(IMAGE_VARIANT) == "ibert"         &&
-     [llength [get_ips ibert_7series_gtx_0]] == 0 } {
+     [llength [get_ips ibert_7series_gt_0]] == 0 } {
 
-	create_ip -name ibert_7series_gtx -vendor xilinx.com -library ip -version 3.0 -module_name ibert_7series_gtx_0
+	# Create IP; edit in gui setting
+	# line-rate (1300/7*20), refclk/(1300/7), sysclk (=FCLK0), data_width (40)
 
-	set_property -dict [list \
-		CONFIG.Component_Name {ibert_7series_gtx_0} \
-		CONFIG.C_PROTOCOL_USE_QUAD_PLL_1 {false} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_0 {MGTREFCLK1_112} \
-		CONFIG.C_SYSCLK_FREQUENCY {50.0} \
-		CONFIG.C_PROTOCOL_1 {Custom_1} \
-		CONFIG.C_PROTOCOL_MAXLINERATE_1 {3.125} \
-		CONFIG.C_PROTOCOL_RXREFCLK_FREQUENCY_1 {125.000} \
-		CONFIG.C_PROTOCOL_QUAD0 {Custom_1_/_3.125_Gbps} \
-		CONFIG.C_PROTOCOL_QUAD1 {None} \
-		CONFIG.C_PROTOCOL_QUAD2 {None} \
-		CONFIG.C_PROTOCOL_QUAD3 {None} \
-		CONFIG.C_PROTOCOL_QUAD4 {None} \
-		CONFIG.C_PROTOCOL_QUAD5 {None} \
-		CONFIG.C_PROTOCOL_QUAD6 {None} \
-		CONFIG.C_PROTOCOL_QUAD7 {None} \
-		CONFIG.C_PROTOCOL_QUAD8 {None} \
-		CONFIG.C_PROTOCOL_QUAD9 {None} \
-		CONFIG.C_PROTOCOL_QUAD10 {None} \
-		CONFIG.C_PROTOCOL_QUAD11 {None} \
-		CONFIG.C_PROTOCOL_QUAD12 {None} \
-		CONFIG.C_PROTOCOL_QUAD13 {None} \
-		CONFIG.C_PROTOCOL_QUAD14 {None} \
-		CONFIG.C_PROTOCOL_QUAD15 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_1 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_2 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_3 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_4 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_5 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_6 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_7 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_8 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_9 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_10 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_11 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_12 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_13 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_14 {None} \
-		CONFIG.C_REFCLK_SOURCE_QUAD_15 {None} \
-		CONFIG.C_CHANNEL_QUAD_0 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_1 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_2 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_3 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_4 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_5 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_6 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_7 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_8 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_9 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_10 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_11 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_12 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_13 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_14 {Channel_0} \
-		CONFIG.C_CHANNEL_QUAD_15 {Channel_0} \
-		CONFIG.C_SYSCLOCK_SOURCE_INT {External} \
-	] [get_ips ibert_7series_gtx_0]
+	if { [ regexp "XC7Z(015|012).*" [string toupper "$::env(PRJ_PART)"] ] } {
+		set ibertIpName "ibert_7series_gtp"
 
+		# Can't change data-width to 20 or 40, only 16 allowed
+		# Get placement errors (incorrect sysclk MMCM configuration)
+		# when using external SYSCLK; internal (from quad) builds...
+		set  ibertProps [ list \
+			CONFIG.C_PROTOCOL_MAXLINERATE_1 {3.716} \
+			CONFIG.C_PROTOCOL_RXREFCLK_FREQUENCY_1 {185.800} \
+			CONFIG.C_PROTOCOL_QUAD0 {Custom_1_/_3.716_Gbps} \
+			CONFIG.C_RXOUTCLK_FREQUENCY {232.25} \
+			CONFIG.C_SYSCLK_MODE_EXTERNAL {0} \
+			CONFIG.C_SYSCLK_FREQUENCY {185.800} \
+			CONFIG.C_SYSCLOCK_SOURCE_INT {QUAD112_0} \
+		]
+	} else {
+		set ibertIpName "ibert_7series_gtx"
+
+		set  ibertProps [ list \
+			CONFIG.C_PROTOCOL_MAXLINERATE_1 {3.716} \
+			CONFIG.C_PROTOCOL_RXREFCLK_FREQUENCY_1 {185.800} \
+			CONFIG.C_PROTOCOL_DATAWIDTH_1 {40} \
+			CONFIG.C_PROTOCOL_QUAD0 {Custom_1_/_3.716_Gbps} \
+			CONFIG.C_SYSCLK_FREQUENCY {50.00} \
+			CONFIG.C_RXOUTCLK_FREQUENCY {92.9} \
+		]
+	}
+
+	create_ip -name ${ibertIpName} -vendor xilinx.com -library ip -version 3.0 -module_name ibert_7series_gt_0
+
+	if { [info exists ibertProps] } {
+		set_property -dict ${ibertProps} [get_ips ibert_7series_gt_0]
+	}
 }
 
 # Load local source Code and constraints
