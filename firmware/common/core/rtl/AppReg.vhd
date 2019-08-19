@@ -114,7 +114,7 @@ architecture mapping of AppReg is
    constant MAC_ADDR_IDX_C  : natural := 3;
 
    constant INI_WRITE_REG_C : Slv32Array(NUM_WRITE_REG_C - 1 downto 0) := (
-      MiSC_CTL_IDX_C     => x"0000_0000",
+      MISC_CTL_IDX_C     => x"0000_0000",
       IRQ_CTL_IDX_C      => x"0000_0000",
       IP_ADDR_IDX_C      => IP_ADDR_G,
       MAC_ADDR_IDX_C     => MAC_ADDR_G(31 downto 0),
