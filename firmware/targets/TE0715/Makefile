@@ -23,7 +23,7 @@ export TOP_DIR = $(abspath $(PWD)/../..)
 #
 # deflt, ibert, devbd, toggle
 
-export IMAGE_VARIANT = ibert
+export IMAGE_VARIANT = deflt
 
 PROJECT_ibert = TE0715-tb7-ibert
 PROJECT_deflt = TE0715-tb7
