@@ -6,8 +6,8 @@ target: prom bin
 export PRJ_VERSION = 0x00000001
 
 # Define target part
-#export PRJ_PART = XC7Z015CLG485-2
-export PRJ_PART = XC7Z030SBG485-1
+export PRJ_PART = XC7Z015CLG485-2
+#export PRJ_PART = XC7Z030SBG485-1
 #export PRJ_PART = XC7Z012SCLG485-1
 
 # Define the Microblaze source path
@@ -23,7 +23,7 @@ export TOP_DIR = $(abspath $(PWD)/../..)
 #
 # deflt, ibert, devbd, toggle
 
-export IMAGE_VARIANT = deflt
+export IMAGE_VARIANT = devbd
 
 PROJECT_ibert = TE0715-tb7-ibert
 PROJECT_deflt = TE0715-tb7
