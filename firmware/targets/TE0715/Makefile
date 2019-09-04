@@ -32,6 +32,14 @@ PROJECT_toggle= TE0715-tb7-toggle
 
 export PROJECT = $(PROJECT_$(IMAGE_VARIANT))
 
+# Which MGT to use for the timing stream ethernet
+# 0: SGMII interface of TE0715 module's ethernet PHY
+#    (instead of PS ethernet)
+# 1: SFP closer to TE0715 module
+# 2: SFP closer to board edge (not present on development carrier)
+#
+# The MGT used for the timing fiber is 1 by default and 2 if
+# TIMING_ETH_MGT=1
 export TIMING_ETH_MGT=1
 
 # Use top level makefile
