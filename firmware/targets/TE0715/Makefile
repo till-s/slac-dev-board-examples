@@ -32,5 +32,7 @@ PROJECT_toggle= TE0715-tb7-toggle
 
 export PROJECT = $(PROJECT_$(IMAGE_VARIANT))
 
+export TIMING_ETH_MGT=1
+
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
