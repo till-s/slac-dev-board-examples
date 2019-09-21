@@ -3,12 +3,14 @@
 target: prom bin
 
 # Define Firmware Version Number
-export PRJ_VERSION = 0x00000001
+export PRJ_VERSION = 0x00000002
 
 # Define target part
-#export PRJ_PART = XC7Z015CLG485-2
-export PRJ_PART = XC7Z030SBG485-1
+export PRJ_PART = XC7Z015CLG485-2
+#export PRJ_PART = XC7Z030SBG485-1
 #export PRJ_PART = XC7Z012SCLG485-1
+
+PRJ_FAMILY = $(shell echo "$(PRJ_PART)" | sed -e 's/\(XC7Z\)\([0-9]\+\).*/7z\2/')
 
 # Define the Microblaze source path
 #export SDK_SRC_PATH = $(PROJ_DIR)/../../../common/core/src
@@ -30,7 +32,7 @@ PROJECT_deflt = TE0715-tb7
 PROJECT_devbd = TE0715-tb7-devbd
 PROJECT_toggle= TE0715-tb7-toggle
 
-export PROJECT = $(PROJECT_$(IMAGE_VARIANT))
+export PROJECT = $(PROJECT_$(IMAGE_VARIANT))-$(PRJ_FAMILY)
 
 # Which MGT to use for the timing stream ethernet
 # 0: SGMII interface of TE0715 module's ethernet PHY
@@ -44,3 +46,6 @@ export TIMING_ETH_MGT=2
 
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
+
+fam:
+	echo $(PRJ_FAMILY)
