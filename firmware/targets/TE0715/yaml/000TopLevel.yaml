@@ -55,6 +55,11 @@ mmio: &mmio
               mode:  RO
               at:
                 offset: 0x000
+            RxStatusRaw:
+              class: IntField
+              mode:  RO
+              at:
+                offset: 0x004
             RxStatusResetDone:
               class: IntField
               mode:  RO
@@ -204,6 +209,26 @@ NetIODev:
           timeoutUS:       800000
         TCP:
           port: 8190
+
+rootDevBrd: &rootDevBrd
+  size: 0x01000000
+  class:     MemDev
+  fileName:  "/dev/uio0"
+  offset: 0x00000000
+  children:
+    mmio:
+      <<: *mmio
+      at:
+        nelms: 1
+        align: 4
+    irq:
+      class:     IntField
+      instantiate: True
+      sizeBits:  32
+      byteOrder: LE
+      singleInterfaceOnly: True
+      at:
+        { fileName: "/dev/uio0", seekable: False }
 
 root: &root
   size: 0x01000000
