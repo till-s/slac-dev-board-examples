@@ -16,7 +16,6 @@
 #include TPGMiniCore.yaml
 #include GthRxAlignCheck.yaml
 #include EvrV2CoreTriggers.yaml
-#include Si5344.yaml
 #include GigEthReg.yaml
 
 GuiBlacklist:
@@ -210,26 +209,6 @@ NetIODev:
         TCP:
           port: 8190
 
-rootDevBrd: &rootDevBrd
-  size: 0x01000000
-  class:     MemDev
-  fileName:  "/dev/mem"
-  offset: 0x40000000
-  children:
-    mmio:
-      <<: *mmio
-      at:
-        nelms: 1
-        align: 4
-    irq:
-      class:     IntField
-      instantiate: True
-      sizeBits:  32
-      byteOrder: LE
-      singleInterfaceOnly: True
-      at:
-        { fileName: "/dev/uio0", seekable: False }
-
 root: &root
   size: 0x01000000
   class:     MemDev
@@ -241,16 +220,6 @@ root: &root
       at:
         nelms: 1
         align: 4
-    i2c-2:
-      class: [LnxI2CDev, NullDev]
-      fileName: /dev/i2c-2
-      at:
-        nelms: 1
-      children:
-        Si5344:
-          <<: *Si5344
-          at:
-            i2cAddr: 0x68
     irq:
       class:     IntField
       instantiate: True
@@ -260,7 +229,7 @@ root: &root
       at:
         { fileName: "/dev/uio0", seekable: False }
     LoopBackMode:
-      class:     [DrvTimingLoopback, SequenceCommand]
+      class:     SequenceCommand
       description: "Loop-back the Mini-TPG to the TimingRX; note that the clock-recovery PLL is frozen in loopback mode (cannot lock to itself)."
       at:
         nelms: 1
@@ -274,18 +243,12 @@ root: &root
             value: 0
           - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxPolarity"
             value: 1
-          - entry: "i2c-2/Si5344/FORCE_HOLD"
-            value: 0
         - 
-          - entry: "i2c-2/Si5344/FORCE_HOLD"
-            value: 1
           - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxPolarity"
             value: 0
           - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxLoopback"
             value: 2
         - 
-          - entry: "i2c-2/Si5344/FORCE_HOLD"
-            value: 1
           - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxPolarity"
             value: 1
           - entry: "mmio/AmcCarrierCore/AmcCarrierTiming/TPGMiniCore/TxLoopback"

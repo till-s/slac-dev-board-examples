@@ -48,12 +48,12 @@ export TIMING_ETH_MGT=2
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
 
-prom bin: yaml
+yaml: yaml-link
 
-yaml: .FORCE
-	$(RM) $@
+yaml-link: .FORCE
+	$(RM) yaml
 	if [ -d yaml-$(IMAGE_VARIANT) ]; then \
-      ln -s yaml-$(IMAGE_VARIANT) $@ ; \
+      ln -s yaml-$(IMAGE_VARIANT) yaml ; \
 	else \
 	  ln -s yaml-deflt yaml; \
 	fi
