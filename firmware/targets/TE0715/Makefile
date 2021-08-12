@@ -1,6 +1,6 @@
 
 # Define target output
-target: prom bin
+target: yaml-link prom bin
 
 # Define Firmware Version Number
 export PRJ_VERSION = 0x00000002
