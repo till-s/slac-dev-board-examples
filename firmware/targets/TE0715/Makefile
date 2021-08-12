@@ -48,5 +48,17 @@ export TIMING_ETH_MGT=2
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
 
+prom bin: yaml
+
+yaml: .FORCE
+	$(RM) $@
+	if [ -d yaml-$(IMAGE_VARIANT) ]; then \
+      ln -s yaml-$(IMAGE_VARIANT) $@ ; \
+	else \
+	  ln -s yaml-deflt yaml; \
+	fi
+
+.PHONY: .FORCE
+
 fam:
 	echo $(PRJ_FAMILY)
