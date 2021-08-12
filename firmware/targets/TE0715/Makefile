@@ -31,6 +31,7 @@ PROJECT_ibert = TE0715-tb7-ibert
 PROJECT_deflt = TE0715-tb7
 PROJECT_devbd = TE0715-tb7-devbd
 PROJECT_toggle= TE0715-tb7-toggle
+PROJECT_ecevr = TE0715-ec
 
 export PROJECT = $(PROJECT_$(IMAGE_VARIANT))-$(PRJ_FAMILY)
 
