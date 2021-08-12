@@ -48,7 +48,7 @@ export TIMING_ETH_MGT=2
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
 
-yaml: yaml-link
+prom bin yaml: yaml-link
 
 yaml-link: .FORCE
 	$(RM) yaml
