@@ -107,8 +107,8 @@ set_property PULLUP      true     [get_ports {pmodE[7]}]
 
 
 # XADC (PMODA-4)
-set_property PACKAGE_PIN K14 [get_ports {vPIn}]
-set_property IOSTANDARD LVCMOS33 [get_ports {vPIn}]
+#set_property PACKAGE_PIN K14 [get_ports {vPIn}]
+#set_property IOSTANDARD LVCMOS33 [get_ports {vPIn}]
 
-set_property PACKAGE_PIN J14 [get_ports {vNIn}]
-set_property IOSTANDARD LVCMOS33 [get_ports {vNIn}]
+#set_property PACKAGE_PIN J14 [get_ports {vNIn}]
+#set_property IOSTANDARD LVCMOS33 [get_ports {vNIn}]
