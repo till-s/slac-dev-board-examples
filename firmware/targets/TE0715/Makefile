@@ -25,7 +25,7 @@ export TOP_DIR = $(abspath $(PWD)/../..)
 #
 # tbox, ibert, devbd, toggle
 
-export IMAGE_VARIANT = ecevr-dio
+export IMAGE_VARIANT = ecevr-spi
 
 PROJECT_ibert     = TE0715-tb7-ibert
 PROJECT_tbox      = TE0715-tb7
