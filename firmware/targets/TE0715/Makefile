@@ -34,6 +34,11 @@ PROJECT_toggle    = TE0715-tb7-toggle
 PROJECT_ecevr-spi = TE0715-ec-spi
 PROJECT_ecevr-dio = TE0715-ec-dio
 
+PROJECT_yaml_ecevr-spi = yaml-ecevr
+PROJECT_yaml_ecevr-dio = yaml-ecevr
+
+PROJECT_yaml = $(PROJECT_yaml_$(IMAGE_VARIANT))
+
 export PROJECT = $(PROJECT_$(IMAGE_VARIANT))-$(PRJ_FAMILY)
 
 # Which MGT to use for the timing stream ethernet
@@ -46,20 +51,20 @@ export PROJECT = $(PROJECT_$(IMAGE_VARIANT))-$(PRJ_FAMILY)
 # TIMING_ETH_MGT=1
 export TIMING_ETH_MGT=2
 
+prom bin yaml: yaml-link
+
 # Use top level makefile
 include $(TOP_DIR)/submodules/ruckus/system_vivado.mk
 
-prom bin yaml: yaml-link
-
 yaml-link: .FORCE
 	$(RM) yaml
-	if [ -d yaml-$(IMAGE_VARIANT) ]; then \
-      ln -s yaml-$(IMAGE_VARIANT) yaml ; \
+	if [ -n "$(PROJECT_yaml)" -a -d $(PROJECT_yaml) ]; then \
+      ln -s $(PROJECT_yaml) yaml ; \
 	else \
 	  ln -s yaml-deflt yaml; \
 	fi
 
-.PHONY: .FORCE
+.PHONY: .FORCE yaml-link
 
 fam:
 	echo $(PRJ_FAMILY)
