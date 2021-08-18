@@ -23,7 +23,7 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 		CONFIG.PCW_ACT_QSPI_PERIPHERAL_FREQMHZ {200.000000} \
 		CONFIG.PCW_ACT_SDIO_PERIPHERAL_FREQMHZ {100.000000} \
 		CONFIG.PCW_ACT_SMC_PERIPHERAL_FREQMHZ {10.000000} \
-		CONFIG.PCW_ACT_SPI_PERIPHERAL_FREQMHZ {10.000000} \
+		CONFIG.PCW_ACT_SPI_PERIPHERAL_FREQMHZ {166.666672} \
 		CONFIG.PCW_ACT_TPIU_PERIPHERAL_FREQMHZ {200.000000} \
 		CONFIG.PCW_ACT_TTC0_CLK0_PERIPHERAL_FREQMHZ {111.111115} \
 		CONFIG.PCW_ACT_TTC0_CLK1_PERIPHERAL_FREQMHZ {111.111115} \
@@ -74,6 +74,7 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 		CONFIG.PCW_EN_EMIO_I2C0 {0} \
 		CONFIG.PCW_EN_EMIO_I2C1 {0} \
 		CONFIG.PCW_EN_EMIO_PJTAG {0} \
+		CONFIG.PCW_EN_EMIO_SPI0 {1} \
 		CONFIG.PCW_EN_EMIO_SPI1 {0} \
 		CONFIG.PCW_EN_EMIO_UART0 {0} \
 		CONFIG.PCW_EN_EMIO_WP_SDIO0 {0} \
@@ -86,6 +87,15 @@ if { [llength [get_ips processing_system7_0]] == 0 } {
 		CONFIG.PCW_EN_QSPI {1} \
 		CONFIG.PCW_EN_RST1_PORT {1} \
 		CONFIG.PCW_EN_SDIO0 {1} \
+		CONFIG.PCW_EN_SPI0 {1} \
+		CONFIG.PCW_SPI0_GRP_SS0_ENABLE {1} \
+		CONFIG.PCW_SPI0_GRP_SS0_IO {EMIO} \
+		CONFIG.PCW_SPI0_GRP_SS1_ENABLE {1} \
+		CONFIG.PCW_SPI0_GRP_SS1_IO {EMIO} \
+		CONFIG.PCW_SPI0_GRP_SS2_ENABLE {1} \
+		CONFIG.PCW_SPI0_GRP_SS2_IO {EMIO} \
+		CONFIG.PCW_SPI0_PERIPHERAL_ENABLE {1} \
+		CONFIG.PCW_SPI0_SPI0_IO    {EMIO} \
 		CONFIG.PCW_EN_SPI1 {0} \
 		CONFIG.PCW_EN_UART0 {1} \
 		CONFIG.PCW_EN_USB0 {1} \
@@ -464,14 +474,26 @@ if { $::env(IMAGE_VARIANT) == "ibert"         &&
 }
 
 # Load local source Code and constraints
-loadSource      -dir  "$::DIR_PATH/hdl/"
+foreach f {
+  ZynqBspPkg.vhd
+  TE0715Impl.vhd
+  AxilDebugBridge.vhd
+  ZynqIOBuf.vhd
+  ZynqOBufDS.vhd
+  ZynqSpiIOBuf.vhd
+} {
+  loadSource    -path "$::DIR_PATH/hdl/$f"
+}
+
+if { $::env(IMAGE_VARIANT) == "tbox" || $::env(IMAGE_VARIANT) == "toggle" } {
+  loadSource    -path "$::DIR_PATH/hdl/TE0715-tbox.vhd"
+} else {
+  loadSource    -path "$::DIR_PATH/hdl/TE0715-default.vhd"
+}
+
 loadConstraints -path "$::DIR_PATH/hdl/TE0715.xdc"
 loadConstraints -path "$::DIR_PATH/hdl/clock_groups.xdc"
-if       { $::env(IMAGE_VARIANT) == "devbd" } {
-	loadConstraints -path "$::DIR_PATH/hdl/pins-B13-devbrd.xdc"
-} else {
-	loadConstraints -path "$::DIR_PATH/hdl/pins-B13.xdc"
-}
+loadConstraints -path "$::DIR_PATH/hdl/io-pins.xdc"
 
 # some submodule ruckus.tcl's already set the strategy
 # (too late for our properties.tcl).

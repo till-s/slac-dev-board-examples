@@ -6,8 +6,8 @@ target: yaml-link prom bin
 export PRJ_VERSION = 0x00000002
 
 # Define target part
-#export PRJ_PART = XC7Z015CLG485-2
-export PRJ_PART = XC7Z030SBG485-1
+export PRJ_PART = XC7Z015CLG485-2
+#export PRJ_PART = XC7Z030SBG485-1
 #export PRJ_PART = XC7Z012SCLG485-1
 
 PRJ_FAMILY = $(shell echo "$(PRJ_PART)" | sed -e 's/\(XC7Z\)\([0-9]\+\).*/7z\2/')
@@ -23,15 +23,16 @@ export TOP_DIR = $(abspath $(PWD)/../..)
 
 # Image variant:
 #
-# deflt, ibert, devbd, toggle
+# tbox, ibert, devbd, toggle
 
-export IMAGE_VARIANT = deflt
+export IMAGE_VARIANT = ecevr-dio
 
-PROJECT_ibert = TE0715-tb7-ibert
-PROJECT_deflt = TE0715-tb7
-PROJECT_devbd = TE0715-tb7-devbd
-PROJECT_toggle= TE0715-tb7-toggle
-PROJECT_ecevr = TE0715-ec
+PROJECT_ibert     = TE0715-tb7-ibert
+PROJECT_tbox      = TE0715-tb7
+PROJECT_devbd     = TE0715-tb7-devbd
+PROJECT_toggle    = TE0715-tb7-toggle
+PROJECT_ecevr-spi = TE0715-ec-spi
+PROJECT_ecevr-dio = TE0715-ec-dio
 
 export PROJECT = $(PROJECT_$(IMAGE_VARIANT))-$(PRJ_FAMILY)
 
