@@ -476,10 +476,15 @@ if { $::env(IMAGE_VARIANT) == "ibert"         &&
 # Load local source Code and constraints
 foreach f {
   ZynqBspPkg.vhd
+  Lan9254Pkg.vhd
   TE0715Impl.vhd
   ZynqIOBuf.vhd
   ZynqOBufDS.vhd
   ZynqSpiIOBuf.vhd
+  Lan9254Hbi.vhd
+  AxilLan9254HbiMaster.vhd
+  AxilSpiMaster.vhd
+  SynchronizerBit.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
