@@ -25,17 +25,19 @@ export TOP_DIR = $(abspath $(PWD)/../..)
 #
 # tbox, ibert, devbd, toggle
 
-export IMAGE_VARIANT = ecevr-spi
+export IMAGE_VARIANT = ecevr-hbi16m
 
-PROJECT_ibert     = TE0715-tb7-ibert
-PROJECT_tbox      = TE0715-tb7
-PROJECT_devbd     = TE0715-tb7-devbd
-PROJECT_toggle    = TE0715-tb7-toggle
-PROJECT_ecevr-spi = TE0715-ec-spi
-PROJECT_ecevr-dio = TE0715-ec-dio
+PROJECT_ibert        = TE0715-tb7-ibert
+PROJECT_tbox         = TE0715-tb7
+PROJECT_devbd        = TE0715-tb7-devbd
+PROJECT_toggle       = TE0715-tb7-toggle
+PROJECT_ecevr-spi    = TE0715-ec-spi
+PROJECT_ecevr-dio    = TE0715-ec-dio
+PROJECT_ecevr-hbi16m = TE0715-ec-hbi16m
 
-PROJECT_yaml_ecevr-spi = yaml-ecevr
-PROJECT_yaml_ecevr-dio = yaml-ecevr
+PROJECT_yaml_ecevr-spi    = yaml-ecevr
+PROJECT_yaml_ecevr-dio    = yaml-ecevr
+PROJECT_yaml_ecevr-hbi16m = yaml-ecevr
 
 PROJECT_yaml = $(PROJECT_yaml_$(IMAGE_VARIANT))
 
