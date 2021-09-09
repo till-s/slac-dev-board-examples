@@ -482,6 +482,7 @@ foreach f {
   ZynqOBufDS.vhd
   ZynqSpiIOBuf.vhd
   Lan9254Hbi.vhd
+  Lan9254HbiImpl.vhd
   AxilLan9254HbiMaster.vhd
   AxilSpiMaster.vhd
   SynchronizerBit.vhd
