@@ -477,6 +477,10 @@ if { $::env(IMAGE_VARIANT) == "ibert"         &&
 foreach f {
   ZynqBspPkg.vhd
   Lan9254Pkg.vhd
+  Lan9254ESCPkg.vhd
+  EEEmulPkg.vhd
+  EEPROMContentPkg.vhd
+  Lan9254ESC.vhd
   TE0715Impl.vhd
   ZynqIOBuf.vhd
   ZynqOBufDS.vhd
