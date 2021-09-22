@@ -10,3 +10,6 @@
 [submodule "firmware/submodules/ila-wrappers-for-surf"]
 	path = firmware/submodules/ila-wrappers-for-surf
 	url = https://github.com/slaclab/ila-wrappers-for-surf
+[submodule "firmware/submodules/lan9254-rtl-esc"]
+	path = firmware/submodules/lan9254-rtl-esc
+	url = https://github.com/paulscherrerinstitute/lan9254-rtl-esc.git
