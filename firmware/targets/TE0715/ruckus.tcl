@@ -477,6 +477,7 @@ if { $::env(IMAGE_VARIANT) == "ibert"         &&
 foreach f {
   ZynqBspPkg.vhd
   TE0715Impl.vhd
+  PhaseDetector.vhd
   ZynqIOBuf.vhd
   ZynqOBufDS.vhd
   ZynqSpiIOBuf.vhd
