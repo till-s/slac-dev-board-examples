@@ -483,6 +483,8 @@ foreach f {
   ZynqSpiIOBuf.vhd
   AxilLan9254HbiMaster.vhd
   AxilSpiMaster.vhd
+  evr320_udp2bus.vhd
+  evr320_udp2bus_wrapper.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }

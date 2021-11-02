@@ -13,3 +13,10 @@
 [submodule "firmware/submodules/lan9254-rtl-esc"]
 	path = firmware/submodules/lan9254-rtl-esc
 	url = https://github.com/paulscherrerinstitute/lan9254-rtl-esc.git
+[submodule "firmware/submodules/psi_common"]
+	path = firmware/submodules/psi_common
+	url = https://github.com/paulscherrerinstitute/psi_common
+[submodule "firmware/submodules/evr320"]
+	path = firmware/submodules/evr320
+	url = https://git.psi.ch/straumann_t/evr320.git/
+	branch = straumann_t
