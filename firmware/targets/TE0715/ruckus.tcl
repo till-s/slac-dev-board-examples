@@ -480,6 +480,7 @@ foreach f {
   ZynqIOBuf.vhd
   ZynqOBufDS.vhd
   ZynqSpiIOBuf.vhd
+  AxilSpiMaster.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
