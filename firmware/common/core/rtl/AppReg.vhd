@@ -166,6 +166,7 @@ architecture mapping of AppReg is
    signal timingTxUsrRst    : sl := '1';
    signal timingTxUsrRstEnb : sl := '1';
    signal timingTxRstAllAxi : sl;
+   signal timingTxRstAllAxiD: sl := '0';
    signal timingTxRstAllTmg : sl;
    signal timingCdrStable   : sl;
    signal timingLoopback    : slv(2 downto 0) := "000";
@@ -487,12 +488,24 @@ begin
 
    timingOb.txClk <= timingTxUsrClk;
 
+   P_TXRESET_DLY : process ( clk ) is
+   begin
+      if ( rising_edge( clk ) ) then
+         if ( rst = '1' ) then
+            timingTxRstAllAxiD <= '0';
+         else
+            timingTxRstAllAxiD <= timingTxRstAllAxi;
+         end if;
+      end if;
+   end process P_TXRESET_DLY;
 
    P_TIMING_PHY : process( timingTxPhy, timingTxRstAllAxi, timingTxRstAsyn ) is
       variable v : TimingPhyType;
    begin
       v                  := timingTxPhy;
-      v.control.reset    := timingTxPhy.control.reset or timingTxRstAsyn or timingTxRstAllAxi;
+      v.control.reset    :=    timingTxPhy.control.reset
+                            or timingTxRstAsyn
+                            or (timingTxRstAllAxi and not timingTxRstAllAxiD);
 
       timingTxPhyLoc     <= v;
    end process P_TIMING_PHY;
