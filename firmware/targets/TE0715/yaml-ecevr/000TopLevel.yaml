@@ -227,7 +227,7 @@ root: &root
       byteOrder: LE
       singleInterfaceOnly: True
       at:
-        { fileName: "/dev/uio0", seekable: False }
+        { fileName: "/dev/uio1", seekable: False }
     LoopBackMode:
       class:     SequenceCommand
       description: "Loop-back the Mini-TPG to the TimingRX; note that the clock-recovery PLL is frozen in loopback mode (cannot lock to itself)."
