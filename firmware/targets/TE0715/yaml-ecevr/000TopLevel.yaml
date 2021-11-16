@@ -230,6 +230,7 @@ root: &root
         { fileName: "/dev/uio0", seekable: False }
     LoopBackMode:
       class:     SequenceCommand
+      instantiate: False
       description: "Loop-back the Mini-TPG to the TimingRX; note that the clock-recovery PLL is frozen in loopback mode (cannot lock to itself)."
       at:
         nelms: 1
