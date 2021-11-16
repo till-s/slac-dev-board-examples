@@ -22,6 +22,7 @@ use work.StdRtlPkg.all;
 use work.AxiStreamPkg.all;
 use work.AxiLitePkg.all;
 use work.TimingConnectorPkg.all;
+use work.TimingPkg.all;
 
 entity AppCore is
    generic (
@@ -70,6 +71,7 @@ entity AppCore is
       -- Timing MGT
       timingIb         : in  TimingWireIbType := TIMING_WIRE_IB_INIT_C;
       timingOb         : out TimingWireObType := TIMING_WIRE_OB_INIT_C;
+      timingRx         : out TimingRxType     := TIMING_RX_INIT_C;
       -- IRQ
       irqOut           : out slv(7 downto 0);
       -- ADC Ports
@@ -228,6 +230,7 @@ begin
          -- Timing
          timingIb             => timingIb,
          timingOb             => timingOb,
+         timingRx             => timingRx,
 
          obTimingEthMsgMaster => timingTxMaster,
          obTimingEthMsgSlave  => timingTxSlave,

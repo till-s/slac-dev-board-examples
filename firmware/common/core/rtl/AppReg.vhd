@@ -79,6 +79,7 @@ entity AppReg is
       -- Timing
       timingIb             : in  TimingWireIbType := TIMING_WIRE_IB_INIT_C;
       timingOb             : out TimingWireObType := TIMING_WIRE_OB_INIT_C;
+      timingRx             : out TimingRxType     := TIMING_RX_INIT_C;
 
       ibTimingEthMsgMaster : in  AxiStreamMasterType := AXI_STREAM_MASTER_INIT_C;
       ibTimingEthMsgSlave  : out AxiStreamSlaveType  := AXI_STREAM_SLAVE_FORCE_C;
@@ -639,5 +640,7 @@ begin
          -- irqIn is synchronized into 'clk' domain
          irqIn      => locIrqs
       );
+
+   timingRx <= timingRxPhy;
 
 end mapping;
