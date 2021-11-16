@@ -499,7 +499,7 @@ begin
       end if;
    end process P_TXRESET_DLY;
 
-   P_TIMING_PHY : process( timingTxPhy, timingTxRstAllAxi, timingTxRstAsyn ) is
+   P_TIMING_PHY : process( timingTxPhy, timingTxRstAllAxi, timingTxRstAllAxiD, timingTxRstAsyn ) is
       variable v : TimingPhyType;
    begin
       v                  := timingTxPhy;
