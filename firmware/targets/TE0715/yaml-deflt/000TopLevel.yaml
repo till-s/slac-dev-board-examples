@@ -103,7 +103,7 @@ mmio: &mmio
               class: IntField
               sizeBits: 1
               lsBit:   0
-              description: "Reset TX AND TPGMini; NOTE: TPGMini UNRESPONSIVE while in reset (bus errors)"
+              description: "Reset TX AND TPGMini; NOTE: TPGMini UNRESPONSIVE while in reset (bus errors); use TxReset in TPGMini to just reset the transceiver"
               enums:
                 - { name: Run  , value: 0 }
                 - { name: Reset, value: 1 }
