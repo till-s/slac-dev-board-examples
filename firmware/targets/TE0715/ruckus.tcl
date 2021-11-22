@@ -485,6 +485,8 @@ foreach f {
   AxilSpiMaster.vhd
   evr320_udp2bus.vhd
   evr320_udp2bus_wrapper.vhd
+  EvrTxPDO.vhd
+  EvrTxPDOPkg.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
