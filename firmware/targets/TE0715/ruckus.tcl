@@ -487,6 +487,8 @@ foreach f {
   evr320_udp2bus_wrapper.vhd
   EvrTxPDO.vhd
   EvrTxPDOPkg.vhd
+  EEPROMConfigPkg.vhd
+  EEPROMConfigurator.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
