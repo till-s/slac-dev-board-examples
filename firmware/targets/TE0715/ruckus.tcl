@@ -490,6 +490,7 @@ foreach f {
   EEPROMConfigPkg.vhd
   EEPROMConfigurator.vhd
   PsiI2cStreamIF.vhd
+  Evr320ConfigPkg.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
