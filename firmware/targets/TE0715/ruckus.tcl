@@ -438,7 +438,7 @@ if { $::env(IMAGE_VARIANT) == "ibert"         &&
 	# Create IP; edit in gui setting
 	# line-rate (1300/7*20), refclk/(1300/7), sysclk (=FCLK0), data_width (40)
 
-	if { [ regexp "XC7Z(015|012).*" [string toupper "$::env(PRJ_PART)"] ] } {
+	if { [ regexp "XC7(Z(015|012)|A).*" [string toupper "$::env(PRJ_PART)"] ] } {
 		set ibertIpName "ibert_7series_gtp"
 
 		# Can't change data-width to 20 or 40, only 16 allowed
