@@ -20,3 +20,6 @@
 	path = firmware/submodules/evr320
 	url = https://git.psi.ch/straumann_t/evr320.git/
 	branch = straumann_t
+[submodule "firmware/submodules/ecevr-core"]
+	path = firmware/submodules/ecevr-core
+	url = ../ecevr-core

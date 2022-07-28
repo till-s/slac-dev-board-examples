@@ -52,6 +52,7 @@ use work.Ila_256Pkg.all;
 
 use work.Lan9254Pkg.all;
 use work.Lan9254ESCPkg.all;
+use work.EcEvrBspPkg.all;
 use work.MicroUDPPkg.all;
 use work.Udp2BusPkg.all;
 use work.EvrTxPDOPkg.all;
@@ -120,9 +121,9 @@ architecture top_level of TE0715 is
 
    constant ETH_MAC_C   : slv(47 downto 0) := x"aa0300564400";  -- 00:44:56:00:03:01 (ETH only)
 
-   constant NUM_AXI_SLV_C : natural        := 4;
+   constant NUM_AXI_SLV_C        : natural        := 4;
 
-   constant NUM_SPI_C     : positive       := 2;
+   constant NUM_ZYNQ_SPI_C       : positive       := 1;
 
 
    -- some differential outputs are swapped on PCB
@@ -182,8 +183,10 @@ architecture top_level of TE0715 is
    signal   sysRstbOut_i: sl := '1';
    signal   sysRstbInp  : sl := '1';
 
-   signal   spiOb       : ZynqSpiOutArray(NUM_SPI_C - 1 downto 0);
-   signal   spiIb       : ZynqSpiArray   (NUM_SPI_C - 1 downto 0);
+   signal   zynqSpiOb   : ZynqSpiOutArray(NUM_ZYNQ_SPI_C - 1 downto 0);
+   signal   zynqSpiIb   : ZynqSpiArray   (NUM_ZYNQ_SPI_C - 1 downto 0);
+   signal   axiSpiOb    : BspSpiType := BSP_SPI_INIT_C;
+   signal   axiSpiIb    : BspSpiType;
 
    signal   spiCtl_o    : Slv32Array(3 downto 0);
    signal   spiCtl_i    : Slv32Array(1 downto 0) := (others => (others => '0'));
@@ -333,9 +336,7 @@ architecture top_level of TE0715 is
    signal   trigReg         : slv(NUM_TRIGS_G - 1 downto 0) := TIMING_TRIG_INVERT_C;
    signal   recClk2         : slv(1 downto 0) := "00";
 
-   signal   spi0_ss_d       : slv(SPI_MAX_SS_C - 1 downto 0)      := (others => '1');
-
-   signal   spi_ss0_i       : slv(NUM_SPI_C - 1 downto 0) := (others => '1'); -- AR# 47511
+   signal   zynq_spi_ss0_i  : slv(NUM_ZYNQ_SPI_C - 1 downto 0) := (others => '1'); -- AR# 47511
 
    signal   pl_spi_irq      : sl;
 
@@ -429,20 +430,20 @@ begin
          USB0_PORT_INDCTL              => open,
          USB0_VBUS_PWRFAULT            => '0',
          USB0_VBUS_PWRSELECT           => open,
-         SPI0_SCLK_I                   => spiIb(1).sclk,
-         SPI0_SCLK_O                   => spiOb(1).o.sclk,
-         SPI0_SCLK_T                   => spiOb(1).t.sclk,
-         SPI0_MOSI_I                   => spiIb(1).mosi,
-         SPI0_MOSI_O                   => spiOb(1).o.mosi,
-         SPI0_MOSI_T                   => spiOb(1).t.mosi,
-         SPI0_MISO_I                   => spiIb(1).miso,
-         SPI0_MISO_O                   => spiOb(1).o.miso,
-         SPI0_MISO_T                   => spiOb(1).t.miso,
-         SPI0_SS_I                     => spi_ss0_i(1),
-         SPI0_SS_O                     => spiOb(1).o_ss(0),
-         SPI0_SS1_O                    => spiOb(1).o_ss(1),
-         SPI0_SS2_O                    => spiOb(1).o_ss(2),
-         SPI0_SS_T                     => spiOb(1).t_ss0
+         SPI0_SCLK_I                   => zynqSpiIb(0).sclk,
+         SPI0_SCLK_O                   => zynqSpiOb(0).o.sclk,
+         SPI0_SCLK_T                   => zynqSpiOb(0).t.sclk,
+         SPI0_MOSI_I                   => zynqSpiIb(0).mosi,
+         SPI0_MOSI_O                   => zynqSpiOb(0).o.mosi,
+         SPI0_MOSI_T                   => zynqSpiOb(0).t.mosi,
+         SPI0_MISO_I                   => zynqSpiIb(0).miso,
+         SPI0_MISO_O                   => zynqSpiOb(0).o.miso,
+         SPI0_MISO_T                   => zynqSpiOb(0).t.miso,
+         SPI0_SS_I                     => zynq_spi_ss0_i(0),
+         SPI0_SS_O                     => zynqSpiOb(0).o_ss(0),
+         SPI0_SS1_O                    => zynqSpiOb(0).o_ss(1),
+         SPI0_SS2_O                    => zynqSpiOb(0).o_ss(2),
+         SPI0_SS_T                     => zynqSpiOb(0).t_ss0
       );
 
    U_PL_SPI  : entity work.AxilSpiMaster
@@ -461,10 +462,10 @@ begin
          axilWriteSlave  => axilWriteSlaves(1),
 
          --SPI interface
-         spiSs(0)        => spiOb(0).o_ss(1),
-         spiSclk         => spiOb(0).o.sclk,
-         spiMosi         => spiOb(0).o.mosi,
-         spiMiso         => spiIb(0).miso,
+         spiSs(0)        => axiSpiOb.csel,
+         spiSclk         => axiSpiOb.sclk,
+         spiMosi         => axiSpiOb.mosi,
+         spiMiso         => axiSpiIb.miso,
 
          ctl_o           => spiCtl_o,
          ctl_i           => spiCtl_i,
@@ -472,36 +473,33 @@ begin
          irq             => pl_spi_irq
       );
 
-      spiOb(0).t.sclk <= '0';
-      spiOb(0).t.mosi <= '0';
-      spiOb(0).t.miso <= '1';
-      spiOb(0).o.miso <= '0';
+      axiSpiOb.miso <= '0';
 
    GEN_SPI_ILA : if ( false ) generate
       U_SPI_ILA : Ila_256
          port map (
             clk => sysClk,
-            probe0( 0) => spiIb(0).sclk,
-            probe0( 1) => spiOb(0).o.sclk,
-            probe0( 2) => spiOb(0).t.sclk,
+            probe0( 0) => axiSpiIb.sclk,
+            probe0( 1) => axiSpiOb.sclk,
+            probe0( 2) => '0',
 
-            probe0( 3) => spiIb(0).mosi,
-            probe0( 4) => spiOb(0).o.mosi,
-            probe0( 5) => spiOb(0).t.mosi,
+            probe0( 3) => axiSpiIb.mosi,
+            probe0( 4) => axiSpiOb.mosi,
+            probe0( 5) => '0',
 
-            probe0( 6) => spiIb(0).miso,
-            probe0( 7) => spiOb(0).o.miso,
-            probe0( 8) => spiOb(0).t.miso,
+            probe0( 6) => axiSpiIb.miso,
+            probe0( 7) => axiSpiOb.miso,
+            probe0( 8) => '1',
 
-            probe0( 9) => spi0_ss_d(0),
-            probe0(10) => spiOb(0).o_ss(0),
-            probe0(11) => spiOb(0).t_ss0,
+            probe0( 9) => '0',
+            probe0(10) => axiSpiOb.csel,
+            probe0(11) => '0',
 
-            probe0(12) => spi0_ss_d(1),
-            probe0(13) => spiOb(0).o_ss(1),
+            probe0(12) => '0',
+            probe0(13) => '0',
 
-            probe0(14) => spi0_ss_d(2),
-            probe0(15) => spiOb(0).o_ss(2),
+            probe0(14) => '0',
+            probe0(15) => '0',
 
             probe0(63 downto 16) => (others => '0'),
 
@@ -1104,36 +1102,6 @@ begin
       constant NUM_LAN_GPI_C            : natural := 8;
       constant NUM_LAN_GPO_C            : natural := 8;
 
-      constant NUM_BUS_MSTS_C           : natural := 1;
-      constant BUS_MIDX_PDO_C           : natural := 0;
-
-      constant EVR_BASE_ADDR_C          : unsigned(31 downto 0) := x"0000_0000";
-
-      constant NUM_BUS_SUBS_C           : natural := 2;
-      constant BUS_SIDX_EVR_C           : natural := 0;
-      constant BUS_SIDX_LOC_C           : natural := 1;
-
-      constant NUM_HBI_MSTS_C           : natural := 1;
-      constant PRI_HBI_MSTS_C           : integer := -1;
-      constant HBI_MIDX_PDO_C           : integer := PRI_HBI_MSTS_C;
-      constant HBI_MSTS_LDX_C           : integer := PRI_HBI_MSTS_C;
-      constant HBI_MSTS_RDX_C           : integer := HBI_MSTS_LDX_C + NUM_HBI_MSTS_C - 1;
-
-      constant MAX_TXPDO_SEGMENTS_C     : natural := 16;
-
-      constant LATCH0_MAP_C             : natural := ite( (PRJ_VARIANT_G = "ecevr-dio"), 0, 42 );
-      constant LATCH1_MAP_C             : natural := ite( (PRJ_VARIANT_G = "ecevr-dio"), 38, 43 );
-
-      type     IntArray                 is array (integer range <>) of integer;
-
-      -- map GPIO numbers to index in 'fpga' array
-      constant lan9254_gpio_map : IntArray(NUM_LAN_GPIO_C - 1 downto 0) := (
-          0 => 35,  1 => 36,  2 => 37,  3 => 39,
-          4 => 18,  5 => 17,  6 => 16,  7 =>  9,
-          8 =>  8,  9 => 27, 10 => 23, 11 => 20,
-         12 => 21, 13 => 22, 14 => 24, 15 => 25
-      );
-
       signal brd_gpio_i : std_logic_vector(NUM_BRD_GPIO_C - 1 downto 0);
       signal brd_gpio_o : std_logic_vector(NUM_BRD_GPIO_C - 1 downto 0) := (others => '0');
       signal brd_gpio_t : std_logic_vector(NUM_BRD_GPIO_C - 1 downto 0) := (others => '1');
@@ -1143,23 +1111,27 @@ begin
       signal fpga_o     : std_logic_vector(43 downto 0) := (others => '0');
       signal fpga_t     : std_logic_vector(43 downto 0) := (others => '1');
 
-      -- assume EEPROM is configured for gpio(15 downto 0) -> inputs, gpio(7 downto 0) -> outputs
+      -- assume EEPROM is configured for gpio(15 downto 8) -> inputs, gpio(7 downto 0) -> outputs
       --               in/out from viewpoint of LAN9254...
 
       signal lan9254_gpi: std_logic_vector(NUM_LAN_GPIO_C - 1 downto NUM_LAN_GPO_C) := (others => '0');
       signal lan9254_gpo: std_logic_vector(NUM_LAN_GPO_C  - 1 downto             0);
 
+      signal lan9254_dio_i : std_logic_vector(31 downto 0);
+      signal lan9254_dio_o : std_logic_vector(31 downto 0) := (others => '0');
+      signal lan9254_dio_t : std_logic_vector(31 downto 0) := (others => '1');
+
       signal lan9254_hbiOb : Lan9254HBIOutType := LAN9254HBIOUT_INIT_C;
       signal lan9254_hbiIb : Lan9254HBIInpType := LAN9254HBIINP_INIT_C;
 
       signal lan9254_irq   : std_logic := '0';
+      signal lan9254_rst   : std_logic := '0';
 
       signal lan9254LocReg : std_logic_vector(31 downto 0) := (others => '0');
       signal lan9254LocRegR: std_logic_vector(31 downto 0) := (others => '0');
 
-      signal ec_SYNC_i     : std_logic_vector( 1 downto 0);
-      signal ec_LATCH_o    : std_logic_vector( 1 downto 0) := (others => '0');
-      signal ec_LATCH_t    : std_logic_vector( 1 downto 0) := (others => '1');
+      signal ec_SYNC_i     : std_logic_vector( EC_NUM_SYNC_OUT_C - 1 downto 0);
+      signal ec_LATCH_o    : std_logic_vector( EC_NUM_LATCH_INP_C - 1 downto 0) := (others => '0');
 
       signal spiSel        : std_logic := '0';
       signal axiSel        : std_logic := '0';
@@ -1177,18 +1149,9 @@ begin
       signal eeprom_scl_o   : std_logic := '1';
       signal eeprom_scl_t   : std_logic := '1';
 
-      signal configReq      : EEPROMConfigReqType;
-      signal configAck      : EEPROMConfigAckType := EEPROM_CONFIG_ACK_ASSERT_C;
-      signal eepWriteReq    : EEPROMWriteWordReqType;
-      signal eepWriteAck    : EEPROMWriteWordAckType;
-      signal dbufSegments   : MemXferArray(MAX_TXPDO_SEGMENTS_C - 1 downto 0);
-      signal configRetries  : unsigned(3 downto 0);
-      signal configRstR     : std_logic := '0';
-      signal configRstRIn   : std_logic;
-      signal configRst      : std_logic;
-      signal configDebug    : std_logic_vector(31 downto 0);
-      signal configInit     : std_logic;
       signal eepEmulActive  : std_logic;
+
+      signal imageSel       : Lan9254ImageType := HBI16M;
 
 begin
 
@@ -1197,8 +1160,7 @@ begin
       ila1(43 downto 0) <= fpga_i;
 
       -- RST# and other locReg mappings
-      fpga_o(1)    <= not lan9254LocReg(0);
-      fpga_t(1)    <= '0';
+      lan9254_rst  <= not lan9254LocReg(0);
 
       spiSel       <= lan9254LocReg(1);
       axiSel       <= lan9254LocReg(2);
@@ -1208,18 +1170,43 @@ begin
 
       lan9254LocRegR(0) <= lan9254_irq;
 
+      U_BRD_MAP : entity work.EcEvrBoardMap
+         port map (
+            sysClk          => sysClk,
+            sysRst          => sysRst,
 
-      -- SYNC
-      ec_SYNC_i(1) <= fpga_i(11);
-      fpga_t(11)   <= '1';
-      ec_SYNC_i(0) <= fpga_i(29);
-      fpga_t(29)   <= '1';
+            imageSel        => imageSel,
 
-      -- LATCH
-      fpga_o(LATCH1_MAP_C) <= ec_LATCH_o(1);
-      fpga_t(LATCH1_MAP_C) <= ec_LATCH_t(1);
-      fpga_o(LATCH0_MAP_C) <= ec_LATCH_o(0);
-      fpga_t(LATCH0_MAP_C) <= ec_LATCH_t(0);
+            fpga_i          => fpga_i,
+            fpga_o          => fpga_o,
+            fpga_t          => fpga_t,
+
+            spiMst          => axiSpiOb,
+            -- provides readback of sck/sdo/scs from digital io
+            spiSub          => axiSpiIb,
+
+            -- GPIO direction must match setup in EEPROM!
+            gpio_i          => lan9254_dio_i,
+            gpio_o          => lan9254_dio_o,
+            gpio_t          => lan9254_dio_t,
+
+            -- DIGIO signals
+            dioSOF          => open,
+            dioEOF          => open,
+            dioWdState      => open,
+            dioLatchIn      => '0',
+            dioOeExt        => '1',
+            dioWdTrig       => open,
+            dioOutValid     => open,
+
+            lan9254_hbiOb   => lan9254_hbiOb,
+            lan9254_hbiIb   => lan9254_hbiIb,
+            lan9254_irq     => lan9254_irq,
+            lan9254_rst     => lan9254_rst,
+
+            ec_SYNC         => ec_SYNC_i,
+            ec_LATCH        => ec_LATCH_o
+         );
 
       GEN_IOBUF : ZynqIOBuf
          generic map (
@@ -1283,47 +1270,10 @@ begin
          sfp_presentb(0) <= B13_L4_P;
       end generate GEN_SFPCTL_0;
 
-      GEN_IOMAP_SPIBUF : if ( PRJ_VARIANT_G = "ecevr-spi" ) generate
-
-         fpga_o(10)    <= spiOb(0).o.mosi;
-         fpga_t(10)    <= spiOb(0).t.mosi;
-         spiIb(0).mosi <= fpga_i(10);
-
-         fpga_o(15)    <= spiOb(0).o.sclk;
-         fpga_t(15)    <= spiOb(0).t.sclk;
-         spiIb(0).sclk <= fpga_i(15);
-
-         fpga_o( 5)    <= spiOb(0).o.miso;
-         fpga_t( 5)    <= spiOb(0).t.miso;
-         spiIb(0).miso <= fpga_i( 5);
-
-         fpga_o(40)    <= spiOb(0).o_ss(1);
-         fpga_t(40)    <= '0';
-
-      end generate GEN_IOMAP_SPIBUF;
-
       GEN_IOMAP_HBI16_MUX : if ( PRJ_VARIANT_G = "ecevr-hbi16m" ) generate
-
-         signal fpga_o_05      : std_logic;
-         signal fpga_o_10      : std_logic;
-         signal fpga_o_15      : std_logic;
-         signal fpga_o_40      : std_logic;
-         signal fpga_t_05      : std_logic;
-         signal fpga_t_10      : std_logic;
-         signal fpga_t_15      : std_logic;
-         signal fpga_t_40      : std_logic;
-         signal fpga_i_05      : std_logic;
-         signal fpga_i_10      : std_logic;
-         signal fpga_i_15      : std_logic;
-         signal fpga_i_40      : std_logic;
 
          signal axiHbiReq      : Lan9254ReqType := LAN9254REQ_INIT_C;
          signal axiHbiRep      : Lan9254RepType := LAN9254REP_INIT_C;
-         signal escHbiReq      : Lan9254ReqType := LAN9254REQ_INIT_C;
-         signal escHbiRep      : Lan9254RepType := LAN9254REP_INIT_C;
-
-         signal hbiReq         : Lan9254ReqType;
-         signal hbiRep         : Lan9254RepType;
 
          signal rxPDOMst       : Lan9254PDOMstType;
          signal rxPDORdy       : std_logic := '1';
@@ -1331,218 +1281,23 @@ begin
          signal escState       : ESCStateType;
          signal ctlState       : std_logic_vector(4 downto 0);
 
-         signal hbi_ad_t       : std_logic := '1';
-         signal hbi_ob_t       : std_logic := '1';
-
          signal escStats       : StatCounterArray(21 downto 0);
          signal diagRegsR      : Slv32Array(31 downto 0) := (others => (others => '0'));
-
-         signal phas           : signed(15 downto 0);
-         signal pdLocked       : std_logic;
-
-         signal busSubReq      : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
-         signal busSubRep      : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_INIT_C);
-
-         signal busMstReq      : Udp2BusReqArray(NUM_BUS_MSTS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
-         signal busMstRep      : Udp2BusRepArray(NUM_BUS_MSTS_C - 1 downto 0) := (others => UDP2BUSREP_INIT_C);
-
-         signal hbiMstReq      : Lan9254ReqArray(HBI_MSTS_LDX_C downto HBI_MSTS_RDX_C) := (others => LAN9254REQ_INIT_C);
-         signal hbiMstRep      : Lan9254RepArray(HBI_MSTS_LDX_C downto HBI_MSTS_RDX_C) := (others => LAN9254REP_INIT_C);
 
          signal timingMGTSt    : std_logic_vector(31 downto 0) := (others => '0');
 
          signal usr_evts_adj   : std_logic_vector(3 downto 0);
-         signal latchedEvents  : std_logic_vector(1 downto 0);
-         signal extra_events   : std_logic_vector(NUM_EXTRA_EVENTS_C - 1 downto 0);
-         signal evrTimestampHi : std_logic_vector(31 downto 0) := (others => '0');
-         signal evrTimestampLo : std_logic_vector(31 downto 0) := (others => '0');
-         signal eventCode      : std_logic_vector( 7 downto 0) := (others => '0');
-         signal eventCodeVld   : std_logic                     := '0';
-
-         signal txPdoTrgCount  : unsigned(15 downto 0);
-
-         signal s_spiIb        : ZynqSpiType;
-         signal s_fpga_o_05    : std_logic;
-         signal s_fpga_t_05    : std_logic;
-         signal s_fpga_o_10    : std_logic;
-         signal s_fpga_t_10    : std_logic;
-         signal s_fpga_o_15    : std_logic;
-         signal s_fpga_t_15    : std_logic;
-         signal s_fpga_o_40    : std_logic;
-         signal s_fpga_t_40    : std_logic;
 
       begin
 
-         -- work-around for an apparent Vivado bug: if we assign only to
-         -- a subset of signal array elements from a combinatorial process
-         -- then the default values of other elements are ignored:
-         --
-         --   signal foo : std_logic_vector(1 downto 0) := (others => '1');
-         --
-         --   process (x) is
-         --   begin
-         --     foo(0) <= x;
-         --   end process;
-         --
-         -- will have Vivado ignoring the '1' value for foo(1). Work around
-         -- this problem by using (scalar) intermediate signals :-(.
-         P_SPI_MUX : process (
-            spiSel, axiSel, spiOb, fpga_i,
-            fpga_o_05, fpga_t_05, fpga_o_10, fpga_t_10,
-            fpga_o_15, fpga_t_15, fpga_o_40, fpga_t_40,
-            lan9254_hbiOb,
-            spiIb
-         ) is
-            variable v_spiIb  : ZynqSpiType;
+         P_SPI_MUX : process ( spiSel, axiSel ) is
          begin
-            v_spiIb  := spiIb(0);
             if ( ( spiSel = '1' ) and ( axiSel = '0' ) ) then
-               s_fpga_o_10   <= spiOb(0).o.mosi;
-               s_fpga_t_10   <= spiOb(0).t.mosi;
-               v_spiIb.mosi  := fpga_i(10);
-               fpga_i_10     <= '0';
-
-               s_fpga_o_15   <= spiOb(0).o.sclk;
-               s_fpga_t_15   <= spiOb(0).t.sclk;
-               v_spiIb.sclk  := fpga_i(15);
-               fpga_i_15     <= '0';
-
-               s_fpga_o_05   <= spiOb(0).o.miso;
-               s_fpga_t_05   <= spiOb(0).t.miso;
-               v_spiIb.miso  := fpga_i( 5);
-               fpga_i_05     <= '0';
-
-               s_fpga_o_40   <= spiOb(0).o_ss(1);
-               s_fpga_t_40   <= '0';
-               fpga_i_40     <= '0';
-
-               hbi_ad_t      <= '1';
-               hbi_ob_t      <= '1';
+               imageSel <= SPI_GPIO;
             else
-               s_fpga_o_10   <= fpga_o_10;
-               s_fpga_t_10   <= fpga_t_10;
-               v_spiIb.mosi  := '1';
-               fpga_i_10     <= fpga_i(10);
-
-               s_fpga_o_15   <= fpga_o_15;
-               s_fpga_t_15   <= fpga_t_15;
-               v_spiIb.sclk  := '1';
-               fpga_i_15     <= fpga_i(15);
-
-               s_fpga_o_05   <= fpga_o_05;
-               s_fpga_t_05   <= fpga_t_05;
-               v_spiIb.miso  := '1';
-               fpga_i_05     <= fpga_i( 5);
-
-               s_fpga_o_40   <= fpga_o_40;
-               s_fpga_t_40   <= fpga_t_40;
-               fpga_i_40     <= fpga_i(40);
-
-               hbi_ad_t      <= lan9254_hbiOb.ad_t( 0);
-               hbi_ob_t      <= '0';
+               imageSel <= HBI16M;
             end if;
-            s_spiIb  <= v_spiIb;
          end process P_SPI_MUX;
-
-         spiIb(0)    <= s_spiIb;
-
-         fpga_o(10)  <= s_fpga_o_10;
-         fpga_t(10)  <= s_fpga_t_10;
-
-         fpga_o(15)  <= s_fpga_o_15;
-         fpga_t(15)  <= s_fpga_t_15;
-
-         fpga_o( 5)  <= s_fpga_o_05;
-         fpga_t( 5)  <= s_fpga_t_05;
-
-         fpga_o(40)  <= s_fpga_o_40;
-         fpga_t(40)  <= s_fpga_t_40;
-
-         P_HBI_MUX : process (
-            axiSel, axiHbiReq, escHbiReq, hbiRep
-         ) is begin
-            if ( axiSel = '1' ) then
-               hbiReq        <= axiHbiReq;
-               axiHbiRep     <= hbiRep;
-               escHbiRep     <= LAN9254REP_INIT_C;
-            else
-               hbiReq        <= escHbiReq;
-               axiHbiRep     <= LAN9254REP_DFLT_C;
-               escHbiRep     <= hbiRep;
-            end if;
-         end process P_HBI_MUX;
-
-         lan9254_hbiIb.waitAck <= fpga_i( 0);
-         fpga_t(0)             <= '1';
-
-         lan9254_hbiIb.ad(15) <= fpga_i(27);
-         lan9254_hbiIb.ad(14) <= fpga_i( 8);
-         lan9254_hbiIb.ad(13) <= fpga_i( 9);
-         lan9254_hbiIb.ad(12) <= fpga_i(16);
-         lan9254_hbiIb.ad(11) <= fpga_i(17);
-         lan9254_hbiIb.ad(10) <= fpga_i(18);
-         lan9254_hbiIb.ad( 9) <= fpga_i_15;
-         lan9254_hbiIb.ad( 8) <= fpga_i(37);
-         lan9254_hbiIb.ad( 7) <= fpga_i(36);
-         lan9254_hbiIb.ad( 6) <= fpga_i(35);
-         lan9254_hbiIb.ad( 5) <= fpga_i_40;
-         lan9254_hbiIb.ad( 4) <= fpga_i(39);
-         lan9254_hbiIb.ad( 3) <= fpga_i(34);
-         lan9254_hbiIb.ad( 2) <= fpga_i( 4);
-         lan9254_hbiIb.ad( 1) <= fpga_i_05;
-         lan9254_hbiIb.ad( 0) <= fpga_i_10;
-
-         fpga_o(27)           <= lan9254_hbiOb.ad(15);
-         fpga_o( 8)           <= lan9254_hbiOb.ad(14);
-         fpga_o( 9)           <= lan9254_hbiOb.ad(13);
-         fpga_o(16)           <= lan9254_hbiOb.ad(12);
-         fpga_o(17)           <= lan9254_hbiOb.ad(11);
-         fpga_o(18)           <= lan9254_hbiOb.ad(10);
-         fpga_o_15            <= lan9254_hbiOb.ad( 9);
-         fpga_o(37)           <= lan9254_hbiOb.ad( 8);
-         fpga_o(36)           <= lan9254_hbiOb.ad( 7);
-         fpga_o(35)           <= lan9254_hbiOb.ad( 6);
-         fpga_o_40            <= lan9254_hbiOb.ad( 5);
-         fpga_o(39)           <= lan9254_hbiOb.ad( 4);
-         fpga_o(34)           <= lan9254_hbiOb.ad( 3);
-         fpga_o( 4)           <= lan9254_hbiOb.ad( 2);
-         fpga_o_05            <= lan9254_hbiOb.ad( 1);
-         fpga_o_10            <= lan9254_hbiOb.ad( 0);
-
-         fpga_t(27)           <= hbi_ad_t;
-         fpga_t( 8)           <= hbi_ad_t;
-         fpga_t( 9)           <= hbi_ad_t;
-         fpga_t(16)           <= hbi_ad_t;
-         fpga_t(17)           <= hbi_ad_t;
-         fpga_t(18)           <= hbi_ad_t;
-         fpga_t_15            <= hbi_ad_t;
-         fpga_t(37)           <= hbi_ad_t;
-         fpga_t(36)           <= hbi_ad_t;
-         fpga_t(35)           <= hbi_ad_t;
-         fpga_t_40            <= hbi_ad_t;
-         fpga_t(39)           <= hbi_ad_t;
-         fpga_t(34)           <= hbi_ad_t;
-         fpga_t( 4)           <= hbi_ad_t;
-         fpga_t_05            <= hbi_ad_t;
-         fpga_t_10            <= hbi_ad_t;
-
-         fpga_o(22)           <= lan9254_hbiOb.cs;
-         fpga_t(22)           <= hbi_ob_t;
-
-         fpga_o(21)           <= lan9254_hbiOb.be(1);
-         fpga_t(21)           <= hbi_ob_t;
-
-         fpga_o(20)           <= lan9254_hbiOb.be(0);
-         fpga_t(20)           <= hbi_ob_t;
-
-         fpga_o(25)           <= lan9254_hbiOb.rs;
-         fpga_t(25)           <= hbi_ob_t;
-
-         fpga_o(24)           <= lan9254_hbiOb.ws;
-         fpga_t(24)           <= hbi_ob_t;
-
-         fpga_o(19)           <= lan9254_hbiOb.ale(0);
-         fpga_t(19)           <= hbi_ob_t;
 
          axilIlaSpare0(15 downto  0) <= lan9254_hbiOb.ad(15 downto 0);
          axilIlaSpare0(17 downto 16) <= lan9254_hbiOb.ale;
@@ -1576,302 +1331,62 @@ begin
             led(i) <= lan9254LocReg(8+i);
          end generate GEN_LED_MAP;
 
-         U_HBI : entity work.Lan9254HBI
+         U_ECEVR : entity work.EcEvrWrapper
             generic map (
-               CLOCK_FREQ_G => CLK_FREQ_C
+               CLK_FREQ_G   => CLK_FREQ_C,
+               BUILD_INFO_G => BUILD_INFO_G(BUILD_INFO_G'left downto BUILD_INFO_G'left - 32 + 1)
             )
             port map (
-               clk          => sysClk,
-               rst          => hbiRst,
-
-               req          => hbiReq,
-               rep          => hbiRep,
-
-               hbiOut       => lan9254_hbiOb,
-               hbiInp       => lan9254_hbiIb
+               sysClk            => sysClk,
+               sysRst            => sysRst,
+           
+               escRst            => escRst,
+               eepRst            => eepRst,
+               hbiRst            => hbiRst,
+           
+               lan9254_hbiOb     => lan9254_hbiOb,
+               lan9254_hbiIb     => lan9254_hbiIb,
+           
+               extHbiSel         => axiSel,
+               extHbiReq         => axiHbiReq,
+               extHbiRep         => axiHbiRep,
+           
+               rxPDOMst          => rxPDOMst,
+               rxPDORdy          => rxPDORdy,
+           
+               i2c_scl_o(0)      => eeprom_scl_o,
+               i2c_scl_t(0)      => eeprom_scl_t,
+               i2c_scl_i(0)      => eeprom_scl_i,
+               i2c_sda_o(0)      => eeprom_sda_o,
+               i2c_sda_t(0)      => eeprom_sda_t,
+               i2c_sda_i(0)      => eeprom_sda_i,
+           
+               ec_latch_o        => ec_LATCH_o,
+               ec_sync_i         => ec_SYNC_i,
+           
+               lan9254_irq       => lan9254_irq,
+           
+               testFailed        => testFailed,
+               escStats          => escStats,
+               escState          => escState,
+               escDebug          => axilIlaSpare2,
+               eepEmulActive     => eepEmulActive,
+           
+               timingMGTStatus   => timingMGTSt,
+           
+               timingRecClk      => timingRecClk,
+               timingRecRst      => timingRecRst,
+           
+               timingRxData      => timingRx.data,
+               timingDataK       => timingRx.dataK,
+               evrEventsAdj      => usr_evts_adj
             );
 
          ctlState                     <= axilIlaSpare2(4 downto 0);
          lan9254LocRegR(12 downto  8) <= ctlState;
          lan9254LocRegR(20 downto 16) <= testFailed;
 
-         U_PD  : entity work.PhaseDetector
-            generic map (
-               CLK_PERIOD_G => 5.385, -- ns
-               DECM_MULT_G  => 256
-            )
-            port map (
-               pclk(0)      => timingOb.txClk,
-               pclk(1)      => timingOb.recClk,
-               clk          => sysClk,
-               rst          => sysRst,
-               locked       => pdLocked,
-               phas         => phas
-            );
-
-         diagRegsR(31)(31 downto 16) <= std_logic_vector(resize(phas,16));
-         diagRegsR(31)(15 downto  1) <= (others => '0');
-         diagRegsR(31)(           0) <= pdLocked;
-
-         U_ESC : entity work.Lan9254ESCWrapper
-            generic map (
-               CLOCK_FREQ_G          => CLK_FREQ_C,
-               NUM_BUS_SUBS_G        => NUM_BUS_SUBS_C,
-               NUM_BUS_MSTS_G        => NUM_BUS_MSTS_C,
-               NUM_EXT_HBI_MASTERS_G => NUM_HBI_MSTS_C,
-               EXT_HBI_MASTERS_PRI_G => PRI_HBI_MSTS_C,
-               -- our EvrTxPDO talks to the HBI directly
-               DISABLE_TXPDO_G       => true
-            )
-            port map (
-               clk             => sysClk,
-               rst             => escRst,
-
-               configRstReq    => configInit,
-
-               escState        => escState,
-               debug           => axilIlaSpare2,
-
-               req             => escHbiReq,
-               rep             => escHbiRep,
-
-               myAddr          => configReq.net,
-               myAddrAck       => configAck.net,
-
-               eepWriteReq     => eepWriteReq,
-               eepWriteAck     => eepWriteAck,
-               eepEmulActive   => eepEmulActive,
-
-               escConfigReq    => configReq.esc,
-               escConfigAck    => configAck.esc,
-
-               extHBIReq       => hbiMstReq,
-               extHBIRep       => hbiMstRep,
-
-               busMstReq       => busMstReq,
-               busMstRep       => busMstRep,
-
-               busSubReq       => busSubReq,
-               busSubRep       => busSubRep,
-
-               txPDOMst        => open,
-               txPDORdy        => open,
-
-               rxPDOMst        => rxPDOMst,
-               rxPDORdy        => rxPDORdy,
-
-               irq             => lan9254_irq,
-
-               testFailed      => testFailed,
-               stats           => escStats
-            );
-
-         U_EVR : entity work.evr320_udp2bus_wrapper
-            generic map (
-               g_BUS_CLOCK_FREQ  => natural( CLK_FREQ_C ),
-               g_N_EVT_DBL_BUFS  => 0,
-               g_DATA_STREAM_EN  => 1,
-               g_EXTRA_RAW_EVTS  => NUM_EXTRA_EVENTS_C
-            )
-            port map (
-               bus_CLK           => sysClk,
-               bus_RESET         => sysRst,
-
-               bus_Req           => busSubReq(BUS_SIDX_EVR_C),
-               bus_Rep           => busSubRep(BUS_SIDX_EVR_C),
-
-               evr_CfgReq        => configReq.evr320,
-               evr_CfgAck        => configAck.evr320,
-
-               clk_evr           => timingRecClk,
-               rst_evr           => timingRecRst,
-
-               usr_events_adj_o  => usr_evts_adj,
-               extra_events_o    => extra_events,
-
-               event_o           => eventCode,
-               event_vld_o       => eventCodeVld,
-               timestamp_hi_o    => evrTimestampHi,
-               timestamp_lo_o    => evrTimestampLo,
-
-               evr_rx_data       => timingRx.data,
-               evr_rx_charisk    => timingRx.dataK,
-               mgt_status_i      => timingMGTSt
-            );
-
-         P_LATCH : process ( timingRecClk ) is
-         begin
-            if ( rising_edge( timingRecClk ) ) then
-               if ( timingRecRst = '1' ) then
-                  latchedEvents <= (others => '0');
-               else
-                  if ( extra_events(0) = '1' ) then
-                     latchedEvents(0) <= '1';
-                  end if;
-                  if ( extra_events(1) = '1' ) then
-                     latchedEvents(0) <= '0';
-                  end if;
-                  if ( extra_events(2) = '1' ) then
-                     latchedEvents(1) <= '1';
-                  end if;
-                  if ( extra_events(3) = '1' ) then
-                     latchedEvents(1) <= '0';
-                  end if;
-               end if;
-            end if;
-         end process P_LATCH;
-
-         ec_LATCH_o(0) <= latchedEvents(0);
-         ec_LATCH_t(0) <= '0'; -- out
-         ec_LATCH_o(1) <= extra_events(2);
-         ec_LATCH_t(1) <= '0'; -- out
-
-         U_TXPDO : entity work.EvrTxPDO
-            generic map (
-               NUM_EVENT_DWORDS_G => 8,
-               EVENT_MAP_G        => EVENT_MAP_IDENT_C,
-               MEM_BASE_ADDR_G    => EVR_BASE_ADDR_C,
-               MAX_MEM_XFERS_G    => MAX_TXPDO_SEGMENTS_C,
-               TXPDO_ADDR_G       => unsigned(ESC_SM3_SMA_C)
-            )
-            port map (
-               evrClk             => timingRecClk,
-               evrRst             => timingRecRst,
-
-               pdoTrg             => usr_evts_adj(0),
-               tsHi               => evrTimestampHi,
-               tsLo               => evrTimestampLo,
-               eventCode          => eventCode,
-               eventCodeVld       => eventCodeVld,
-               eventMapClr        => x"FF",
-
-               busClk             => sysClk,
-               busRst             => escRst,
-
-               dbufMaps           => dbufSegments,
-               config             => configReq.txPDO,
-
-               lanReq             => hbiMstReq(HBI_MIDX_PDO_C),
-               lanRep             => hbiMstRep(HBI_MIDX_PDO_C),
-
-               busReq             => busMstReq(BUS_MIDX_PDO_C),
-               busRep             => busMstRep(BUS_MIDX_PDO_C),
-
-               trgCnt             => txPdoTrgCount
-            );
-
-         U_EEP_CFG : entity work.EEPROMConfigurator
-            generic map (
-               CLOCK_FREQ_G       => CLK_FREQ_C,
-               MAX_TXPDO_MAPS_G   => MAX_TXPDO_SEGMENTS_C
-            )
-            port map (
-               clk                => sysClk,
-               rst                => configRst,
-
-               configReq          => configReq,
-               configAck          => configAck,
-               eepWriteReq        => eepWriteReq,
-               eepWriteAck        => eepWriteAck,
-               dbufMaps           => dbufSegments,
-
-               i2cAddr2BMode      => '0',
-
-               i2cSclInp          => eeprom_scl_i,
-               i2cSclOut          => eeprom_scl_o,
-               i2cSclHiZ          => eeprom_scl_t,
-
-               i2cSdaInp          => eeprom_sda_i,
-               i2cSdaOut          => eeprom_sda_o,
-               i2cSdaHiZ          => eeprom_sda_t,
-
-               retries            => configRetries
-            );
-
-         G_I2C_ILA : if ( true ) generate
-            signal clkdiv : unsigned(5 downto 0) := (others => '0');
-            signal ilaClk : std_logic;
-         begin
-
-            P_DIV : process ( sysClk ) is
-            begin
-               if ( rising_edge( sysClk ) ) then
-                  clkdiv <= clkdiv + 1;
-               end if;
-            end process P_DIV;
-
-            U_BUF : BUFG port map( I => std_logic(clkdiv(4)), O => ilaClk );
-
-            U_ILA : Ila_256
-               port map (
-                  clk        => ilaClk,
-                  probe0(0)  => eeprom_scl_i,
-                  probe0(1)  => eeprom_sda_i,
-                  probe0(2)  => eeprom_scl_o,
-                  probe0(3)  => eeprom_sda_o,
-                  probe0(4)  => eeprom_scl_t,
-                  probe0(5)  => eeprom_sda_t,
-                  probe0(63 downto 6) => (others => '0')
-               );
-         end generate G_I2C_ILA;
-
-         configRst <= escRst or configRstR or eepRst or configInit;
-
-         P_CFG_SEQ : process ( sysClk ) is
-         begin
-            if ( rising_edge( sysClk ) ) then
-               if ( escRst = '1' ) then
-                  configRstR <= '0';
-               else
-                  configRstR <= configRstRIn;
-               end if;
-            end if;
-         end process P_CFG_SEQ;
-
-         P_DIAG : process ( busSubReq(BUS_SIDX_LOC_C), dbufSegments, configReq,
-                            configRetries, configRstR, configDebug, txPdoTrgCount ) is
-            variable a : unsigned( 7 downto 0 );
-            variable v : std_logic_vector(31 downto 0);
-            variable q : Udp2BusReqType;
-         begin
-            q := busSubReq(BUS_SIDX_LOC_C);
-            a := unsigned(q.dwaddr(7 downto 0));
-            v := (others => '0');
-            busSubRep(BUS_SIDX_LOC_C)       <= UDP2BUSREP_INIT_C;
-            busSubRep(BUS_SIDX_LOC_C).valid <= '1';
-            configRstRin                    <= configRstR;
-            case ( to_integer( a ) ) is
-               when 0 => v(0) := configReq.net.macAddrVld;
-                         v(1) := configReq.net.ip4AddrVld;
-                         v(2) := configReq.net.udpPortVld;
-                         v(3) := configReq.esc.valid;
-                         v(15 downto 8) := std_logic_vector( to_unsigned( configReq.txPDO.numMaps, 8 ) );
-                         v(24) := configReq.txPDO.hasTs;
-                         v(25) := configReq.txPDO.hasEventCodes;
-                         v(26) := configReq.txPDO.hasLatch0P;
-                         v(27) := configReq.txPDO.hasLatch0N;
-                         v(28) := configReq.txPDO.hasLatch1P;
-                         v(29) := configReq.txPDO.hasLatch1N;
-                         v(31) := configRstR;
-                         if ( (not q.rdnwr and q.valid and q.be(3)) = '1' ) then
-                            configRstRIn <= q.data(31);
-                         end if;
-
-               when 1 => v    :=           configReq.net.macAddr(31 downto  0);
-               when 2 => v    := x"0000" & std_logic_vector( txPdoTrgCount );
-               when 3 => v    :=           configReq.net.ip4Addr;
-               when 4 => v    := BUILD_INFO_G(BUILD_INFO_G'left downto BUILD_INFO_G'left - 32 + 1);
-               when 5 => v    := configReq.esc.sm3Len & configReq.esc.sm2Len;
-               when 6 => v(configRetries'range) := std_logic_vector(configRetries);
-               when 7 => v    := configDebug;
-               when 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 =>
-                         v    :=   std_logic_vector( to_unsigned( SwapType'pos(dbufSegments(to_integer(a) - 8).swp), 4 ) )
-                                 & "00" & std_logic_vector( dbufSegments(to_integer(a) - 8).num )
-                                 & std_logic_vector( dbufSegments(to_integer(a) - 8).off );
-               when others =>
-            end case;
-            busSubRep(BUS_SIDX_LOC_C).rdata <= v;
-         end process P_DIAG;
+         diagRegsR(31)               <= (others => '0');
 
          timingMGTSt <= (
              0     => timingIb.pllLocked,
@@ -1923,17 +1438,26 @@ begin
 
       end generate GEN_IOMAP_HBI16_MUX;
 
+      P_GPIO_MAP : process( lan9254_gpi, lan9254_dio_i ) is
+      begin
+         lan9254_dio_o <= (others => '0');
+         lan9254_dio_t <= (others => '1');
+         lan9254_gpo   <= (others => '0');
+
+         for i in lan9254_gpi'range loop
+            lan9254_dio_o( i ) <= lan9254_gpi(i);
+            lan9254_dio_t( i ) <= '0';
+         end loop;
+
+         for i in lan9254_gpo'range loop
+            lan9254_gpo(i) <= lan9254_dio_i(i);
+         end loop;
+      end process P_GPIO_MAP;
+
+
       GEN_GPIO_MAP : if ( PRJ_VARIANT_G = "ecevr-spi" or PRJ_VARIANT_G = "ecevr-dio" ) generate
-         GEN_GPI_MAP : for i in lan9254_gpi'range generate
-            fpga_o(lan9254_gpio_map(i)) <= lan9254_gpi(i);
-            fpga_t(lan9254_gpio_map(i)) <= '0';
-         end generate GEN_GPI_MAP;
 
-         GEN_GPO_MAP : for i in lan9254_gpo'range generate
-            lan9254_gpo(i)              <= fpga_i(lan9254_gpio_map(i));
-            fpga_t(lan9254_gpio_map(i)) <= '1';
-         end generate GEN_GPO_MAP;
-
+         imageSel <= SPI_GPIO when ( PRJ_VARIANT_G = "ecevr-spi" ) else DIGIO;
 
          -- hack to drive RST#
          lan9254LocReg(0) <= timingTxStat.resetDone;
@@ -2007,29 +1531,6 @@ begin
       led(9)          <= '0';
       -- grn-ano/amb-cat in PS-ethernet conn.
       led(10)         <= '0';
-
-      GEN_MAP_DIGIO : if ( PRJ_VARIANT_G = "ecevr-dio" ) generate
-      -- OE_EXT
-      fpga_o(19) <= '1';
-      fpga_t(19) <= '0';
-      end generate GEN_MAP_DIGIO;
-
-      GEN_MAP_IRQ   : if ( PRJ_VARIANT_G /= "ecevr_dio" ) generate
-
-         U_SYNC_IRQ : entity work.SynchronizerBit
-            generic map (
-               RSTPOL_G   => not EC_IRQ_ACT_C
-            )
-            port map (
-               clk        => sysClk,
-               rst        => sysRst,
-               datInp(0)  => fpga_i(38),
-               datOut(0)  => lan9254_irq
-            );
-
-         fpga_t(38) <= '1';
-
-      end generate GEN_MAP_IRQ;
 
       -- IRQ
       GEN_IRQ_8 : if ( (NUM_IRQS_C > 8) and  (PRJ_VARIANT_G /= "ecevr_dio") ) generate
