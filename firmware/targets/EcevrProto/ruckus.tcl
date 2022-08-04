@@ -9,6 +9,7 @@ foreach f {
   EcEvrProto.vhd
   EcEvrProtoPkg.vhd
   EcEvrProtoTop.vhd
+  TimingGtpCoreWrapper.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
