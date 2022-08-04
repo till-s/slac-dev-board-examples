@@ -8,11 +8,7 @@ if { [VersionCheck 2016.4] < 0 } {
 }
 
 # Load ruckus files
-loadRuckusTcl "$::DIR_PATH/submodules/surf"
-loadRuckusTcl "$::DIR_PATH/submodules/lcls-timing-core"
-loadRuckusTcl "$::DIR_PATH/submodules/ila-wrappers-for-surf"
 loadRuckusTcl "$::DIR_PATH/submodules/lan9254-rtl-esc"
 loadRuckusTcl "$::DIR_PATH/submodules/ecevr-core"
 loadSource -dir "$::DIR_PATH/submodules/psi_common/hdl"
 loadSource -dir "$::DIR_PATH/submodules/evr320/hdl"
-loadRuckusTcl "$::DIR_PATH/common"
