@@ -1125,7 +1125,7 @@ begin
       signal lan9254_hbiIb : Lan9254HBIInpType := LAN9254HBIINP_INIT_C;
 
       signal lan9254_irq   : std_logic := '0';
-      signal lan9254_rst   : std_logic := '0';
+      signal lan9254_rstb  : std_logic := '1';
 
       signal lan9254LocReg : std_logic_vector(31 downto 0) := (others => '0');
       signal lan9254LocRegR: std_logic_vector(31 downto 0) := (others => '0');
@@ -1160,7 +1160,7 @@ begin
       ila1(43 downto 0) <= fpga_i;
 
       -- RST# and other locReg mappings
-      lan9254_rst  <= not lan9254LocReg(0);
+      lan9254_rstb <= not lan9254LocReg(0);
 
       spiSel       <= lan9254LocReg(1);
       axiSel       <= lan9254LocReg(2);
@@ -1202,7 +1202,7 @@ begin
             lan9254_hbiOb   => lan9254_hbiOb,
             lan9254_hbiIb   => lan9254_hbiIb,
             lan9254_irq     => lan9254_irq,
-            lan9254_rst     => lan9254_rst,
+            lan9254_rstb    => lan9254_rstb,
 
             ec_SYNC         => ec_SYNC_i,
             ec_LATCH        => ec_LATCH_o
