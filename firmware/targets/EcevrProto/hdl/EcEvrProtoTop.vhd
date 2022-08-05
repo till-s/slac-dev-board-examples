@@ -214,6 +214,8 @@ begin
     generic map (
       CLK_FREQ_G        => SYS_CLK_FREQ_C,
       BUILD_INFO_G      => x"deadbeef",
+      EEP_I2C_ADDR_G    => x"50",
+      EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
       GEN_HBI_ILA_G     => false,
       GEN_ESC_ILA_G     => true,
       GEN_EOE_ILA_G     => false,
@@ -243,6 +245,8 @@ begin
 
       rxPDOMst          => open, -- out    Lan9254PDOMstType;
       rxPDORdy          => open, -- in     std_logic := '1';
+
+      i2cAddr2BMode     => eepSz32k,
 
       i2c_scl_o         => open, -- out    std_logic_vector(NUM_I2C_G  - 1 downto 0);
       i2c_scl_t         => i2cSclOut,
