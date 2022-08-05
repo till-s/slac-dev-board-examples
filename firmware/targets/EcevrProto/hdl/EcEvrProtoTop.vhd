@@ -10,6 +10,7 @@ use     work.EcEvrBspPkg.all;
 
 entity EcEvrProtoTop is
   generic (
+    GIT_HASH_G               : std_logic_vector(31 downto 0);
     NUM_LED_G                : natural;
     NUM_POF_G                : natural;
     NUM_GPIO_G               : natural;
@@ -213,7 +214,7 @@ begin
   U_MAIN : entity work.EcEvrWrapper
     generic map (
       CLK_FREQ_G        => SYS_CLK_FREQ_C,
-      BUILD_INFO_G      => x"deadbeef",
+      GIT_HASH_G        => GIT_HASH_G,
       EEP_I2C_ADDR_G    => x"50",
       EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
       GEN_HBI_ILA_G     => false,
