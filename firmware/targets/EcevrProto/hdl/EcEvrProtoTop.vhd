@@ -505,6 +505,7 @@ begin
 
     P_PWRCYCLE : process (r) is
     begin
+      pwrCycle <= '0';
       if ( r.regs(2)(15 downto 0) = x"dead" ) then
         pwrCycle <= '1';
       end if;
