@@ -88,6 +88,10 @@ def mkPinMap():
   pinMap["sfpPresentbPins[0]"]     = { "name"  : "IO_L2N_T0_AD8N_15", "props" : {} }
   pinMap["sfpTxFaultPins[0]"]      = { "name"  : "IO_L5N_T0_AD9N_15", "props" : {} }
   pinMap["sfpTxEnPins[0]"]         = { "name"  : "IO_L3N_T0_DQS_AD1N_15", "props" : {} }
+  # pinMap["spiSclkPin"]  must use STARTUPE2 to drive this pin
+  pinMap["spiMosiPin"]             = { "name"  : "IO_L1P_T0_D00_MOSI_14", "props" : {} }
+  pinMap["spiCselPin"]             = { "name"  : "IO_L6P_T0_FCS_B_14",    "props" : {} }
+  pinMap["spiMisoPin"]             = { "name"  : "IO_L1N_T0_D01_DIN_14",       "props" : {} }
   pinMap["mgtRxPPins[0]"]          = { "name"  : "MGTPRXP0_216", "props" : {} }
   pinMap["mgtRxPPins[1]"]          = { "name"  : "MGTPRXP1_216", "props" : {} }
   pinMap["mgtRxPPins[2]"]          = { "name"  : "MGTPRXP2_216", "props" : {} }

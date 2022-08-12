@@ -1,5 +1,13 @@
 ## Automatically generated; do not modify
 ## Edit 'ecevr_pinmap.py' instead and run gen_xdc.py
+# IO_L1P_T0_D00_MOSI_14
+set_property PACKAGE_PIN      K16          [get_ports spiMosiPin]
+set_property IOSTANDARD       LVCMOS18     [get_ports spiMosiPin]
+
+# IO_L1N_T0_D01_DIN_14
+set_property PACKAGE_PIN      L17          [get_ports spiMisoPin]
+set_property IOSTANDARD       LVCMOS18     [get_ports spiMisoPin]
+
 # IO_L2N_T0_D03_14
 set_property PACKAGE_PIN      J16          [get_ports lan9254Pins[21]]
 set_property IOSTANDARD       LVCMOS18     [get_ports lan9254Pins[21]]
@@ -15,6 +23,10 @@ set_property IOSTANDARD       LVCMOS18     [get_ports lan9254Pins[25]]
 # IO_L4N_T0_D05_14
 set_property PACKAGE_PIN      L18          [get_ports lan9254Pins[26]]
 set_property IOSTANDARD       LVCMOS18     [get_ports lan9254Pins[26]]
+
+# IO_L6P_T0_FCS_B_14
+set_property PACKAGE_PIN      L15          [get_ports spiCselPin]
+set_property IOSTANDARD       LVCMOS18     [get_ports spiCselPin]
 
 # IO_L6N_T0_D08_VREF_14
 set_property PACKAGE_PIN      M15          [get_ports lan9254Pins[30]]

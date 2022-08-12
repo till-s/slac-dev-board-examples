@@ -57,6 +57,10 @@ entity EcEvrProto is
     jumper7Pin               : inout std_logic;
     jumper8Pin               : inout std_logic;
 
+    spiMosiPin               : inout std_logic;
+    spiCselPin               : inout std_logic;
+    spiMisoPin               : inout std_logic;
+
     sfpLosPins               : inout std_logic_vector(NUM_SFP_G - 1 downto 0);
     sfpPresentbPins          : inout std_logic_vector(NUM_SFP_G - 1 downto 0);
     sfpTxFaultPins           : inout std_logic_vector(NUM_SFP_G - 1 downto 0);
@@ -98,6 +102,9 @@ architecture Impl of EcEvrProto is
   signal i2cISObOut    : std_logic;
   signal jumper7       : std_logic;
   signal jumper8       : std_logic;
+
+  signal spiMstOut     : BspSpiMstType := BSP_SPI_MST_INIT_C;
+  signal spiSubInp     : BspSpiSubType;
 
   signal lan9254_i     : std_logic_vector(lan9254Pins'range);
   signal lan9254_o     : std_logic_vector(lan9254Pins'range);
@@ -218,6 +225,35 @@ begin
   
   U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_C ), I => mgtTxP(0) );
 
+  U_STARTUPE2: STARTUPE2
+    generic map (
+      PROG_USR => "FALSE", -- Activate program event security feature. Requires encrypted bitstreams.
+      SIM_CCLK_FREQ => 0.0 -- Set the Configuration Clock Frequency(ns) for simulation.
+    )
+    port map (
+      CFGCLK     => open, -- 1-bit output: Configuration main clock output
+      CFGMCLK    => open, -- 1-bit output: Configuration internal oscillator clock output
+      EOS        => open, -- 1-bit output: Active high output signal indicating the End Of Startup.
+      PREQ       => open, -- 1-bit output: PROGRAM request to fabric output
+      CLK        => '0',  -- 1-bit input: User start-up clock input
+      GSR        => '0',  -- 1-bit input: Global Set/Reset input (GSR cannot be used for the port name)
+      GTS        => '0',  -- 1-bit input: Global 3-state input (GTS cannot be used for the port name)
+      KEYCLEARB  => '1',  -- 1-bit input: Clear AES Decrypter Key input from Battery-Backed RAM (BBRAM)
+      PACK       => '0',  -- 1-bit input: PROGRAM acknowledge input
+      USRCCLKO   => spiMstOut.sclk, -- 1-bit input: User CCLK input
+      USRCCLKTS  => '0',  -- 1-bit input: User CCLK 3-state enable input
+      USRDONEO   => '1',  -- 1-bit input: User DONE pin output control
+      USRDONETS  => '0'   -- 1-bit input: User DONE 3-state enable output
+    );
+
+  U_IOBUF_SPI_CSEL : IOBUF
+    port map ( IO => spiCselPin, O => open,           I => spiMstOut.csel, T => '0' );
+  U_IOBUF_SPI_MOSI : IOBUF
+    port map ( IO => spiMosiPin, O => open,           I => spiMstOut.mosi, T => '0' );
+  U_IOBUF_SPI_MISO : IOBUF
+    port map ( IO => spiMisoPin, O => spiSubInp.miso, I => '0',            T => '1' );
+
+
   U_Top : entity work.EcEvrProtoTop
     generic map (
       GIT_HASH_G               => BUILD_INFO_G(BUILD_INFO_G'left downto BUILD_INFO_G'left - 32 + 1),
@@ -254,6 +290,8 @@ begin
       sfpPresentb              => sfpPresentb,
       sfpTxFault               => sfpTxFault,
       sfpTxEn                  => sfpTxEn,
+      spiMst                   => spiMstOut,
+      spiSub                   => spiSubInp,
       lan9254_i                => lan9254_i,
       lan9254_o                => lan9254_o,
       lan9254_t                => lan9254_t,

@@ -7,6 +7,7 @@ use     work.Lan9254Pkg.all;
 use     work.Lan9254ESCPkg.all;
 use     work.Udp2BusPkg.all;
 use     work.EcEvrBspPkg.all;
+use     work.FoE2SpiPkg.all;
 
 entity EcEvrProtoTop is
   generic (
@@ -63,6 +64,9 @@ entity EcEvrProtoTop is
     sfpTxFault               : in    std_logic_vector(NUM_SFP_G - 1 downto 0) := (others => '1');
     sfpTxEn                  : out   std_logic_vector(NUM_SFP_G - 1 downto 0) := (others => '0');
 
+    spiMst                   : out   BspSpiMstType := BSP_SPI_MST_INIT_C;
+    spiSub                   : in    BspSpiSubType;
+
     mgtRxP                   : in    std_logic_vector(NUM_MGT_G - 1 downto 0);
     mgtRxN                   : in    std_logic_vector(NUM_MGT_G - 1 downto 0);
     mgtTxP                   : out   std_logic_vector(NUM_MGT_G - 1 downto 0);
@@ -90,6 +94,19 @@ architecture Impl of EcEvrProtoTop is
   constant NUM_BUS_SUBS_C : natural   := 1;
   constant SUB_IDX_DRP_C  : natural   := 0;
 
+  constant SPI_FILE_MAP_C : FlashFileArray := (
+    0 => (
+            id => x"42", -- 'B'
+            begAddr => x"000000",
+            endAddr => x"21FFFF"
+         ),
+    1 => (
+            id => x"54", -- 'T'
+            begAddr => x"FE0000",
+            endAddr => x"FFFFFF"
+         )
+  );
+
   signal sysClk           : std_logic;
   signal sysRst           : std_logic := '1';
   signal lanRstAssertCnt  : natural range 0 to LAN_RST_ASSC_C := LAN_RST_ASSC_C;
@@ -102,7 +119,7 @@ architecture Impl of EcEvrProtoTop is
 
   signal mgtRstCnt        : natural range 0 to TIMG_RST_CNT_C := TIMG_RST_CNT_C;
 
-  signal ledsLoc          : std_logic_vector(leds'range);
+  signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
 
   signal lan9254HbiOb     : Lan9254HBIOutType;
   signal lan9254HbiIb     : Lan9254HBIInpType;
@@ -126,6 +143,10 @@ architecture Impl of EcEvrProtoTop is
 
   signal busReqs          : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
   signal busReps          : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_ERROR_C);
+
+  signal spiMstLoc        : BspSpiMstType := BSP_SPI_MST_INIT_C;
+
+  signal file0WP          : std_logic     := '0';
 
 begin
 
@@ -182,7 +203,7 @@ begin
       fpga_t          => lan9254_t,
 
       -- SPI image
-      spiMst          => BSP_SPI_INIT_C,
+      spiMst          => BSP_SPI_MST_INIT_C,
       -- provides readback of sck/sdo/scs from digital io
       spiSub          => open, -- out BspSpiType;
 
@@ -215,14 +236,16 @@ begin
     generic map (
       CLK_FREQ_G        => SYS_CLK_FREQ_C,
       GIT_HASH_G        => GIT_HASH_G,
+      SPI_FILE_MAP_G    => SPI_FILE_MAP_C,
       EEP_I2C_ADDR_G    => x"50",
       EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
       GEN_HBI_ILA_G     => false,
       GEN_ESC_ILA_G     => true,
-      GEN_EOE_ILA_G     => false,
-      GEN_U2B_ILA_G     => true,
+      GEN_EOE_ILA_G     => true,
+      GEN_FOE_ILA_G     => true,
+      GEN_U2B_ILA_G     => false,
       GEN_CNF_ILA_G     => true,
-      GEN_I2C_ILA_G     => true,
+      GEN_I2C_ILA_G     => false,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C
     )
@@ -266,6 +289,10 @@ begin
       escState          => open, -- out    ESCStateType;
       escDebug          => open, -- out    std_logic_vector(23 downto 0);
       eepEmulActive     => open, -- out    std_logic;
+
+      spiMst            => spiMstLoc,
+      spiSub            => spiSub,
+      file0WP           => file0WP,
 
       timingMGTStatus   => open, -- in     std_logic_vector(31 downto 0) := (others => '0');
 
@@ -368,5 +395,12 @@ begin
       );
 
   end block B_MGT;
+
+  ledsLoc(0)                     <= spiMstLoc.util(0);
+  ledsLoc(1)                     <= spiMstLoc.util(1);
+  ledsLoc(ledsLoc'left downto 2) <= (others => '0');
+
+  leds   <= ledsLoc;
+  spiMst <= spiMstLoc;
    
 end architecture Impl;

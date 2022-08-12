@@ -7,13 +7,14 @@ import ecevr_pinmap
 
 class GenXdc:
 
-  PAT = re.compile("^(IO_|MGT(REFCLK|PTX|PRX)).*")
+  PAT = re.compile("^(IO_|MGT(REFCLK|PTX|PRX)|CCLK_).*")
 
   def __init__(self, pin_file, pin_map, prefix="EcEvrProto"):
     self.pin_file_ = pin_file
     self.pin_map_  = pin_map
     self.prefix_   = prefix
     self.xio_file_ = prefix + "-io.xdc"
+    self.notfound_ = pin_map.copy()
 
   def genHdr(self):
     with io.open(self.xio_file_, "w") as x:
@@ -37,8 +38,17 @@ class GenXdc:
             for p in pinDesc["props"].items():
               x.write("set_property {:16s} {:12s} [get_ports {:s}]\n".format(p[0], p[1], portName))
             x.write("\n")
+            del( self.notfound_[wrds[1]] )
           except KeyError as e:
             pass
+    self.warnNotfound()
+
+  def warnNotfound(self):
+    if ( len(self.notfound_) > 0 ):
+      print("WARNING - some pin mappings could not be establishsed")
+      print("          maybe their names are misspelled in ecevr_pinmap.py?")
+      for k in self.notfound_.keys():
+         print(k)
 
   def genFtr(self):
     pass
