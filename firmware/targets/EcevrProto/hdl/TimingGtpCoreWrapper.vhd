@@ -162,7 +162,6 @@ architecture rtl of TimingGtCoreWrapper is
 
    signal drpClk           : std_logic;
    signal drpRst           : std_logic;
-   signal rxRst            : std_logic;
    signal rxrstdone        : std_logic;
    signal txrstdone        : std_logic;
    signal bypasserr        : std_logic := '0';
@@ -203,7 +202,7 @@ begin
       port map (
          sysclk_in                       =>      sysClk,
          soft_reset_tx_in                =>      txControl(0),
-         soft_reset_rx_in                =>      rxRst,
+         soft_reset_rx_in                =>      rxControl(0),
          dont_reset_on_data_error_in     =>      '0',
          gt0_drp_busy_out                =>      open,
          gt0_tx_fsm_reset_done_out       =>      txrstdone,
