@@ -3,6 +3,7 @@ library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
 
+use     work.ESCBasicTypesPkg.all;
 use     work.Lan9254Pkg.all;
 use     work.Lan9254ESCPkg.all;
 use     work.Udp2BusPkg.all;
@@ -91,8 +92,9 @@ architecture Impl of EcEvrProtoTop is
   constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_C ) - 1;
   constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_C ) - 1;
 
-  constant NUM_BUS_SUBS_C : natural   := 1;
+  constant NUM_BUS_SUBS_C : natural   := 2;
   constant SUB_IDX_DRP_C  : natural   := 0;
+  constant SUB_IDX_LOC_C  : natural   := 1;
 
   constant SPI_FILE_MAP_C : FlashFileArray := (
     0 => (
@@ -120,6 +122,8 @@ architecture Impl of EcEvrProtoTop is
   signal mgtRstCnt        : natural range 0 to TIMG_RST_CNT_C := TIMG_RST_CNT_C;
 
   signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
+  signal pdoLeds          : std_logic_vector(2 downto 0)      := (others => '0');
+  signal tstLeds          : std_logic_vector(2 downto 0)      := (others => '0');
 
   signal lan9254HbiOb     : Lan9254HBIOutType;
   signal lan9254HbiIb     : Lan9254HBIInpType;
@@ -144,13 +148,28 @@ architecture Impl of EcEvrProtoTop is
   signal busReqs          : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
   signal busReps          : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_ERROR_C);
 
-  signal spiMstLoc        : BspSpiMstType := BSP_SPI_MST_INIT_C;
+  signal spiMstLoc        : BspSpiMstType  := BSP_SPI_MST_INIT_C;
 
-  signal file0WP          : std_logic     := '0';
+  signal file0WP          : std_logic      := '0';
+
+  signal busReqLoc        : Udp2BusReqType;
+  signal busRepLoc        : Udp2BusRepType := UDP2BUSREP_ERROR_C;
+
+  signal mgtLoopback      : std_logic_vector(2 downto 0);
+  signal mgtRxControl     : std_logic_vector(1 downto 0);
+  signal mgtTxControl     : std_logic_vector(1 downto 0);
+  signal mgtTxStatus      : std_logic_vector(7 downto 0);
+  signal mgtRxStatus      : std_logic_vector(7 downto 0);
+
+  signal rxPDOMst         : Lan9254PDOMstType;
 
 begin
 
-  sysClk <= lan9254Clk;
+  -- abbreviations
+  busReqLoc                <= busReqs( SUB_IDX_LOC_C );
+  busReps( SUB_IDX_LOC_C ) <= busRepLoc;
+
+  sysClk         <= lan9254Clk;
 
   jumperRst      <= '1' when jumperDebCnt    > 0 else '0';
   sysRst         <= '1' when lanRstWaitCnt   > 0 else '0';
@@ -267,8 +286,8 @@ begin
       busReqs           => busReqs,
       busReps           => busReps,
 
-      rxPDOMst          => open, -- out    Lan9254PDOMstType;
-      rxPDORdy          => open, -- in     std_logic := '1';
+      rxPDOMst          => rxPDOMst, -- out    Lan9254PDOMstType;
+      rxPDORdy          => open,     -- in     std_logic := '1';
 
       i2cAddr2BMode     => eepSz32k,
 
@@ -370,8 +389,8 @@ begin
         gtRefClkDiv2     => open, -- in  std_logic := '0';-- Unused in GTHE3, but used in GTHE4
 
         -- Rx ports
-        rxControl        => open, -- in  std_logic_vector(1 downto 0) := (others => '0');
-        rxStatus         => open, -- out std_logic_vector(7 downto 0);
+        rxControl        => mgtRxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
+        rxStatus         => mgtRxStatus, -- out std_logic_vector(7 downto 0);
         rxUsrClkActive   => open, -- in  std_logic := '1';
         rxCdrStable      => open, -- out std_logic;
         rxUsrClk         => mgtRxRecClk,  -- in  std_logic;
@@ -382,8 +401,8 @@ begin
         rxOutClk         => mgtRxRecClk, -- out std_logic;
 
         -- Tx Ports
-        txControl        => open, -- in  std_logic_vector(1 downto 0) := (others => '0');
-        txStatus         => open, -- out std_logic_vector(7 downto 0);
+        txControl        => mgtTxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
+        txStatus         => mgtTxStatus, -- out std_logic_vector(7 downto 0);
         txUsrClk         => mgtTxUsrClk, -- in  std_logic;
         txUsrClkActive   => open, -- in  std_logic := '1';
         txData           => mgtTxData,  -- in  std_logic_vector(15 downto 0);
@@ -391,13 +410,138 @@ begin
         txOutClk         => mgtTxUsrClk, -- out std_logic;
 
         -- Loopback
-        loopback         => open -- in std_logic_vector(2 downto 0) := (others => '0')
+        loopback         => mgtLoopback -- in std_logic_vector(2 downto 0) := (others => '0')
       );
 
   end block B_MGT;
 
-  ledsLoc(0)                     <= spiMstLoc.util(0);
-  ledsLoc(1)                     <= spiMstLoc.util(1);
+  B_LOC_REGS : block is
+
+    constant NUM_REGS_C : natural := 4;
+
+    type StateType is (IDLE);
+
+    type RegType is record
+      state      : StateType;
+      rep        : Udp2BusRepType;
+      regs       : Slv32Array(0 to NUM_REGS_C - 1);
+    end record RegType;
+
+    constant REG_INIT_C : RegType := (
+      state      => IDLE,
+      rep        => UDP2BUSREP_ERROR_C,
+      -- initialize individual registers here
+      regs       => (others => (others => '0'))
+    );
+    
+    signal r   : RegType := REG_INIT_C;
+    signal rin : RegType;
+
+  begin
+
+     P_COMB : process ( r, busReqLoc,
+       mgtRxStatus, mgtTxStatus,
+       sfpPresentb, sfpTxFault, sfpLos
+     ) is
+       variable v : RegType;
+       variable a : unsigned(7 downto 0);
+     begin
+      v   := r;
+      a   := unsigned( busReqLoc.dwaddr( 7 downto 0 ) );
+
+      if ( ( busReqLoc.valid and r.rep.valid ) = '1' ) then
+        v.rep.valid := '0';
+      end if;
+
+      case ( r.state ) is
+        when IDLE =>
+          if ( ( not r.rep.valid and busReqLoc.valid ) = '1' ) then
+            if    ( a >= NUM_REGS_C ) then
+              v.rep := UDP2BUSREP_ERROR_C;
+            else
+              v.rep.berr  := '0';
+              v.rep.valid := '1';
+              if ( busReqLoc.rdnwr = '1' ) then
+                v.rep.rdata := r.regs( to_integer(a) );
+              else
+                for i in busReqLoc.be'range loop
+                  if ( busReqLoc.be(i) = '1' ) then
+                    v.regs( to_integer(a) )(8*i + 7 downto 8*i) := busReqLoc.data(8*i+7 downto 8*i);
+                  end if;
+                end loop;
+              end if;
+            end if;
+          end if;
+      end case;
+
+      -- read-only
+      v.regs(1)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) &
+                                mgtRxStatus &
+                                mgtTxStatus;
+      rin <= v;
+    end process P_COMB;
+
+    P_SEQ : process ( sysClk ) is
+    begin
+      if ( rising_edge( sysClk ) ) then
+        if ( sysRst = '1' ) then
+          r <= REG_INIT_C;
+        else
+          r <= rin;
+        end if;
+      end if;
+    end process P_SEQ;
+
+    busRepLoc <= r.rep;
+
+    mgtTxControl <= r.regs(0)( 1 downto  0);
+    mgtRxControl <= r.regs(0)( 9 downto  8);
+    mgtLoopback  <= r.regs(0)(18 downto 16);
+
+    sfpTxEn(0)   <= r.regs(1)(          31);
+    tstLeds(2)   <= r.regs(1)(          30);
+    tstLeds(1)   <= r.regs(1)(          29);
+    tstLeds(0)   <= r.regs(1)(          28);
+
+    P_PWRCYCLE : process (r) is
+    begin
+      if ( r.regs(2)(15 downto 0) = x"dead" ) then
+        pwrCycle <= '1';
+      end if;
+    end process P_PWRCYCLE;
+
+  end block B_LOC_REGS;
+
+  B_RXPDO : block is
+  begin
+
+    P_LED : process ( sysClk ) is
+    begin
+      if ( rising_edge( sysClk ) ) then
+        if ( sysRst = '1' ) then
+          pdoLeds <= (others => '0');
+        elsif ( ( rxPDOMst.valid = '1' ) ) then
+          if ( unsigned( rxPDOMst.wrdAddr ) = 0 ) then
+            if ( rxPDOMst.ben(0) = '1' ) then
+              pdoLeds(0) <= rxPDOMst.data(0);
+            end if;
+            if ( rxPDOMst.ben(1) = '1' ) then
+              pdoLeds(1) <= rxPDOMst.data(8);
+            end if;
+          elsif ( unsigned( rxPDOMst.wrdAddr ) = 1 ) then
+            if ( rxPDOMst.ben(0) = '1' ) then
+              pdoLeds(2) <= rxPDOMst.data(0);
+            end if;
+          end if;
+        end if;
+      end if;
+    end process P_LED;
+
+  end block B_RXPDO;
+
+  ledsLoc(0)                     <= spiMstLoc.util(0) or pdoLeds(0) or tstLeds(0);
+  ledsLoc(1)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1);
+  ledsLoc(2)                     <=  '0'              or pdoLeds(2) or tstLeds(2);
   ledsLoc(ledsLoc'left downto 2) <= (others => '0');
 
   leds   <= ledsLoc;
