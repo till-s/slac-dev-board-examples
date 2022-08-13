@@ -540,11 +540,14 @@ begin
 
   end block B_RXPDO;
 
-  ledsLoc(8)                     <= spiMstLoc.util(0) or pdoLeds(2) or tstLeds(2); --R
-  ledsLoc(7)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1); --G
-  ledsLoc(6)                     <=  '0'              or pdoLeds(0) or tstLeds(0); --B
-  ledsLoc(ledsLoc'left downto 3) <= (others => '0');
-
+  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds ) is
+  begin
+    ledsLoc                        <= (others => '0');
+    ledsLoc(8)                     <= spiMstLoc.util(0) or pdoLeds(2) or tstLeds(2); --R
+    ledsLoc(7)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1); --G
+    ledsLoc(6)                     <=  '0'              or pdoLeds(0) or tstLeds(0); --B
+  end process P_LEDS;
+  
   leds   <= ledsLoc;
   spiMst <= spiMstLoc;
    
