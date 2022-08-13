@@ -540,9 +540,9 @@ begin
 
   end block B_RXPDO;
 
-  ledsLoc(0)                     <= spiMstLoc.util(0) or pdoLeds(0) or tstLeds(0);
-  ledsLoc(1)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1);
-  ledsLoc(2)                     <=  '0'              or pdoLeds(2) or tstLeds(2);
+  ledsLoc(8)                     <= spiMstLoc.util(0) or pdoLeds(2) or tstLeds(2); --R
+  ledsLoc(7)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1); --G
+  ledsLoc(6)                     <=  '0'              or pdoLeds(0) or tstLeds(0); --B
   ledsLoc(ledsLoc'left downto 3) <= (others => '0');
 
   leds   <= ledsLoc;
