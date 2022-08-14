@@ -429,7 +429,7 @@ begin
 
     constant REG_INIT_C : RegType := (
       state      => IDLE,
-      rep        => UDP2BUSREP_ERROR_C,
+      rep        => UDP2BUSREP_INIT_C,
       -- initialize individual registers here
       regs       => (others => (others => '0'))
     );
