@@ -11,7 +11,7 @@ use     work.EcEvrProtoPkg.all;
 
 entity EcEvrProto is
   generic (
-    BUILD_INFO_G             : std_logic_vector(2239 downto 0);
+    GIT_HASH_G               : std_logic_vector(31 downto 0);
     NUM_LED_G                : natural := 9;
     NUM_POF_G                : natural := 2;
     NUM_GPIO_G               : natural := 3;
@@ -256,7 +256,7 @@ begin
 
   U_Top : entity work.EcEvrProtoTop
     generic map (
-      GIT_HASH_G               => BUILD_INFO_G(BUILD_INFO_G'left downto BUILD_INFO_G'left - 32 + 1),
+      GIT_HASH_G               => GIT_HASH_G(GIT_HASH_G'left downto GIT_HASH_G'left - 32 + 1),
       NUM_LED_G                => NUM_LED_G,
       NUM_POF_G                => NUM_POF_G,
       NUM_GPIO_G               => NUM_GPIO_G,
