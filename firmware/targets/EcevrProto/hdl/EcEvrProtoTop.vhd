@@ -6,6 +6,7 @@ use     ieee.numeric_std.all;
 use     work.ESCBasicTypesPkg.all;
 use     work.Lan9254Pkg.all;
 use     work.Lan9254ESCPkg.all;
+use     work.ESCFoEPkg.all;
 use     work.Udp2BusPkg.all;
 use     work.EcEvrBspPkg.all;
 use     work.FoE2SpiPkg.all;
@@ -96,16 +97,25 @@ architecture Impl of EcEvrProtoTop is
   constant SUB_IDX_DRP_C  : natural   := 0;
   constant SUB_IDX_LOC_C  : natural   := 1;
 
+  constant NUM_SUBSUBS_C  : natural   := 2;
+  constant SS_IDX_LOC_C   : natural   := 0;
+  constant SS_IDX_ICAP_C  : natural   := 1;
+
   constant SPI_FILE_MAP_C : FlashFileArray := (
     0 => (
-            id => x"42", -- 'B'
+            id      => x"42", -- 'B'
             begAddr => x"000000",
             endAddr => x"21FFFF"
          ),
     1 => (
-            id => x"54", -- 'T'
+            id      => x"54", -- 'T'
             begAddr => x"FE0000",
             endAddr => x"FFFFFF"
+         ),
+    2 => ( -- catch-all entry must be last!
+            id      => FOE_FILE_NAME_WILDCARD_C,
+            begAddr => x"220000",
+            endAddr => x"43FFFF"
          )
   );
 
@@ -148,6 +158,8 @@ architecture Impl of EcEvrProtoTop is
   signal busReqs          : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
   signal busReps          : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_ERROR_C);
 
+  signal busLocReqs       : Udp2BusReqArray(NUM_SUBSUBS_C - 1 downto 0)  := (others => UDP2BUSREQ_INIT_C);
+  signal busLocReps       : Udp2BusRepArray(NUM_SUBSUBS_C - 1 downto 0)  := (others => UDP2BUSREP_ERROR_C);
   signal spiMstLoc        : BspSpiMstType  := BSP_SPI_MST_INIT_C;
 
   signal file0WP          : std_logic      := '0';
@@ -166,8 +178,8 @@ architecture Impl of EcEvrProtoTop is
 begin
 
   -- abbreviations
-  busReqLoc                <= busReqs( SUB_IDX_LOC_C );
-  busReps( SUB_IDX_LOC_C ) <= busRepLoc;
+  busReqLoc                  <= busLocReqs( SS_IDX_LOC_C );
+  busLocReps( SS_IDX_LOC_C ) <= busRepLoc;
 
   sysClk         <= lan9254Clk;
 
@@ -439,6 +451,23 @@ begin
 
   begin
 
+     U_BUSMUX : entity work.Udp2BusMux
+       generic map (
+         ADDR_MSB_G => 8,
+         ADDR_LSB_G => 6,
+         NUM_SUBS_G => NUM_SUBSUBS_C
+       )
+       port map (
+         clk        => sysClk,
+         rst        => sysRst,
+
+         reqIb      => busReqs( SUB_IDX_LOC_C downto SUB_IDX_LOC_C ),
+         repIb      => busReps( SUB_IDX_LOC_C downto SUB_IDX_LOC_C ),
+
+         reqOb      => busLocReqs,
+         repOb      => busLocReps
+       );
+
      P_COMB : process ( r, busReqLoc,
        mgtRxStatus, mgtTxStatus,
        sfpPresentb, sfpTxFault, sfpLos
@@ -510,6 +539,21 @@ begin
         pwrCycle <= '1';
       end if;
     end process P_PWRCYCLE;
+
+    U_ICAP : entity work.IcapE2Reg
+      port map ( 
+        clk    => sysClk,
+        rst    => sysRst,
+        addr   => busLocReqs(SS_IDX_ICAP_C).dwaddr(15 downto 0),
+        rdnw   => busLocReqs(SS_IDX_ICAP_C).rdnwr,
+        dInp   => busLocReqs(SS_IDX_ICAP_C).data,
+        req    => busLocReqs(SS_IDX_ICAP_C).valid,
+
+        dOut   => busLocReps(SS_IDX_ICAP_C).rdata,
+        ack    => busLocReps(SS_IDX_ICAP_C).valid
+      );
+
+    busLocReps(SS_IDX_ICAP_C).berr <= '0';
 
   end block B_LOC_REGS;
 
