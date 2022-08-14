@@ -540,6 +540,7 @@ begin
       end if;
     end process P_PWRCYCLE;
 
+    -- the ICAPE2 can be clocked up to 100MHz (70MHz -2le device @ 0.9V)
     U_ICAP : entity work.IcapE2Reg
       port map ( 
         clk    => sysClk,
