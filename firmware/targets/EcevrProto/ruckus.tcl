@@ -14,8 +14,9 @@ foreach f {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
 
-loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-clocks.xdc"
+loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-misc.xdc"
 loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-io.xdc"
+loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-clocks.xdc"
 
 # some submodule ruckus.tcl's already set the strategy
 # (too late for our properties.tcl).
