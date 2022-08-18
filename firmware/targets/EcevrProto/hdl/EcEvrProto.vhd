@@ -124,6 +124,9 @@ architecture Impl of EcEvrProto is
   signal sfpTxFault    : std_logic_vector(NUM_SFP_G - 1 downto 0);
   signal sfpTxEn       : std_logic_vector(NUM_SFP_G - 1 downto 0) := (others => '1');
  
+  signal sysClk        : std_logic;
+  signal sysRstReq     : std_logic;
+  
 begin
 
   U_IOBUF_CLK_PLL : IOBUF
@@ -232,7 +235,6 @@ begin
     -- does not immediately pass user clock pulses (caused SPI erase faults!)
     -- but needs a few cycles. Hold off sysRst until this is complete.
 
-    signal    sysRstReq      : std_logic;
     signal    usrCclk        : std_logic;
 
     -- assume sysClk to be < 200MHz so prescaling by 4 is certainly acceptable
