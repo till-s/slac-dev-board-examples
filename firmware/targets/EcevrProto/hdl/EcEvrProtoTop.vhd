@@ -100,13 +100,13 @@ architecture Impl of EcEvrProtoTop is
   constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_G ) - 1;
 
-  constant NUM_BUS_SUBS_C : natural   := 2;
-  constant SUB_IDX_DRP_C  : natural   := 0;
+  constant NUM_BUS_SUBS_C : natural   := 1;
   constant SUB_IDX_LOC_C  : natural   := 1;
 
-  constant NUM_SUBSUBS_C  : natural   := 2;
+  constant NUM_SUBSUBS_C  : natural   := 3;
   constant SS_IDX_LOC_C   : natural   := 0;
-  constant SS_IDX_ICAP_C  : natural   := 1;
+  constant SS_IDX_DRP_C   : natural   := 1;
+  constant SS_IDX_ICAP_C  : natural   := 2;
 
   constant SPI_FILE_MAP_C : FlashFileArray := (
     0 => (
@@ -389,8 +389,8 @@ begin
         clk              => sysClkLoc,
         rst              => sysRstLoc,
 
-        req              => busReqs(SUB_IDX_DRP_C),
-        rep              => busReps(SUB_IDX_DRP_C),
+        req              => busLocReqs(SS_IDX_DRP_C),
+        rep              => busLocReps(SS_IDX_DRP_C),
 
         drpAddr          => drpAddr,
         drpEn            => drpEn,
@@ -491,8 +491,8 @@ begin
 
      U_BUSMUX : entity work.Udp2BusMux
        generic map (
-         ADDR_MSB_G => 8,
-         ADDR_LSB_G => 6,
+         ADDR_MSB_G => 16,
+         ADDR_LSB_G => 14,
          NUM_SUBS_G => NUM_SUBSUBS_C
        )
        port map (
