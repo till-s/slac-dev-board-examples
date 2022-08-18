@@ -21,6 +21,7 @@ entity EcEvrProtoTop is
     NUM_MGT_G                : natural;
     PLL_CLK_FREQ_G           : real;
     LAN9254_CLK_FREQ_G       : real;
+    SYS_CLK_FREQ_G           : real;
     EEP_WR_WAIT_G            : natural := 1000000
   );
   port (
@@ -29,6 +30,12 @@ entity EcEvrProtoTop is
     pllClk                   : in    std_logic := '0';
     -- from LAN9254 (used to clock fpga logic)
     lan9254Clk               : in    std_logic := '0';
+
+    sysClk                   : out   std_logic;
+    sysRst                   : out   std_logic;
+    -- external request; don't create a loop
+    -- from sysRst -> sysRstReq!
+    sysRstReq                : in    std_logic := '0';
 
     mgtRefClk                : in    std_logic := '0';
 
@@ -79,8 +86,8 @@ entity EcEvrProtoTop is
 end entity EcEvrProtoTop;
 
 architecture Impl of EcEvrProtoTop is
+
   constant TIMG_RST_CNT_C : natural   := 100;
-  constant SYS_CLK_FREQ_C : real      := LAN9254_CLK_FREQ_G;
 
   -- debounce of sys-reset
   constant SYS_RST_DEBT_C : real      := 0.01;
@@ -89,9 +96,9 @@ architecture Impl of EcEvrProtoTop is
   -- wait until lan9254 comes on-line
   constant LAN_RST_WAIT_C : real      := 0.01;
 
-  constant SYS_RST_DEBC_C : natural   := natural( SYS_RST_DEBT_C * SYS_CLK_FREQ_C ) - 1;
-  constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_C ) - 1;
-  constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_C ) - 1;
+  constant SYS_RST_DEBC_C : natural   := natural( SYS_RST_DEBT_C * SYS_CLK_FREQ_G ) - 1;
+  constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_G ) - 1;
+  constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_G ) - 1;
 
   constant NUM_BUS_SUBS_C : natural   := 2;
   constant SUB_IDX_DRP_C  : natural   := 0;
@@ -119,8 +126,8 @@ architecture Impl of EcEvrProtoTop is
          )
   );
 
-  signal sysClk           : std_logic;
-  signal sysRst           : std_logic := '1';
+  signal sysClkLoc        : std_logic;
+  signal sysRstLoc        : std_logic := '1';
   signal lanRstAssertCnt  : natural range 0 to LAN_RST_ASSC_C := LAN_RST_ASSC_C;
   signal lanRstWaitCnt    : natural range 0 to LAN_RST_WAIC_C := LAN_RST_WAIC_C;
   signal lan9254RstbOut   : std_logic := '0';
@@ -181,15 +188,41 @@ begin
   busReqLoc                  <= busLocReqs( SS_IDX_LOC_C );
   busLocReps( SS_IDX_LOC_C ) <= busRepLoc;
 
-  sysClk         <= lan9254Clk;
+  -- ATM we have not connected an MMCM
+  assert ( SYS_CLK_FREQ_G = LAN9254_CLK_FREQ_G )
+    report ("differen SYS_CLK_FREQ_G requires an MMCM")
+    severity failure;
+
+  sysClkLoc      <= lan9254Clk;
+
+  sysClk         <= sysClkLoc;
+  sysRst         <= sysRstLoc;
 
   jumperRst      <= '1' when jumperDebCnt    > 0 else '0';
-  sysRst         <= '1' when lanRstWaitCnt   > 0 else '0';
   lan9254RstbOut <= '0' when lanRstAssertCnt > 0 else '1';
 
-  P_FPGA_RST : process (sysClk) is
+  P_RESET    : process( jumperDebCnt, lanRstWaitCnt, lanRstAssertCnt, sysRstReq ) is
   begin
-    if ( rising_edge( sysClk ) ) then
+    jumperRst      <= '0';
+    sysRstLoc      <= sysRstReq;
+    lan9254RstbOut <= '1';
+
+    if ( lanRstAssertCnt > 0 ) then
+      lan9254RstbOut <= '0';
+    end if;
+
+    if ( jumperDebCnt    > 0 ) then
+      jumperRst <= '1';
+    end if;
+
+    if ( lanRstWaitCnt   > 0 ) then
+      sysRstLoc      <= '1';
+    end if;
+  end process P_RESET;
+
+  P_FPGA_RST : process ( sysClkLoc ) is
+  begin
+    if ( rising_edge( sysClkLoc ) ) then
       if ( lan9254RstbInp = '0' ) then
         lanRstWaitCnt <= LAN_RST_WAIC_C;
       elsif ( lanRstWaitCnt > 0 ) then
@@ -224,8 +257,8 @@ begin
 
   U_MAP  : entity work.EcEvrBoardMap
     port map (
-      sysClk          => sysClk,
-      sysRst          => sysRst,
+      sysClk          => sysClkLoc,
+      sysRst          => sysRstLoc,
 
       imageSel        => HBI16M,
 
@@ -265,7 +298,7 @@ begin
 
   U_MAIN : entity work.EcEvrWrapper
     generic map (
-      CLK_FREQ_G        => SYS_CLK_FREQ_C,
+      CLK_FREQ_G        => SYS_CLK_FREQ_G,
       GIT_HASH_G        => GIT_HASH_G,
       SPI_FILE_MAP_G    => SPI_FILE_MAP_C,
       EEP_I2C_ADDR_G    => x"50",
@@ -281,12 +314,12 @@ begin
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C
     )
     port map (
-      sysClk            => sysClk,
-      sysRst            => sysRst,
+      sysClk            => sysClkLoc,
+      sysRst            => sysRstLoc,
 
-      escRst            => sysRst, -- in     std_logic := '0';
-      eepRst            => sysRst, -- in     std_logic := '0';
-      hbiRst            => open,   -- in     std_logic := '0';
+      escRst            => sysRstLoc, -- in     std_logic := '0';
+      eepRst            => sysRstLoc, -- in     std_logic := '0';
+      hbiRst            => open,      -- in     std_logic := '0';
 
       lan9254_hbiOb     => lan9254HbiOb,
       lan9254_hbiIb     => lan9254HbiIb,
@@ -350,8 +383,8 @@ begin
         GEN_ILA_G        => false
       )
       port map (
-        clk              => sysClk,
-        rst              => sysRst,
+        clk              => sysClkLoc,
+        rst              => sysRstLoc,
 
         req              => busReqs(SUB_IDX_DRP_C),
         rep              => busReps(SUB_IDX_DRP_C),
@@ -366,8 +399,8 @@ begin
 
     U_MGT : entity work.TimingGtCoreWrapper
       port map (
-        sysClk           => sysClk, -- in  std_logic;
-        sysRst           => sysRst, -- in  std_logic;
+        sysClk           => sysClkLoc, -- in  std_logic;
+        sysRst           => sysRstLoc, -- in  std_logic;
 
         -- DRP
         drpAddr          => drpAddr(8 downto 0),
@@ -445,7 +478,7 @@ begin
       -- initialize individual registers here
       regs       => (others => (others => '0'))
     );
-    
+
     signal r   : RegType := REG_INIT_C;
     signal rin : RegType;
 
@@ -458,8 +491,8 @@ begin
          NUM_SUBS_G => NUM_SUBSUBS_C
        )
        port map (
-         clk        => sysClk,
-         rst        => sysRst,
+         clk        => sysClkLoc,
+         rst        => sysRstLoc,
 
          reqIb      => busReqs( SUB_IDX_LOC_C downto SUB_IDX_LOC_C ),
          repIb      => busReps( SUB_IDX_LOC_C downto SUB_IDX_LOC_C ),
@@ -510,10 +543,10 @@ begin
       rin <= v;
     end process P_COMB;
 
-    P_SEQ : process ( sysClk ) is
+    P_SEQ : process ( sysClkLoc ) is
     begin
-      if ( rising_edge( sysClk ) ) then
-        if ( sysRst = '1' ) then
+      if ( rising_edge( sysClkLoc ) ) then
+        if ( sysRstLoc = '1' ) then
           r <= REG_INIT_C;
         else
           r <= rin;
@@ -542,9 +575,9 @@ begin
 
     -- the ICAPE2 can be clocked up to 100MHz (70MHz -2le device @ 0.9V)
     U_ICAP : entity work.IcapE2Reg
-      port map ( 
-        clk    => sysClk,
-        rst    => sysRst,
+      port map (
+        clk    => sysClkLoc,
+        rst    => sysRstLoc,
         addr   => busLocReqs(SS_IDX_ICAP_C).dwaddr(15 downto 0),
         rdnw   => busLocReqs(SS_IDX_ICAP_C).rdnwr,
         dInp   => busLocReqs(SS_IDX_ICAP_C).data,
@@ -561,10 +594,10 @@ begin
   B_RXPDO : block is
   begin
 
-    P_LED : process ( sysClk ) is
+    P_LED : process ( sysClkLoc ) is
     begin
-      if ( rising_edge( sysClk ) ) then
-        if ( sysRst = '1' ) then
+      if ( rising_edge( sysClkLoc ) ) then
+        if ( sysRstLoc = '1' ) then
           pdoLeds <= (others => '0');
         elsif ( ( rxPDOMst.valid = '1' ) ) then
           if ( unsigned( rxPDOMst.wrdAddr ) = 0 ) then
@@ -592,8 +625,8 @@ begin
     ledsLoc(7)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1); --G
     ledsLoc(6)                     <=  '0'              or pdoLeds(0) or tstLeds(0); --B
   end process P_LEDS;
-  
+
   leds   <= ledsLoc;
   spiMst <= spiMstLoc;
-   
+
 end architecture Impl;

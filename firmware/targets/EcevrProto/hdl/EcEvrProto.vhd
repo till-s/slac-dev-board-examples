@@ -2,6 +2,7 @@
 library ieee;
 use     ieee.std_logic_1164.all;
 use     ieee.numeric_std.all;
+use     ieee.math_real.all;
 
 library unisim;
 use     unisim.vcomponents.all;
@@ -19,6 +20,7 @@ entity EcEvrProto is
     NUM_MGT_G                : natural := 4;
     NUM_REFCLK_G             : natural := 2;
     PLL_CLK_FREQ_G           : real    := 25.0E6;
+    SYS_CLK_FREQ_G           : real    := 25.0E6;
     LAN9254_CLK_FREQ_G       : real    := 25.0E6
   );
   port (
@@ -122,7 +124,6 @@ architecture Impl of EcEvrProto is
   signal sfpTxFault    : std_logic_vector(NUM_SFP_G - 1 downto 0);
   signal sfpTxEn       : std_logic_vector(NUM_SFP_G - 1 downto 0) := (others => '1');
  
-
 begin
 
   U_IOBUF_CLK_PLL : IOBUF
@@ -225,26 +226,64 @@ begin
   
   U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_C ), I => mgtTxP(0) );
 
-  U_STARTUPE2: STARTUPE2
-    generic map (
-      PROG_USR => "FALSE", -- Activate program event security feature. Requires encrypted bitstreams.
-      SIM_CCLK_FREQ => 0.0 -- Set the Configuration Clock Frequency(ns) for simulation.
-    )
-    port map (
-      CFGCLK     => open, -- 1-bit output: Configuration main clock output
-      CFGMCLK    => open, -- 1-bit output: Configuration internal oscillator clock output
-      EOS        => open, -- 1-bit output: Active high output signal indicating the End Of Startup.
-      PREQ       => open, -- 1-bit output: PROGRAM request to fabric output
-      CLK        => '0',  -- 1-bit input: User start-up clock input
-      GSR        => '0',  -- 1-bit input: Global Set/Reset input (GSR cannot be used for the port name)
-      GTS        => '0',  -- 1-bit input: Global 3-state input (GTS cannot be used for the port name)
-      KEYCLEARB  => '1',  -- 1-bit input: Clear AES Decrypter Key input from Battery-Backed RAM (BBRAM)
-      PACK       => '0',  -- 1-bit input: PROGRAM acknowledge input
-      USRCCLKO   => spiMstOut.sclk, -- 1-bit input: User CCLK input
-      USRCCLKTS  => '0',  -- 1-bit input: User CCLK 3-state enable input
-      USRDONEO   => '1',  -- 1-bit input: User DONE pin output control
-      USRDONETS  => '0'   -- 1-bit input: User DONE 3-state enable output
+
+  B_STARTUP : block is
+    -- STARTUPE2 apparently (this is not documented but I looked at the simulation)
+    -- does not immediately pass user clock pulses (caused SPI erase faults!)
+    -- but needs a few cycles. Hold off sysRst until this is complete.
+
+    signal    sysRstReq      : std_logic;
+    signal    usrCclk        : std_logic;
+
+    -- assume sysClk to be < 200MHz so prescaling by 4 is certainly acceptable
+    -- for the STARTUPE2.
+
+    -- 2 bits prescaler, a count of 8 pulses... 2 bit for the reset state
+    subtype StartupCntType is unsigned(1 + 2 + 3 - 1 downto 0);
+
+    signal  startupInitCnt : StartupCntType := (
+      StartupCntType'left => '1',  -- hold in reset initially
+      others => '0'
     );
+
+  begin
+
+    P_STARTUP_CLK : process ( sysClk ) is
+    begin
+      if ( rising_edge( sysClk ) ) then
+        if ( startupInitCnt /= 0 ) then
+           startupInitCnt <= startupInitCnt + 1;
+        end if;
+      end if;
+    end process P_STARTUP_CLK;
+
+    sysRstReq <= startupInitCnt( startupInitCnt'left );
+    -- we assume the SPI clock is initially low but by using XOR
+    -- we don't really care.
+    usrCclk   <= startupInitCnt(1) xor spiMstOut.sclk;
+
+    U_STARTUPE2: STARTUPE2
+      generic map (
+        PROG_USR => "FALSE", -- Activate program event security feature. Requires encrypted bitstreams.
+        SIM_CCLK_FREQ => 0.0 -- Set the Configuration Clock Frequency(ns) for simulation.
+      )
+      port map (
+        CFGCLK     => open, -- 1-bit output: Configuration main clock output
+        CFGMCLK    => open, -- 1-bit output: Configuration internal oscillator clock output
+        EOS        => open, -- 1-bit output: Active high output signal indicating the End Of Startup.
+        PREQ       => open, -- 1-bit output: PROGRAM request to fabric output
+        CLK        => '0',  -- 1-bit input: User start-up clock input
+        GSR        => '0',  -- 1-bit input: Global Set/Reset input (GSR cannot be used for the port name)
+        GTS        => '0',  -- 1-bit input: Global 3-state input (GTS cannot be used for the port name)
+        KEYCLEARB  => '1',  -- 1-bit input: Clear AES Decrypter Key input from Battery-Backed RAM (BBRAM)
+        PACK       => '0',  -- 1-bit input: PROGRAM acknowledge input
+        USRCCLKO   => usrCclk, -- 1-bit input: User CCLK input
+        USRCCLKTS  => '0',  -- 1-bit input: User CCLK 3-state enable input
+        USRDONEO   => '1',  -- 1-bit input: User DONE pin output control
+        USRDONETS  => '0'   -- 1-bit input: User DONE 3-state enable output
+      );
+
+  end block B_STARTUP;
 
   U_IOBUF_SPI_CSEL : IOBUF
     port map ( IO => spiCselPin, O => open,           I => spiMstOut.csel, T => '0' );
@@ -263,7 +302,8 @@ begin
       NUM_SFP_G                => NUM_SFP_G,
       NUM_MGT_G                => NUM_USED_MGT_C,
       PLL_CLK_FREQ_G           => PLL_CLK_FREQ_G,
-      LAN9254_CLK_FREQ_G       => LAN9254_CLK_FREQ_G
+      LAN9254_CLK_FREQ_G       => LAN9254_CLK_FREQ_G,
+      SYS_CLK_FREQ_G           => SYS_CLK_FREQ_G
     )
     port map (
       pllClk                   => pllClk,
@@ -271,6 +311,10 @@ begin
       lan9254Clk               => lan9254Clk,
 
       mgtRefClk                => mgtRefClkBuf(1),
+
+      sysClk                   => sysClk,
+      sysRst                   => open,
+      sysRstReq                => sysRstReq,
 
       leds                     => leds,
       pofInp                   => pofInp,
