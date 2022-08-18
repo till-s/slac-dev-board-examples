@@ -101,7 +101,7 @@ architecture Impl of EcEvrProtoTop is
   constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_G ) - 1;
 
   constant NUM_BUS_SUBS_C : natural   := 1;
-  constant SUB_IDX_LOC_C  : natural   := 1;
+  constant SUB_IDX_LOC_C  : natural   := 0;
 
   constant NUM_SUBSUBS_C  : natural   := 3;
   constant SS_IDX_LOC_C   : natural   := 0;
