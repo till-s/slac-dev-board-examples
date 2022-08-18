@@ -141,6 +141,9 @@ architecture Impl of EcEvrProtoTop is
   signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
   signal pdoLeds          : std_logic_vector(2 downto 0)      := (others => '0');
   signal tstLeds          : std_logic_vector(2 downto 0)      := (others => '0');
+  signal mgtLeds          : std_logic_vector(2 downto 0)      := (others => '0');
+
+  signal tstLedPw         : std_logic_vector(23 downto 0);
 
   signal lan9254HbiOb     : Lan9254HBIOutType;
   signal lan9254HbiIb     : Lan9254HBIInpType;
@@ -424,8 +427,8 @@ begin
         pllOutClk        => open, -- in  std_logic_vector(1 downto 0) := "00";
         pllOutRefClk     => open, -- in  std_logic_vector(1 downto 0) := "00";
 
-        pllLocked        => open, -- in  std_logic := '0';
-        pllRefClkLost    => open, -- in  std_logic := '0';
+        pllLocked        => mgtLeds(1), -- in  std_logic := '0';
+        pllRefClkLost    => mgtLeds(0), -- in  std_logic := '0';
 
         pllRst           => open, -- out std_logic;
 
@@ -457,6 +460,8 @@ begin
         -- Loopback
         loopback         => mgtLoopback -- in std_logic_vector(2 downto 0) := (others => '0')
       );
+
+    mgtLeds(2) <= '0';
 
   end block B_MGT;
 
@@ -561,9 +566,6 @@ begin
     mgtLoopback  <= r.regs(0)(18 downto 16);
 
     sfpTxEn(0)   <= r.regs(1)(          31);
-    tstLeds(2)   <= r.regs(1)(          30);
-    tstLeds(1)   <= r.regs(1)(          29);
-    tstLeds(0)   <= r.regs(1)(          28);
 
     P_PWRCYCLE : process (r) is
     begin
@@ -572,6 +574,8 @@ begin
         pwrCycle <= '1';
       end if;
     end process P_PWRCYCLE;
+
+    tstLedPw <= r.regs(3)(tstLedPw'range);
 
     -- the ICAPE2 can be clocked up to 100MHz (70MHz -2le device @ 0.9V)
     U_ICAP : entity work.IcapE2Reg
@@ -618,9 +622,24 @@ begin
 
   end block B_RXPDO;
 
-  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds ) is
+  G_PWM : for i in tstLeds'range generate
+    U_PWM : entity work.PwmCore
+      generic map (
+        SYS_CLK_FREQ_G => SYS_CLK_FREQ_G
+      )
+      port map (
+        clk            => sysClk,
+        rst            => sysRst,
+        pw             => unsigned( tstLedPw(8*i + 7 downto 8*i) ),
+        pwmOut         => tstLeds(i)
+      );
+        
+  end generate G_PWM;
+
+  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds ) is
   begin
     ledsLoc                        <= (others => '0');
+    ledsLoc(2 downto 0)            <= mgtLeds;
     ledsLoc(8)                     <= spiMstLoc.util(0) or pdoLeds(2) or tstLeds(2); --R
     ledsLoc(7)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1); --G
     ledsLoc(6)                     <=  '0'              or pdoLeds(0) or tstLeds(0); --B
