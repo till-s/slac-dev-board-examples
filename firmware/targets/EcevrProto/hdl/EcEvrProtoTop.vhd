@@ -628,8 +628,8 @@ begin
         SYS_CLK_FREQ_G => SYS_CLK_FREQ_G
       )
       port map (
-        clk            => sysClk,
-        rst            => sysRst,
+        clk            => sysClkLoc,
+        rst            => sysRstLoc,
         pw             => unsigned( tstLedPw(8*i + 7 downto 8*i) ),
         pwmOut         => tstLeds(i)
       );
