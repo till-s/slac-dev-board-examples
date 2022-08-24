@@ -139,7 +139,7 @@ architecture Impl of EcEvrProtoTop is
   signal mgtRstCnt        : natural range 0 to TIMG_RST_CNT_C := TIMG_RST_CNT_C;
 
   signal ledsLoc          : std_logic_vector(leds'range)      := (others => '0');
-  signal pdoLeds          : std_logic_vector(2 downto 0)      := (others => '0');
+  signal pdoLeds          : Slv08Array      (2 downto 0)      := (others => (others => '0'));
   signal tstLeds          : std_logic_vector(2 downto 0)      := (others => '0');
   signal mgtLeds          : std_logic_vector(2 downto 0)      := (others => '0');
 
@@ -308,11 +308,11 @@ begin
       EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
       GEN_HBI_ILA_G     => false,
       GEN_ESC_ILA_G     => true,
-      GEN_EOE_ILA_G     => false,
-      GEN_FOE_ILA_G     => true,
+      GEN_EOE_ILA_G     => true,
+      GEN_FOE_ILA_G     => false,
       GEN_U2B_ILA_G     => false,
       GEN_CNF_ILA_G     => true,
-      GEN_I2C_ILA_G     => true,
+      GEN_I2C_ILA_G     => false,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C
     )
@@ -601,19 +601,19 @@ begin
     P_LED : process ( sysClkLoc ) is
     begin
       if ( rising_edge( sysClkLoc ) ) then
-        if ( sysRstLoc = '1' ) then
-          pdoLeds <= (others => '0');
+        if ( ( sysRstLoc = '1' ) or ( rxPDOMst.escState /= OP ) ) then
+          pdoLeds <= (others => (others => '0'));
         elsif ( ( rxPDOMst.valid = '1' ) ) then
           if ( unsigned( rxPDOMst.wrdAddr ) = 0 ) then
             if ( rxPDOMst.ben(0) = '1' ) then
-              pdoLeds(0) <= rxPDOMst.data(0);
+              pdoLeds(0) <= rxPDOMst.data( 7 downto  0);
             end if;
             if ( rxPDOMst.ben(1) = '1' ) then
-              pdoLeds(1) <= rxPDOMst.data(8);
+              pdoLeds(1) <= rxPDOMst.data(15 downto  8);
             end if;
           elsif ( unsigned( rxPDOMst.wrdAddr ) = 1 ) then
             if ( rxPDOMst.ben(0) = '1' ) then
-              pdoLeds(2) <= rxPDOMst.data(0);
+              pdoLeds(2) <= rxPDOMst.data( 7 downto  0);
             end if;
           end if;
         end if;
@@ -623,6 +623,12 @@ begin
   end block B_RXPDO;
 
   G_PWM : for i in tstLeds'range generate
+
+    signal pwSat     : unsigned( 8 downto 0) := (others => '0');
+    signal pwClipped : unsigned( 7 downto 0) := (others => '0');
+
+  begin
+
     U_PWM : entity work.PwmCore
       generic map (
         SYS_CLK_FREQ_G => SYS_CLK_FREQ_G
@@ -630,19 +636,37 @@ begin
       port map (
         clk            => sysClkLoc,
         rst            => sysRstLoc,
-        pw             => unsigned( tstLedPw(8*i + 7 downto 8*i) ),
+        pw             => pwClipped,
         pwmOut         => tstLeds(i)
       );
-        
+
+    P_SAT : process( sysClkLoc ) is
+    begin
+      if ( rising_edge( sysClkLoc ) ) then
+        if ( sysRstLoc = '1' ) then
+          pwSat     <= (others => '0');
+          pwClipped <= (others => '0');
+        else
+          pwSat <=   unsigned( '0' & tstLedPw(8*i + 7 downto 8*i) )
+                   + unsigned( '0' & pdoLeds(i) );
+          if ( pwSat(8) = '1' ) then
+            pwClipped <= (others => '1');
+          else
+            pwClipped <= pwSat(7 downto 0);
+          end if;
+        end if;
+      end if;
+    end process P_SAT;
+    
   end generate G_PWM;
 
   P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds ) is
   begin
     ledsLoc                        <= (others => '0');
     ledsLoc(2 downto 0)            <= mgtLeds;
-    ledsLoc(8)                     <= spiMstLoc.util(0) or pdoLeds(2) or tstLeds(2); --R
-    ledsLoc(7)                     <= spiMstLoc.util(1) or pdoLeds(1) or tstLeds(1); --G
-    ledsLoc(6)                     <=  '0'              or pdoLeds(0) or tstLeds(0); --B
+    ledsLoc(8)                     <= spiMstLoc.util(0) or tstLeds(2); --R
+    ledsLoc(7)                     <= spiMstLoc.util(1) or tstLeds(1); --G
+    ledsLoc(6)                     <=  '0'              or tstLeds(0); --B
   end process P_LEDS;
 
   leds   <= ledsLoc;
