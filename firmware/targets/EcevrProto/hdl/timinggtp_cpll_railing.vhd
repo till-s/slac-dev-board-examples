@@ -120,11 +120,7 @@ begin
   end generate;
 
   use_bufh_cpll:if(USE_BUFG = 0) generate
-  refclk_buf : BUFH
-  port map
-   (O   => gtrefclk0_i,
-    I   => refclk_in);
-
+    gtrefclk0_i <= refclk_in;
   end generate;
 
     process( gtrefclk0_i )
@@ -141,4 +137,3 @@ refclk_out <= gtrefclk0_i;
 
 
  end RTL;
-
