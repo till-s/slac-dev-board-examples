@@ -10,6 +10,7 @@ use     work.ESCFoEPkg.all;
 use     work.Udp2BusPkg.all;
 use     work.EcEvrBspPkg.all;
 use     work.FoE2SpiPkg.all;
+use     work.IlaWrappersPkg.all;
 
 entity EcEvrProtoTop is
   generic (
@@ -108,21 +109,32 @@ architecture Impl of EcEvrProtoTop is
   constant SS_IDX_DRP_C   : natural   := 1;
   constant SS_IDX_ICAP_C  : natural   := 2;
 
+  constant SPI_NORMAL_BOOT_FILE_ADDR_C : A24Type := x"220000";
+
   constant SPI_FILE_MAP_C : FlashFileArray := (
     0 => (
-            id      => x"42", -- 'B'
+            id      => x"47", -- 'G' ('golden')
             begAddr => x"000000",
-            endAddr => x"21FFFF"
+            endAddr => x"21FFFF",
+            flags   => FLASH_FILE_FLAG_WP_C
          ),
     1 => (
-            id      => x"54", -- 'T'
-            begAddr => x"FE0000",
-            endAddr => x"FFFFFF"
+            id      => x"42", -- 'B' ('barrier' following the standard/wildcard image)
+            begAddr => x"440000",
+            endAddr => x"44FFFF",
+            flags   => FLASH_FILE_FLAG_WP_C
          ),
-    2 => ( -- catch-all entry must be last!
-            id      => FOE_FILE_NAME_WILDCARD_C,
-            begAddr => x"220000",
-            endAddr => x"43FFFF"
+    2 => (
+            id      => x"54", -- 'T' ('test')
+            begAddr => x"FE0000",
+            endAddr => x"FFFFFF",
+            flags   => FLASH_FILE_FLAGS_NONE_C
+         ),
+    3 => ( -- catch-all entry must be last!
+            id      => FOE_FILE_ID_WILDCARD_C,
+            begAddr => SPI_NORMAL_BOOT_FILE_ADDR_C,
+            endAddr => x"43FFFF",
+            flags   => FLASH_FILE_FLAGS_NONE_C
          )
   );
 
@@ -162,9 +174,6 @@ architecture Impl of EcEvrProtoTop is
   signal mgtRxRecClk      : std_logic;
   signal mgtRxRecRst      : std_logic := '1';
 
-  signal mgtRxDispErr     : std_logic_vector(1 downto 0);
-  signal mgtRxDecErr      : std_logic_vector(1 downto 0);
-
   signal busReqs          : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
   signal busReps          : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_ERROR_C);
 
@@ -172,18 +181,22 @@ architecture Impl of EcEvrProtoTop is
   signal busLocReps       : Udp2BusRepArray(NUM_SUBSUBS_C - 1 downto 0)  := (others => UDP2BUSREP_ERROR_C);
   signal spiMstLoc        : BspSpiMstType  := BSP_SPI_MST_INIT_C;
 
-  signal file0WP          : std_logic      := '0';
+  signal icapReq          : Udp2BusReqType := UDP2BUSREQ_INIT_C;
+  signal icapRep          : Udp2BusRepType := UDP2BUSREP_INIT_C;
+
+  signal fileWP           : std_logic      := '0';
 
   signal busReqLoc        : Udp2BusReqType;
   signal busRepLoc        : Udp2BusRepType := UDP2BUSREP_ERROR_C;
 
-  signal mgtLoopback      : std_logic_vector(2 downto 0);
-  signal mgtRxControl     : std_logic_vector(1 downto 0);
-  signal mgtTxControl     : std_logic_vector(1 downto 0);
-  signal mgtTxStatus      : std_logic_vector(7 downto 0);
-  signal mgtRxStatus      : std_logic_vector(7 downto 0);
+  signal mgtRxControl     : std_logic_vector(15 downto 0);
+  signal mgtTxControl     : std_logic_vector(15 downto 0);
+  signal mgtTxStatus      : std_logic_vector(15 downto 0);
+  signal mgtRxStatus      : std_logic_vector(15 downto 0);
 
   signal rxPDOMst         : Lan9254PDOMstType;
+
+  signal dbgTrg           : std_logic;
 
 begin
 
@@ -359,7 +372,7 @@ begin
 
       spiMst            => spiMstLoc,
       spiSub            => spiSub,
-      file0WP           => file0WP,
+      fileWP            => fileWP,
 
       timingMGTStatus   => open, -- in     std_logic_vector(31 downto 0) := (others => '0');
 
@@ -378,6 +391,7 @@ begin
     signal drpAddr       : std_logic_vector(15 downto 0) := (others => '0');
     signal drpDin        : std_logic_vector(15 downto 0) := (others => '0');
     signal drpDou        : std_logic_vector(15 downto 0) := (others => '0');
+    signal drpBsy        : std_logic;
 
   begin
 
@@ -397,55 +411,54 @@ begin
         drpWe            => drpWe,
         drpRdy           => drpRdy,
         drpDou           => drpDou,
+        drpBsy           => drpBsy,
         drpDin           => drpDin
       );
 
-    U_MGT : entity work.TimingGtCoreWrapper
+    U_MGT : entity work.TimingMgtWrapper
       port map (
         sysClk           => sysClkLoc, -- in  std_logic;
         sysRst           => sysRstLoc, -- in  std_logic;
 
-        -- DRP
-        drpAddr          => drpAddr(8 downto 0),
-        drpDi            => drpDin,
+        -- drp
+        drpBsy           => drpBsy,
+        drpAddr          => drpAddr,
+        drpDin           => drpDin,
         drpEn            => drpEn,
         drpWe            => drpWe,
-        drpDo            => drpDou,
+        drpDou           => drpDou,
         drpRdy           => drpRdy,
 
-        -- GTP FPGA IO
+        -- gtp fpga io
         gtRxP            => mgtRxP(0),
         gtRxN            => mgtRxN(0),
         gtTxP            => mgtTxP(0),
         gtTxN            => mgtTxN(0),
 
-        -- Clock PLL selection: bit 1: rx/txoutclk, bit 0: rx/tx data path
-        gtRxPllSel       => "00", -- in std_logic_vector(1 downto 0) := "00";
-        gtTxPllSel       => "00", -- in std_logic_vector(1 downto 0) := "00";
+        -- clock pll selection:
+        gtRxPllSel       => '0',
+        gtTxPllSel       => '0',
 
-        -- signals for external common block (WITH_COMMON_G = false)
+        -- signals for external common block (with_common_g = false)
         pllOutClk        => open, -- in  std_logic_vector(1 downto 0) := "00";
         pllOutRefClk     => open, -- in  std_logic_vector(1 downto 0) := "00";
 
-        pllLocked        => mgtLeds(1), -- in  std_logic := '0';
-        pllRefClkLost    => mgtLeds(0), -- in  std_logic := '0';
+        pllLocked        => open, -- in  std_logic := '0';
+        pllRefClkLost    => open, -- in  std_logic := '0';
 
         pllRst           => open, -- out std_logic;
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
-        gtRefClk         => mgtRefClk, -- in  std_logic := '0';
-        gtRefClkDiv2     => open, -- in  std_logic := '0';-- Unused in GTHE3, but used in GTHE4
+        gtRefClk(0)      => mgtRefClk, -- in  std_logic := '0';
+        gtRefClk(1)      => '0',       -- in  std_logic := '0';-- Unused in GTHE3, but used in GTHE4
 
         -- Rx ports
         rxControl        => mgtRxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
         rxStatus         => mgtRxStatus, -- out std_logic_vector(7 downto 0);
         rxUsrClkActive   => open, -- in  std_logic := '1';
-        rxCdrStable      => open, -- out std_logic;
         rxUsrClk         => mgtRxRecClk,  -- in  std_logic;
         rxData           => mgtRxData,    -- out std_logic_vector(15 downto 0);
         rxDataK          => mgtRxDataK,   -- out std_logic_vector(1 downto 0);
-        rxDispErr        => mgtRxDispErr, -- out std_logic_vector(1 downto 0);
-        rxDecErr         => mgtRxDecErr,  -- out std_logic_vector(1 downto 0);
         rxOutClk         => mgtRxRecClk, -- out std_logic;
 
         -- Tx Ports
@@ -455,10 +468,7 @@ begin
         txUsrClkActive   => open, -- in  std_logic := '1';
         txData           => mgtTxData,  -- in  std_logic_vector(15 downto 0);
         txDataK          => mgtTxDataK, -- in  std_logic_vector(1 downto 0);
-        txOutClk         => mgtTxUsrClk, -- out std_logic;
-
-        -- Loopback
-        loopback         => mgtLoopback -- in std_logic_vector(2 downto 0) := (others => '0')
+        txOutClk         => mgtTxUsrClk  -- out std_logic;
       );
 
     mgtLeds(2) <= '0';
@@ -467,7 +477,7 @@ begin
 
   B_LOC_REGS : block is
 
-    constant NUM_REGS_C : natural := 4;
+    constant NUM_REGS_C : natural := 5;
 
     type StateType is (IDLE);
 
@@ -542,9 +552,8 @@ begin
       end case;
 
       -- read-only
-      v.regs(1)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) &
-                                mgtRxStatus &
-                                mgtTxStatus;
+      v.regs(1)              := mgtRxStatus & mgtTxStatus;
+      v.regs(4)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) & x"0000";
       rin <= v;
     end process P_COMB;
 
@@ -561,11 +570,11 @@ begin
 
     busRepLoc <= r.rep;
 
-    mgtTxControl <= r.regs(0)( 1 downto  0);
-    mgtRxControl <= r.regs(0)( 9 downto  8);
-    mgtLoopback  <= r.regs(0)(18 downto 16);
+    mgtTxControl <= r.regs(0)(15 downto  0);
+    mgtRxControl <= r.regs(0)(31 downto 16);
 
-    sfpTxEn(0)   <= r.regs(1)(          31);
+    sfpTxEn(0)   <= r.regs(4)(          31);
+    dbgTrg       <= r.regs(4)(          30);
 
     P_PWRCYCLE : process (r) is
     begin
@@ -582,18 +591,170 @@ begin
       port map (
         clk    => sysClkLoc,
         rst    => sysRstLoc,
-        addr   => busLocReqs(SS_IDX_ICAP_C).dwaddr(15 downto 0),
-        rdnw   => busLocReqs(SS_IDX_ICAP_C).rdnwr,
-        dInp   => busLocReqs(SS_IDX_ICAP_C).data,
-        req    => busLocReqs(SS_IDX_ICAP_C).valid,
+        addr   => icapReq.dwaddr(15 downto 0),
+        rdnw   => icapReq.rdnwr,
+        dInp   => icapReq.data,
+        req    => icapReq.valid,
 
-        dOut   => busLocReps(SS_IDX_ICAP_C).rdata,
-        ack    => busLocReps(SS_IDX_ICAP_C).valid
+        dOut   => icapRep.rdata,
+        ack    => icapRep.valid
       );
 
     busLocReps(SS_IDX_ICAP_C).berr <= '0';
 
   end block B_LOC_REGS;
+
+  B_ICAP_INIT : block is
+
+    subtype DwAddrType is std_logic_vector(icapReq.dwaddr'range);
+
+    function dwaddr(constant x : natural) return DwAddrType is
+      variable v : DwAddrType;
+    begin
+      v := DwAddrType( to_unsigned( x, v'length ) );
+      return v;
+    end function dwaddr;
+
+    constant ICAP_REG_BOOTSTS_C : DwAddrType := dwaddr(16#16#);
+    constant ICAP_REG_WBSTAR_C  : DwAddrType := dwaddr(16#10#);
+    constant ICAP_REG_TIMER_C   : DwAddrType := dwaddr(16#11#);
+    constant ICAP_REG_CMD_C     : DwAddrType := dwaddr(16#04#);
+
+    constant ICAP_TIMER_USR_MON_C : std_logic_vector(31 downto 0) := x"8000_0000";
+    constant ICAP_TIMER_CFG_MON_C : std_logic_vector(31 downto 0) := x"4000_0000";
+    constant ICAP_CMD_REBOOT_C    : std_logic_vector(31 downto 0) := x"0000_000F";
+
+    type IcapProgType is record
+      addr : DwAddrType;
+      data : std_logic_vector(31 downto 0);
+      rdnw : std_logic;
+    end record IcapProgType;
+
+    type IcapProgArray is array(integer range <>) of IcapProgType;
+
+    -- set timer to some small timeout so that if the user file does not load
+    -- the watchdog expires
+    constant ICAP_PROG_C : IcapProgArray := (
+     -1 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
+      0 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
+      1 => ( rdnw => '0', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_ADDR_C) ) ),
+      2 => ( rdnw => '1', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_ADDR_C) ) ),
+      3 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ), 
+      4 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ), 
+      5 => ( rdnw => '0', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         ),
+      6 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
+    );
+
+    type StateType is (IDLE, RUN);
+
+    type RegType is record
+      state     : StateType;
+      valid     : std_logic;
+      ltrg      : std_logic;
+      ip        : integer range ICAP_PROG_C'range;
+    end record RegType;
+
+    constant REG_INIT_C : RegType := (
+      state     => IDLE,
+      valid     => '1',
+      ltrg      => '0',
+      ip        => ICAP_PROG_C'low
+    );
+
+
+    signal r       : RegType := REG_INIT_C;
+    signal rin     : RegType;
+
+  begin
+
+    -- decide if we need to warm-boot
+
+    P_ICAP_INIT_COMB : process ( r, busLocReqs, icapRep, jumper7, dbgTrg ) is
+      variable v : RegType;
+    begin
+      v   := r;
+
+      icapReq                         <= UDP2BUSREQ_INIT_C;
+      icapReq.dwaddr                  <= ICAP_PROG_C( r.ip ).addr;
+      icapReq.data                    <= ICAP_PROG_C( r.ip ).data;
+      icapReq.be                      <= "1111";
+      icapReq.rdnwr                   <= ICAP_PROG_C( r.ip ).rdnw;
+      icapReq.valid                   <= r.valid;
+
+      busLocReps(SS_IDX_ICAP_C)       <= icapRep;
+      busLocReps(SS_IDX_ICAP_C).valid <= '0';
+
+      v.ltrg := dbgTrg;
+
+      case ( r.state ) is
+
+        when IDLE =>
+          -- hand over the bus
+          icapReq                         <= busLocReqs(SS_IDX_ICAP_C);
+          busLocReps(SS_IDX_ICAP_C).valid <= icapRep.valid;
+          if ( ( (dbgTrg and not r.ltrg) = '1') and ( busLocReqs(SS_IDX_ICAP_C).valid = '0' ) ) then
+             v.state := RUN;
+             v.ip    := ICAP_PROG_C'low;
+          end if;
+
+        when RUN =>
+          if ( icapRep.valid = '1' ) then
+            if ( r.ip = ICAP_PROG_C'high ) then
+              -- we probably never get here if the reboot is successful but if
+              -- something goes wrong we might be able to recover...
+              v.state := IDLE;
+            else
+              v.ip    := r.ip + 1;
+              if ( r.ip = 0 ) then
+                -- got the result of the readback
+                if (    ( icapRep.berr     = '1' )  -- invalid readback
+                     or ( jumper7          = '0' )  -- jumper7 = 0 prevents reboot
+                     or ( icapRep.rdata(8) = '1' )  -- if this is already 2nd boot; don't attempt a 3rd
+                ) then
+                  v.state      := IDLE;
+                end if;
+              end if;
+            end if;
+          end if;
+          
+      end case;
+
+      rin <= v;
+    end process P_ICAP_INIT_COMB;
+
+    P_ICAP_INIT_SEQ : process ( sysClkLoc ) is
+    begin
+       if ( rising_edge( sysClkLoc ) ) then
+         if ( sysRstLoc = '1' ) then
+           r <= REG_INIT_C;
+         else
+           r <= rin;
+         end if;
+       end if;
+    end process P_ICAP_INIT_SEQ;
+
+    G_REBOOT_ILA : if ( true ) generate
+      U_ILA : component Ila_256
+        port map (
+            clk                  => sysClkLoc,
+            probe0(29 downto  0) => std_logic_vector(icapReq.dwaddr),
+            probe0(30          ) => icapReq.rdnwr,
+            probe0(31          ) => icapReq.valid,
+            probe0(63 downto 32) => icapReq.data,
+
+            probe1(31 downto  0) => icapRep.rdata,
+            probe1(32          ) => icapRep.valid,
+            probe1(33 downto 33) => std_logic_vector( to_unsigned( StateType'pos( r.state ), 1 ) ),
+            probe1(35 downto 34) => "00",
+            probe1(39 downto 36) => std_logic_vector( to_unsigned( r.ip , 4 ) ),
+            probe1(63 downto 40) => (others => '0'),
+
+            probe2(63 downto  0) => (others => '0'),
+            probe3(63 downto  0) => (others => '0')
+        );
+    end generate G_REBOOT_ILA;
+
+  end block B_ICAP_INIT;
 
   B_RXPDO : block is
   begin
