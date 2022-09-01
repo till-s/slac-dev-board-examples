@@ -82,7 +82,7 @@ end entity EcEvrProto;
 architecture Impl of EcEvrProto is
 
   constant NUM_USED_MGT_C : natural := 1;
-  
+
   constant MGT_USED_IDX_C : natural := 1;
 
   signal pllClkInp     : std_logic;
@@ -113,7 +113,6 @@ architecture Impl of EcEvrProto is
   signal lan9254_t     : std_logic_vector(lan9254Pins'range);
 
   signal mgtRefClk     : std_logic_vector(NUM_REFCLK_G - 1 downto 0);
-  signal mgtRefClkBuf  : std_logic_vector(NUM_REFCLK_G - 1 downto 0);
   signal mgtRxP        : std_logic_vector(NUM_USED_MGT_C - 1 downto 0);
   signal mgtRxN        : std_logic_vector(NUM_USED_MGT_C - 1 downto 0);
   signal mgtTxP        : std_logic_vector(NUM_USED_MGT_C - 1 downto 0);
@@ -123,10 +122,10 @@ architecture Impl of EcEvrProto is
   signal sfpPresentb   : std_logic_vector(NUM_SFP_G - 1 downto 0);
   signal sfpTxFault    : std_logic_vector(NUM_SFP_G - 1 downto 0);
   signal sfpTxEn       : std_logic_vector(NUM_SFP_G - 1 downto 0) := (others => '1');
- 
+
   signal sysClk        : std_logic;
   signal sysRstReq     : std_logic;
-  
+
 begin
 
   U_IOBUF_CLK_PLL : IOBUF
@@ -161,18 +160,13 @@ begin
          O                => mgtRefClk(i),
          ODIV2            => open
       );
-    U_BUFG : component BUFG
-      port map (
-         I                => mgtRefClk(i),
-         O                => mgtRefClkBuf(i)
-      );
   end generate G_BUF_CLK_MGT;
 
   G_BUF_LED : for i in ledPins'range generate
     U_IOBUF_LED : IOBUF
       port map ( IO => ledPins(i), T => '0', I => leds(i), O => open );
   end generate G_BUF_LED;
-    
+
   G_BUF_POF_INP : for i in pofInpPins'range generate
     U_IOBUF_POF_INP : IOBUF
       port map ( IO => pofInpPins(i), T => '1', I => '0',     O => pofInp(i) );
@@ -220,13 +214,13 @@ begin
     U_BUF : IOBUF
       port map ( IO => lan9254Pins(i), T => lan9254_t(i), I => lan9254_o(i), O => lan9254_i(i) );
   end generate G_LAN9254_IOBUF;
-  
+
   U_MGT_IBUFN : IBUF port map ( I => mgtRxNPins( MGT_USED_IDX_C ), O => mgtRxN(0) );
-  
+
   U_MGT_IBUFP : IBUF port map ( I => mgtRxPPins( MGT_USED_IDX_C ), O => mgtRxP(0) );
-  
+
   U_MGT_OBUFN : OBUF port map ( O => mgtTxNPins( MGT_USED_IDX_C ), I => mgtTxN(0) );
-  
+
   U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_C ), I => mgtTxP(0) );
 
 
@@ -312,7 +306,7 @@ begin
 
       lan9254Clk               => lan9254Clk,
 
-      mgtRefClk                => mgtRefClkBuf(1),
+      mgtRefClk                => mgtRefClk,
 
       sysClk                   => sysClk,
       sysRst                   => open,
@@ -346,5 +340,5 @@ begin
       mgtTxN                   => mgtTxN,
       mgtTxP                   => mgtTxP
     );
-   
+
 end architecture Impl;

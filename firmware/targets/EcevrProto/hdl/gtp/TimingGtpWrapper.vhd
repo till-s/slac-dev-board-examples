@@ -51,8 +51,6 @@ entity TimingMgtWrapper is
 
       pllRst             : out std_logic_vector(1 downto 0);
 
-      -- ref clock for internal common block; index 0 drives PLL0,
-      -- index 1 drives PLL1
       gtRefClk           : in  std_logic_vector(1 downto 0);
       pllRefClkSel       : in  PllRefClkSelArray := (others => PLLREFCLK_SEL_REF0_C);
 
@@ -141,6 +139,8 @@ architecture Impl of TimingMgtWrapper is
    signal rxRstDone         : std_logic;
 
    signal drpClk            : std_logic;
+
+   signal pllRefClk         : std_logic_vector(1 downto 0);
 begin
 
    gtRxPllSel_i <= (gtRxPllSel & gtRxPllSel);
@@ -285,6 +285,17 @@ begin
       signal pllRstAny  : std_logic_vector(1 downto 0);
    begin
 
+      P_MAP_REF : process ( pllRefClkSel, gtRefClk ) is
+      begin
+         for i in pllRefClk'range loop
+            if ( pllRefClkSel(i) = PLLREFCLK_SEL_REF1_C ) then
+               pllRefClk(i) <= gtRefClk(1);
+            else
+               pllRefClk(i) <= gtRefClk(0);
+            end if;
+         end loop;
+      end process P_MAP_REF;
+
       G_RAIL_RST : for i in pllInitRst'range generate
          U_INITIAL_RST : entity work.TimingGtp_cpll_railing
             generic map (
@@ -294,7 +305,7 @@ begin
                cpll_reset_out => pllInitRst(i),
                cpll_pd_out    => pllInitPd(i),
                refclk_out     => open,
-               refclk_in      => gtRefClk(i)
+               refclk_in      => pllRefClk(i)
             );
 
          pllRstAny(i) <= pllInitRst(i) or pllRst_i(i);

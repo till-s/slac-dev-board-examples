@@ -11,6 +11,7 @@ use     work.Udp2BusPkg.all;
 use     work.EcEvrBspPkg.all;
 use     work.FoE2SpiPkg.all;
 use     work.IlaWrappersPkg.all;
+use     work.TimingGtpPkg.all;
 
 entity EcEvrProtoTop is
   generic (
@@ -38,7 +39,7 @@ entity EcEvrProtoTop is
     -- from sysRst -> sysRstReq!
     sysRstReq                : in    std_logic := '0';
 
-    mgtRefClk                : in    std_logic := '0';
+    mgtRefClk                : in    std_logic_vector(1 downto 0) := (others => '0');
 
     -- LEDs
     leds                     : out   std_logic_vector(NUM_LED_G - 1 downto 0) := (others => '0');
@@ -167,7 +168,7 @@ architecture Impl of EcEvrProtoTop is
   signal mgtRxData        : std_logic_vector(15 downto 0) := (others => '0');
   signal mgtRxDataK       : std_logic_vector( 1 downto 0) := (others => '0');
 
-  signal mgtTxData        : std_logic_vector(15 downto 0) := x"AABC";
+  signal mgtTxData        : std_logic_vector(15 downto 0) := x"A5BC";
   signal mgtTxDataK       : std_logic_vector( 1 downto 0) := "01";
 
   signal mgtTxUsrClk      : std_logic;
@@ -445,12 +446,12 @@ begin
 
         pllLocked        => open, -- in  std_logic := '0';
         pllRefClkLost    => open, -- in  std_logic := '0';
+        pllRefClkSel     => (others => PLLREFCLK_SEL_REF1_C),
 
         pllRst           => open, -- out std_logic;
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
-        gtRefClk(0)      => mgtRefClk, -- in  std_logic := '0';
-        gtRefClk(1)      => '0',       -- in  std_logic := '0';-- Unused in GTHE3, but used in GTHE4
+        gtRefClk         => mgtRefClk, -- in  std_logic := '0';
 
         -- Rx ports
         rxControl        => mgtRxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
@@ -818,7 +819,7 @@ begin
         end if;
       end if;
     end process P_SAT;
-    
+
   end generate G_PWM;
 
   P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds ) is
