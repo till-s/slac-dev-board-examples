@@ -54,7 +54,7 @@ entity TimingMgtWrapper is
       -- ref clock for internal common block; index 0 drives PLL0,
       -- index 1 drives PLL1
       gtRefClk           : in  std_logic_vector(1 downto 0);
-      pllRefClkSel       : in  PllRefClkSelArray := (others => "001");
+      pllRefClkSel       : in  PllRefClkSelArray := (others => PLLREFCLK_SEL_REF0_C);
 
       -- Receiver
       rxControl          : in  std_logic_vector(15 downto 0)            := (others => '0');

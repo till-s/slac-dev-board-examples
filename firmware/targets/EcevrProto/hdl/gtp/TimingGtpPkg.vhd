@@ -75,4 +75,7 @@ end component TimingGtp;
 
 type PllRefClkSelArray is array (natural range 1 downto 0) of std_logic_vector(2 downto 0);
 
+constant PLLREFCLK_SEL_REF0_C : std_logic_vector(2 downto 0) := "001";
+constant PLLREFCLK_SEL_REF1_C : std_logic_vector(2 downto 0) := "010";
+
 end package TimingGtpPkg;
