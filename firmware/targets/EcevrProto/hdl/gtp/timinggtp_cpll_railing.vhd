@@ -74,7 +74,7 @@ use UNISIM.VCOMPONENTS.ALL;
 --***********************************Entity Declaration************************
 
 entity TimingGtp_cpll_railing is
-generic( USE_BUFG       : integer := 0
+generic( USE_BUF       : string := "BUFH"
        );
    port  (
          cpll_reset_out : out std_logic;
@@ -105,13 +105,17 @@ signal    gtrefclk0_i      :std_logic ;
                        
 begin                      
 
+  assert USE_BUF = "BUFG" or USE_BUF = "BUFH" or USE_BUF = "NONE"
+    report "Invalid choice for USE_BUF generic (BUFG, BUFH, NONE allowed)"
+    severity failure;
+
     ---------------------------  Static signal Assignments ---------------------   
 
     tied_to_ground_i                    <= '0';
     tied_to_ground_vec_i(63 downto 0)   <= (others => '0');
     tied_to_vcc_i                       <= '1';
 
-  use_bufg_cpll:if(USE_BUFG = 1) generate
+  use_bufg_cpll:if(USE_BUF = "BUFG") generate
   refclk_buf : BUFG
   port map
    (O   => gtrefclk0_i,
@@ -119,7 +123,15 @@ begin
 
   end generate;
 
-  use_bufh_cpll:if(USE_BUFG = 0) generate
+  use_bufh_cpll:if(USE_BUF = "BUFH") generate
+  refclk_buf : BUFH
+  port map
+   (O   => gtrefclk0_i,
+    I   => refclk_in);
+
+  end generate;
+
+  use_nobuf_cpll:if(USE_BUF = "NONE") generate
     gtrefclk0_i <= refclk_in;
   end generate;
 
