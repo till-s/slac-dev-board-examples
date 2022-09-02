@@ -203,6 +203,12 @@ architecture Impl of EcEvrProtoTop is
 
   signal evrStable        : std_logic;
   signal pllRefClkLost    : std_logic;
+  signal pllLocked        : std_logic;
+  signal rxRefClk         : std_logic;
+
+  -- blink with frequency refClk / 1e8 
+  signal rxRefClkCount    : natural range 0 to 49999999 := 49999999;
+  signal rxRefClkBlink    : std_logic := '0';
 
 begin
 
@@ -211,6 +217,7 @@ begin
   busLocReps( SS_IDX_LOC_C ) <= busRepLoc;
 
   pllRefClkLost              <= mgtRxStatus(2);
+  pllLocked                  <= mgtRxStatus(1);
 
   -- ATM we have not connected an MMCM
   assert ( SYS_CLK_FREQ_G = LAN9254_CLK_FREQ_G )
@@ -454,23 +461,25 @@ begin
         pllOutClk        => open, -- in  std_logic_vector(1 downto 0) := "00";
         pllOutRefClk     => open, -- in  std_logic_vector(1 downto 0) := "00";
 
-        pllLocked        => open, -- in  std_logic := '0';
-        pllRefClkLost    => open, -- in  std_logic := '0';
+        pllLocked        => open, -- in  std_logic_vector(1 downto 0) := "00";
+        pllRefClkLost    => open, -- in  std_logic_vector(1 downto 0) := "00";
         pllRefClkSel     => (others => PLLREFCLK_SEL_REF1_C),
 
-        pllRst           => open, -- out std_logic;
+        pllRst           => open, -- out std_logic_vector(1 downto 0);
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
-        gtRefClk         => mgtRefClk, -- in  std_logic := '0';
+        gtRefClk         => mgtRefClk, -- in  std_logic_vector(1 downto 0) := "00";
 
         -- Rx ports
-        rxControl        => mgtRxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
-        rxStatus         => mgtRxStatus, -- out std_logic_vector(7 downto 0);
+        rxControl        => mgtRxControl, -- in  std_logic_vector(15 downto 0) := (others => '0');
+        rxStatus         => mgtRxStatus, -- out std_logic_vector(15 downto 0);
         rxUsrClkActive   => open, -- in  std_logic := '1';
         rxUsrClk         => mgtRxRecClk,  -- in  std_logic;
         rxData           => mgtRxData,    -- out std_logic_vector(15 downto 0);
         rxDataK          => mgtRxDataK,   -- out std_logic_vector(1 downto 0);
         rxOutClk         => mgtRxRecClk, -- out std_logic;
+
+        rxRefClk         => rxRefClk,
 
         -- Tx Ports
         txControl        => mgtTxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
@@ -482,7 +491,41 @@ begin
         txOutClk         => mgtTxUsrClk  -- out std_logic;
       );
 
-    mgtLeds(2) <= '0';
+    P_REF_BLINK : process ( rxRefClk ) is
+    begin
+      if ( rising_edge( rxRefClk ) ) then
+        if ( rxRefClkCount = 0 ) then
+          rxRefClkBlink <= not rxRefClkBlink;
+          rxRefClkCount <= rxRefClkCount'high;
+        else
+          rxRefClkCount <= rxRefClkCount - 1;
+        end if;
+      end if;
+    end process P_REF_BLINK;
+
+    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable ) is
+    begin
+      -- BGR
+      mgtLeds <= "000";
+
+      if    ( evrStable = '1' ) then
+         -- stable: steady green
+         mgtLeds(1) <= '1';
+         -- maybe we flash blue if TxPDO is being sent...
+      elsif ( pllRefClkLost = '1' ) then 
+         -- no refclk; steady red if no SFP; if RX signal: steady yellow
+         mgtLeds(0) <= '1';
+         mgtLeds(1) <= not sfpLos(0);
+      else
+         -- have refclk; if there is RX signal blink yellow, otherwise blink red
+         mgtLeds(0) <= rxRefClkBlink;
+         if ( sfpLos(0) = '0' ) then
+           -- if 
+           mgtLeds(1) <= rxRefClkBlink;
+         end if;
+      end if;
+      
+    end process P_MGT_LEDS;
 
   end block B_MGT;
 
