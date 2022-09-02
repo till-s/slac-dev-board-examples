@@ -24,6 +24,7 @@ entity EcEvrProtoTop is
     PLL_CLK_FREQ_G           : real;
     LAN9254_CLK_FREQ_G       : real;
     SYS_CLK_FREQ_G           : real;
+    SPI_CLK_FREQ_G           : real    := 12.5E6;
     EEP_WR_WAIT_G            : natural := 1000000
   );
   port (
@@ -316,6 +317,7 @@ begin
   U_MAIN : entity work.EcEvrWrapper
     generic map (
       CLK_FREQ_G        => SYS_CLK_FREQ_G,
+      SPI_CLK_FREQ_G    => SPI_CLK_FREQ_G,
       GIT_HASH_G        => GIT_HASH_G,
       SPI_FILE_MAP_G    => SPI_FILE_MAP_C,
       EEP_I2C_ADDR_G    => x"50",
