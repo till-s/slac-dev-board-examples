@@ -516,7 +516,7 @@ begin
         if ( flickerCount = 0 ) then
            if ( pdoBlink /= "00" ) then
               pdoBlink     <= pdoBlink(pdoBlink'left - 1 downto 0) & '0';
-              flickerCount <= flickerCount'high;
+              flickerCount <= FlickerCountType'high;
            end if;
         else
            flickerCount <= flickerCount - 1;
