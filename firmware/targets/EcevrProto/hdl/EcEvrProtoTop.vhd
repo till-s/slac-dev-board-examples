@@ -200,11 +200,16 @@ architecture Impl of EcEvrProtoTop is
 
   signal dbgTrg           : std_logic;
 
+  signal evrStable        : std_logic;
+  signal pllRefClkLost    : std_logic;
+
 begin
 
   -- abbreviations
   busReqLoc                  <= busLocReqs( SS_IDX_LOC_C );
   busLocReps( SS_IDX_LOC_C ) <= busRepLoc;
+
+  pllRefClkLost              <= mgtRxStatus(2);
 
   -- ATM we have not connected an MMCM
   assert ( SYS_CLK_FREQ_G = LAN9254_CLK_FREQ_G )
@@ -377,6 +382,8 @@ begin
       spiSub            => spiSub,
       fileWP            => fileWP,
 
+      evrStable         => evrStable,
+
       timingMGTStatus   => open, -- in     std_logic_vector(31 downto 0) := (others => '0');
 
       timingRecClk      => mgtRxRecClk,
@@ -480,7 +487,7 @@ begin
 
   B_LOC_REGS : block is
 
-    constant NUM_REGS_C : natural := 5;
+    constant NUM_REGS_C : natural := 6;
 
     type StateType is (IDLE);
 
@@ -575,6 +582,8 @@ begin
 
     mgtTxControl <= r.regs(0)(15 downto  0);
     mgtRxControl <= r.regs(0)(31 downto 16);
+
+    fileWP       <= not r.regs(2)(16);
 
     sfpTxEn(0)   <= r.regs(4)(          31);
     dbgTrg       <= r.regs(4)(          30);
