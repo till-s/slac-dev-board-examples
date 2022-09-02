@@ -9,7 +9,8 @@ use work.TimingGtpPkg.all;
 
 entity TimingMgtWrapper is
    generic (
-      WITH_COMMON_G      : boolean              := true;
+      WITH_COMMON_G      : boolean    := true;
+      COMMON_BUF_TYPE_G  : string     := "BUFH"; -- BUFG, BUFH
 
       -- used only with internal common block
       PLL0_FBDIV_G       : integer    := 2;
@@ -62,6 +63,9 @@ entity TimingMgtWrapper is
       rxData             : out std_logic_vector(15 downto 0);
       rxDataK            : out std_logic_vector( 1 downto 0);
       rxOutClk           : out std_logic;
+
+      -- reference clock used by the receiver; ONLY DRIVEN if WITH_COMMON_G = TRUE
+      rxRefClk           : out std_logic := '0';
 
       -- Transmitter
       txControl          : in  std_logic_vector(15 downto 0)            := (others => '0');
@@ -141,6 +145,7 @@ architecture Impl of TimingMgtWrapper is
    signal drpClk            : std_logic;
 
    signal pllRefClk         : std_logic_vector(1 downto 0);
+   signal pllRefClkBuf      : std_logic_vector(1 downto 0);
 begin
 
    gtRxPllSel_i <= (gtRxPllSel & gtRxPllSel);
@@ -285,7 +290,7 @@ begin
       signal pllRstAny  : std_logic_vector(1 downto 0);
    begin
 
-      P_MAP_REF : process ( pllRefClkSel, gtRefClk ) is
+      P_MAP_REF : process ( pllRefClkSel, gtRefClk, gtRxPllSel, pllRefClkBuf ) is
       begin
          for i in pllRefClk'range loop
             if ( pllRefClkSel(i) = PLLREFCLK_SEL_REF1_C ) then
@@ -294,17 +299,22 @@ begin
                pllRefClk(i) <= gtRefClk(0);
             end if;
          end loop;
+         if ( gtRxPllSel = '0' ) then
+            rxRefClk <= pllRefClkBuf(0);
+         else
+            rxRefClk <= pllRefClkBuf(1);
+         end if;
       end process P_MAP_REF;
 
       G_RAIL_RST : for i in pllInitRst'range generate
          U_INITIAL_RST : entity work.TimingGtp_cpll_railing
             generic map (
-               USE_BUF => "BUFH"
+               USE_BUF => COMMON_BUF_TYPE_G
             )
             port map (
                cpll_reset_out => pllInitRst(i),
                cpll_pd_out    => pllInitPd(i),
-               refclk_out     => open,
+               refclk_out     => pllRefClkBuf(i),
                refclk_in      => pllRefClk(i)
             );
 
