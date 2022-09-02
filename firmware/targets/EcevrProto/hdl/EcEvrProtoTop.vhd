@@ -205,10 +205,15 @@ architecture Impl of EcEvrProtoTop is
   signal pllRefClkLost    : std_logic;
   signal pllLocked        : std_logic;
   signal rxRefClk         : std_logic;
+  signal pdoTrg           : std_logic;
 
   -- blink with frequency refClk / 1e8 
-  signal rxRefClkCount    : natural range 0 to 49999999 := 49999999;
+  signal rxRefClkCount    : natural range 0 to 49999999  := 49999999;
   signal rxRefClkBlink    : std_logic := '0';
+  -- flicker with ~10h
+  signal flickerCount     : natural range 0 to 4999999   := 0;
+
+  signal pdoBlink         : std_logic_vector(1 downto 0) := "00";
 
 begin
 
@@ -399,7 +404,8 @@ begin
 
       timingRxData      => mgtRxData,
       timingDataK       => mgtRxDataK,
-      evrEventsAdj      => open  --: out    std_logic_vector( 3 downto 0)
+      evrEventsAdj      => open,  --: out    std_logic_vector( 3 downto 0)
+      pdoTrg            => pdoTrg
     );
 
   B_MGT : block is
@@ -500,10 +506,22 @@ begin
         else
           rxRefClkCount <= rxRefClkCount - 1;
         end if;
+        if ( (pdoTrg and not pdoBlink(1)) = '1' ) then
+           pdoBlink <= "11";
+           flickerCount <= flickerCount'high;
+        end if;
+        if ( flickerCount = 0 ) then
+           if ( pdoBlink /= "00" ) then
+              pdoBlink     <= pdoBlink(pdoBlink'left - 1 downto 0) & '0';
+              flickerCount <= flickerCount'high;
+           end if;
+        else
+           flickerCount <= flickerCount - 1;
+        end if;
       end if;
     end process P_REF_BLINK;
 
-    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable ) is
+    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable, pdoBlink ) is
     begin
       -- BGR
       mgtLeds <= "000";
@@ -511,7 +529,8 @@ begin
       if    ( evrStable = '1' ) then
          -- stable: steady green
          mgtLeds(1) <= '1';
-         -- maybe we flash blue if TxPDO is being sent...
+         -- we flash blue if TxPDO is being sent...
+         mgtLeds(2) <= pdoBlink(0);
       elsif ( pllRefClkLost = '1' ) then 
          -- no refclk; steady red if no SFP; if RX signal: steady yellow
          mgtLeds(0) <= '1';
