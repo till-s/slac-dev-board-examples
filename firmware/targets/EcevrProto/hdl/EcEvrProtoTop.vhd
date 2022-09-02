@@ -520,7 +520,6 @@ begin
          -- have refclk; if there is RX signal blink yellow, otherwise blink red
          mgtLeds(0) <= rxRefClkBlink;
          if ( sfpLos(0) = '0' ) then
-           -- if 
            mgtLeds(1) <= rxRefClkBlink;
          end if;
       end if;
