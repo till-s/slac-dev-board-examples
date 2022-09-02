@@ -199,6 +199,7 @@ architecture Impl of EcEvrProtoTop is
   signal rxPDOMst         : Lan9254PDOMstType;
 
   signal dbgTrg           : std_logic;
+  signal dbgVal           : std_logic_vector(31 downto 0);
 
   signal evrStable        : std_logic;
   signal pllRefClkLost    : std_logic;
@@ -587,6 +588,7 @@ begin
 
     sfpTxEn(0)   <= r.regs(4)(          31);
     dbgTrg       <= r.regs(4)(          30);
+    dbgVal       <= r.regs(5);
 
     P_PWRCYCLE : process (r) is
     begin
@@ -647,30 +649,34 @@ begin
     -- set timer to some small timeout so that if the user file does not load
     -- the watchdog expires
     constant ICAP_PROG_C : IcapProgArray := (
+     -- seems we have to do one dummy read; the ICAPE2 does not return valid
+     -- data on the first read...
      -1 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
       0 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
       1 => ( rdnw => '0', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_ADDR_C) ) ),
       2 => ( rdnw => '1', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_ADDR_C) ) ),
-      3 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ), 
-      4 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ), 
+      3 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
+      4 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
       5 => ( rdnw => '0', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         ),
       6 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
     );
 
-    type StateType is (IDLE, RUN);
+    type StateType is (IDLE, RUN, WAI);
 
     type RegType is record
       state     : StateType;
       valid     : std_logic;
       ltrg      : std_logic;
       ip        : integer range ICAP_PROG_C'range;
+      cnt       : unsigned(7 downto 0);
     end record RegType;
 
     constant REG_INIT_C : RegType := (
       state     => IDLE,
       valid     => '1',
       ltrg      => '0',
-      ip        => ICAP_PROG_C'low
+      ip        => ICAP_PROG_C'low,
+      cnt       => (others => '0')
     );
 
 
@@ -681,7 +687,7 @@ begin
 
     -- decide if we need to warm-boot
 
-    P_ICAP_INIT_COMB : process ( r, busLocReqs, icapRep, jumper7, dbgTrg ) is
+    P_ICAP_INIT_COMB : process ( r, busLocReqs, icapRep, jumper7, dbgTrg, dbgVal ) is
       variable v : RegType;
     begin
       v   := r;
@@ -707,10 +713,16 @@ begin
           if ( ( (dbgTrg and not r.ltrg) = '1') and ( busLocReqs(SS_IDX_ICAP_C).valid = '0' ) ) then
              v.state := RUN;
              v.ip    := ICAP_PROG_C'low;
+             v.valid := '1';
           end if;
 
         when RUN =>
           if ( icapRep.valid = '1' ) then
+            if ( dbgVal(7 downto 0) /= x"00" ) then
+              v.cnt   := unsigned(dbgVal(7 downto 0)) - 1;
+              v.state := WAI;
+              v.valid := '0';
+            end if;
             if ( r.ip = ICAP_PROG_C'high ) then
               -- we probably never get here if the reboot is successful but if
               -- something goes wrong we might be able to recover...
@@ -728,7 +740,15 @@ begin
               end if;
             end if;
           end if;
-          
+
+        when WAI =>
+          if ( r.cnt = 0 ) then
+            v.state := RUN;
+            v.valid := '1';
+          else
+            v.cnt := r.cnt - 1;
+          end if;
+
       end case;
 
       rin <= v;
