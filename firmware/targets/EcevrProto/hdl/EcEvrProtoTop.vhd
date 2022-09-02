@@ -208,10 +208,13 @@ architecture Impl of EcEvrProtoTop is
   signal pdoTrg           : std_logic;
 
   -- blink with frequency refClk / 1e8 
-  signal rxRefClkCount    : natural range 0 to 49999999  := 49999999;
-  signal rxRefClkBlink    : std_logic := '0';
-  -- flicker with ~10h
-  signal flickerCount     : natural range 0 to 4999999   := 0;
+  subtype RefClkCountType  is natural range 0 to 49999999;
+  subtype FlickerCountType is natural range 0 to 4999999;
+
+  signal rxRefClkCount    : RefClkCountType  := RefClkCountType'high;
+  signal rxRefClkBlink    : std_logic        := '0';
+  -- flicker with ~10hz
+  signal flickerCount     : FlickerCountType := 0;
 
   signal pdoBlink         : std_logic_vector(1 downto 0) := "00";
 
@@ -502,13 +505,13 @@ begin
       if ( rising_edge( rxRefClk ) ) then
         if ( rxRefClkCount = 0 ) then
           rxRefClkBlink <= not rxRefClkBlink;
-          rxRefClkCount <= rxRefClkCount'high;
+          rxRefClkCount <= RefClkCountType'high;
         else
           rxRefClkCount <= rxRefClkCount - 1;
         end if;
         if ( (pdoTrg and not pdoBlink(1)) = '1' ) then
            pdoBlink <= "11";
-           flickerCount <= flickerCount'high;
+           flickerCount <= FlickerCountType'high;
         end if;
         if ( flickerCount = 0 ) then
            if ( pdoBlink /= "00" ) then
