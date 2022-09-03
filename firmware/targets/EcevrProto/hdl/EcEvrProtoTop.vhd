@@ -824,6 +824,13 @@ begin
                 v.modeJtag := icapRep.rdata(10);
               elsif ( r.ip = 1 ) then
                 -- got the result of the readback
+
+                -- there is a potential problem: we would like to avoid warmbooting
+                -- if the device was configured by JTAG but there seems to be no way
+                -- to detect that. The good news are that it seems that when JTAG is
+                -- active then the warmboot command seems to be ignored.
+                -- I tested a JTAG image w/o any jumper and it worked, i.e, no warmboot
+                -- was performed.
                 if (    ( icapRep.berr     = '1' )  -- invalid readback
                      or ( jumper7          = '0' )  -- jumper7 = 0 prevents reboot
                      or ( icapRep.rdata(8) = '1' )  -- if this is already 2nd boot; don't attempt a 3rd
