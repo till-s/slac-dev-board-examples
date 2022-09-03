@@ -697,6 +697,7 @@ begin
     end function dwaddr;
 
     constant ICAP_REG_BOOTSTS_C : DwAddrType := dwaddr(16#16#);
+    constant ICAP_REG_STATUS_C  : DwAddrType := dwaddr(16#07#);
     constant ICAP_REG_WBSTAR_C  : DwAddrType := dwaddr(16#10#);
     constant ICAP_REG_TIMER_C   : DwAddrType := dwaddr(16#11#);
     constant ICAP_REG_CMD_C     : DwAddrType := dwaddr(16#04#);
@@ -718,13 +719,14 @@ begin
     constant ICAP_PROG_C : IcapProgArray := (
      -- seems we have to do one dummy read; the ICAPE2 does not return valid
      -- data on the first read...
-     -1 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
-      0 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
-      1 => ( rdnw => '0', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_BEG_C) ) ),
-      2 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
-      3 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
-      4 => ( rdnw => '0', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         ),
-      5 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
+     -1 => ( rdnw => '1', addr => ICAP_REG_STATUS_C , data => x"0000_0000"                                              ),
+      0 => ( rdnw => '1', addr => ICAP_REG_STATUS_C , data => x"0000_0000"                                              ),
+      1 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
+      2 => ( rdnw => '0', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_BEG_C) ) ),
+      3 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
+      4 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
+      5 => ( rdnw => '0', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         ),
+      6 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
     );
 
     type StateType is (IDLE, RUN, WAI, DONE);
@@ -733,6 +735,7 @@ begin
       state     : StateType;
       valid     : std_logic;
       ltrg      : std_logic;
+      modeJtag  : std_logic;
       ip        : integer range ICAP_PROG_C'range;
       cnt       : unsigned(7 downto 0);
     end record RegType;
@@ -741,6 +744,7 @@ begin
       state     => IDLE,
       valid     => '1',
       ltrg      => '0',
+      modeJtag  => '0',
       ip        => ICAP_PROG_C'low,
       cnt       => (others => '0')
     );
@@ -808,14 +812,22 @@ begin
             if ( r.ip = ICAP_PROG_C'high ) then
               -- we probably never get here if the reboot is successful but if
               -- something goes wrong we might be able to recover...
-              v.state := IDLE;
+              if ( GEN_WMB_ILA_G ) then
+                v.state := IDLE;
+              else
+                v.state      := DONE;
+              end if;
             else
               v.ip    := r.ip + 1;
-              if ( r.ip = 0 ) then
+              if    ( r.ip = 0 ) then
+                -- is the JTAG jumper engaged?
+                v.modeJtag := icapRep.rdata(10);
+              elsif ( r.ip = 1 ) then
                 -- got the result of the readback
                 if (    ( icapRep.berr     = '1' )  -- invalid readback
                      or ( jumper7          = '0' )  -- jumper7 = 0 prevents reboot
                      or ( icapRep.rdata(8) = '1' )  -- if this is already 2nd boot; don't attempt a 3rd
+                     or ( r.modeJtag       = '1' )  -- using JTAG;
                 ) then
                   if ( GEN_WMB_ILA_G ) then
                     v.state      := IDLE;
