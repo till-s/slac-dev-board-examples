@@ -827,7 +827,10 @@ begin
           end if;
 
         when DONE =>
-          warmBootDone <= '1';
+          warmBootDone                    <= '1';
+          -- hand over the bus
+          icapReq                         <= busLocReqs(SS_IDX_ICAP_C);
+          busLocReps(SS_IDX_ICAP_C).valid <= icapRep.valid;
 
       end case;
 
