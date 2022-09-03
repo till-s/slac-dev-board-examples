@@ -25,6 +25,7 @@ entity EcEvrProtoTop is
     LAN9254_CLK_FREQ_G       : real;
     SYS_CLK_FREQ_G           : real;
     SPI_CLK_FREQ_G           : real    := 12.5E6;
+    SPI_LD_BLK_SZ_G          : natural := 16; -- Erase block size: 12, 15, 16
     EEP_WR_WAIT_G            : natural := 1000000;
     GEN_WMB_ILA_G            : boolean := false;
     GEN_DRP_ILA_G            : boolean := false
@@ -113,19 +114,27 @@ architecture Impl of EcEvrProtoTop is
   constant SS_IDX_DRP_C   : natural   := 1;
   constant SS_IDX_ICAP_C  : natural   := 2;
 
-  constant SPI_NORMAL_BOOT_FILE_ADDR_C : A24Type := x"220000";
+  constant SPI_BOOT_IMAGE_SIZE_C       : A24Type := x"220000";
+  constant SPI_EBLK_SIZE_C             : A24Type := to_unsigned( 2**SPI_LD_BLK_SZ_G, A24Type'length );
+
+  constant SPI_GOLDEN_BOOT_FILE_BEG_C  : A24Type := x"000000";
+  constant SPI_GOLDEN_BOOT_FILE_END_C  : A24Type := SPI_GOLDEN_BOOT_FILE_BEG_C + SPI_BOOT_IMAGE_SIZE_C - 1;
+  constant SPI_NORMAL_BOOT_FILE_BEG_C  : A24Type := SPI_GOLDEN_BOOT_FILE_END_C + 1;
+  constant SPI_NORMAL_BOOT_FILE_END_C  : A24Type := SPI_NORMAL_BOOT_FILE_BEG_C + SPI_BOOT_IMAGE_SIZE_C - 1;
+  constant SPI_BARRIER_FILE_BEG_C      : A24Type := SPI_NORMAL_BOOT_FILE_END_C + 1;
+  constant SPI_BARRIER_FILE_END_C      : A24Type := SPI_BARRIER_FILE_BEG_C + SPI_EBLK_SIZE_C - 1;
 
   constant SPI_FILE_MAP_C : FlashFileArray := (
     0 => (
             id      => x"47", -- 'G' ('golden')
-            begAddr => x"000000",
-            endAddr => x"21FFFF",
+            begAddr => SPI_GOLDEN_BOOT_FILE_BEG_C,
+            endAddr => SPI_GOLDEN_BOOT_FILE_END_C,
             flags   => FLASH_FILE_FLAG_WP_C
          ),
     1 => (
             id      => x"42", -- 'B' ('barrier' following the standard/wildcard image)
-            begAddr => x"440000",
-            endAddr => x"44FFFF",
+            begAddr => SPI_BARRIER_FILE_BEG_C,
+            endAddr => SPI_BARRIER_FILE_END_C,
             flags   => FLASH_FILE_FLAG_WP_C
          ),
     2 => (
@@ -136,8 +145,8 @@ architecture Impl of EcEvrProtoTop is
          ),
     3 => ( -- catch-all entry must be last!
             id      => FOE_FILE_ID_WILDCARD_C,
-            begAddr => SPI_NORMAL_BOOT_FILE_ADDR_C,
-            endAddr => x"43FFFF",
+            begAddr => SPI_NORMAL_BOOT_FILE_BEG_C,
+            endAddr => SPI_NORMAL_BOOT_FILE_END_C,
             flags   => FLASH_FILE_FLAGS_NONE_C
          )
   );
@@ -339,8 +348,9 @@ begin
     generic map (
       CLK_FREQ_G        => SYS_CLK_FREQ_G,
       SPI_CLK_FREQ_G    => SPI_CLK_FREQ_G,
-      GIT_HASH_G        => GIT_HASH_G,
+      SPI_LD_BLK_SZ_G   => SPI_LD_BLK_SZ_G,
       SPI_FILE_MAP_G    => SPI_FILE_MAP_C,
+      GIT_HASH_G        => GIT_HASH_G,
       EEP_I2C_ADDR_G    => x"50",
       EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
       GEN_HBI_ILA_G     => false,
@@ -710,12 +720,11 @@ begin
      -- data on the first read...
      -1 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
       0 => ( rdnw => '1', addr => ICAP_REG_BOOTSTS_C, data => x"0000_0000"                                              ),
-      1 => ( rdnw => '0', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_ADDR_C) ) ),
-      2 => ( rdnw => '1', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_ADDR_C) ) ),
-      3 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
-      4 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
-      5 => ( rdnw => '0', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         ),
-      6 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
+      1 => ( rdnw => '0', addr => ICAP_REG_WBSTAR_C , data => (x"00" & std_logic_vector( SPI_NORMAL_BOOT_FILE_BEG_C) ) ),
+      2 => ( rdnw => '0', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
+      3 => ( rdnw => '1', addr => ICAP_REG_TIMER_C  , data => (ICAP_TIMER_CFG_MON_C or x"0000_0100" )                   ),
+      4 => ( rdnw => '0', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         ),
+      5 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
     );
 
     type StateType is (IDLE, RUN, WAI, DONE);
