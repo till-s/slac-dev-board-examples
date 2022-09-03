@@ -234,7 +234,7 @@ begin
     -- assume sysClk to be < 200MHz so prescaling by 4 is certainly acceptable
     -- for the STARTUPE2.
 
-    -- 2 bits prescaler, a count of 8 pulses... 2 bit for the reset state
+    -- 2 bits prescaler, a count of 8 pulses... 1 bit for the reset state
     subtype StartupCntType is unsigned(1 + 2 + 3 - 1 downto 0);
 
     signal  startupInitCnt : StartupCntType := (
