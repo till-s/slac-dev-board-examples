@@ -25,7 +25,9 @@ entity EcEvrProtoTop is
     LAN9254_CLK_FREQ_G       : real;
     SYS_CLK_FREQ_G           : real;
     SPI_CLK_FREQ_G           : real    := 12.5E6;
-    EEP_WR_WAIT_G            : natural := 1000000
+    EEP_WR_WAIT_G            : natural := 1000000;
+    GEN_WMB_ILA_G            : boolean := false;
+    GEN_DRP_ILA_G            : boolean := false
   );
   port (
     -- external clocks
@@ -93,13 +95,13 @@ architecture Impl of EcEvrProtoTop is
   constant TIMG_RST_CNT_C : natural   := 100;
 
   -- debounce of sys-reset
-  constant SYS_RST_DEBT_C : real      := 0.01;
+  constant JMP_DEBT_C     : real      := 0.01;
   -- min-time lan9254 RST# must be asserted
   constant LAN_RST_TIME_C : real      := 0.0005;
   -- wait until lan9254 comes on-line
   constant LAN_RST_WAIT_C : real      := 0.01;
 
-  constant SYS_RST_DEBC_C : natural   := natural( SYS_RST_DEBT_C * SYS_CLK_FREQ_G ) - 1;
+  constant JMP_DEBC_C     : natural   := natural( JMP_DEBT_C     * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_ASSC_C : natural   := natural( LAN_RST_TIME_C * SYS_CLK_FREQ_G ) - 1;
   constant LAN_RST_WAIC_C : natural   := natural( LAN_RST_WAIT_C * SYS_CLK_FREQ_G ) - 1;
 
@@ -142,13 +144,16 @@ architecture Impl of EcEvrProtoTop is
 
   signal sysClkLoc        : std_logic;
   signal sysRstLoc        : std_logic := '1';
+  signal warmBootRst      : std_logic;
+  signal warmBootDone     : std_logic := '0';
   signal lanRstAssertCnt  : natural range 0 to LAN_RST_ASSC_C := LAN_RST_ASSC_C;
   signal lanRstWaitCnt    : natural range 0 to LAN_RST_WAIC_C := LAN_RST_WAIC_C;
   signal lan9254RstbOut   : std_logic := '0';
   signal lan9254RstbInp   : std_logic;
+  signal lan9254RstReq    : std_logic;
 
-  signal jumperDebCnt     : natural range 0 to SYS_RST_DEBC_C := SYS_RST_DEBC_C;
-  signal jumperRst        : std_logic;
+  signal jumper8DebCnt    : natural range 0 to JMP_DEBC_C     := JMP_DEBC_C;
+  signal jumper8Deb       : std_logic;
 
   signal mgtRstCnt        : natural range 0 to TIMG_RST_CNT_C := TIMG_RST_CNT_C;
 
@@ -182,9 +187,6 @@ architecture Impl of EcEvrProtoTop is
   signal busLocReqs       : Udp2BusReqArray(NUM_SUBSUBS_C - 1 downto 0)  := (others => UDP2BUSREQ_INIT_C);
   signal busLocReps       : Udp2BusRepArray(NUM_SUBSUBS_C - 1 downto 0)  := (others => UDP2BUSREP_ERROR_C);
   signal spiMstLoc        : BspSpiMstType  := BSP_SPI_MST_INIT_C;
-
-  signal icapReq          : Udp2BusReqType := UDP2BUSREQ_INIT_C;
-  signal icapRep          : Udp2BusRepType := UDP2BUSREP_INIT_C;
 
   signal fileWP           : std_logic      := '0';
 
@@ -237,21 +239,16 @@ begin
   sysClk         <= sysClkLoc;
   sysRst         <= sysRstLoc;
 
-  jumperRst      <= '1' when jumperDebCnt    > 0 else '0';
-  lan9254RstbOut <= '0' when lanRstAssertCnt > 0 else '1';
-
-  P_RESET    : process( jumperDebCnt, lanRstWaitCnt, lanRstAssertCnt, sysRstReq ) is
+  P_RESET    : process( lanRstWaitCnt, lanRstAssertCnt, sysRstReq, warmBootDone, lan9254RstReq ) is
   begin
-    jumperRst      <= '0';
-    sysRstLoc      <= sysRstReq;
+    -- sysRstReq holds sysRstReq until STARTUPE2 forwards the clock
+    sysRstLoc      <= sysRstReq or not warmBootDone;
+    -- just use sysRstReq to ensure the warmboot processor is reset
+    warmBootRst    <= sysRstReq;
     lan9254RstbOut <= '1';
 
     if ( lanRstAssertCnt > 0 ) then
       lan9254RstbOut <= '0';
-    end if;
-
-    if ( jumperDebCnt    > 0 ) then
-      jumperRst <= '1';
     end if;
 
     if ( lanRstWaitCnt   > 0 ) then
@@ -269,13 +266,16 @@ begin
       end if;
 
       -- debounce jumper
-      if ( jumper8 = '1' ) then
-        jumperDebCnt   <= SYS_RST_DEBC_C;
-      elsif ( jumperDebCnt > 0 ) then
-        jumperDebCnt <= jumperDebCnt - 1;
+      if ( jumper8DebCnt > 0 ) then
+        jumper8DebCnt <= jumper8DebCnt - 1;
+      elsif ( jumper8 /= jumper8Deb ) then
+        -- new value: register and then ignore changes
+        -- for a while
+        jumper8DebCnt <= JMP_DEBC_C;
+        jumper8Deb    <= jumper8;
       end if;
 
-      if ( jumperRst = '1' ) then
+      if ( lan9254RstReq = '1' ) then
         lanRstAssertCnt <= LAN_RST_ASSC_C;
       elsif ( lanRstAssertCnt > 0 ) then
         lanRstAssertCnt <= lanRstAssertCnt - 1;
@@ -424,7 +424,7 @@ begin
 
     U_DRP : entity work.Bus2DRP
       generic map (
-        GEN_ILA_G        => false
+        GEN_ILA_G        => GEN_DRP_ILA_G
       )
       port map (
         clk              => sysClkLoc,
@@ -524,7 +524,7 @@ begin
       end if;
     end process P_REF_BLINK;
 
-    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable, pdoBlink ) is
+    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable, pdoBlink, rxRefClkBlink ) is
     begin
       -- BGR
       mgtLeds <= "000";
@@ -643,16 +643,16 @@ begin
       end if;
     end process P_SEQ;
 
-    busRepLoc <= r.rep;
+    busRepLoc         <= r.rep;
 
-    mgtTxControl <= r.regs(0)(15 downto  0);
-    mgtRxControl <= r.regs(0)(31 downto 16);
+    mgtTxControl      <= r.regs(0)(15 downto  0);
+    mgtRxControl      <= r.regs(0)(31 downto 16);
 
-    fileWP       <= not r.regs(2)(16);
-
-    sfpTxEn(0)   <= r.regs(4)(          31);
-    dbgTrg       <= r.regs(4)(          30);
-    dbgVal       <= r.regs(5);
+    fileWP            <= not r.regs(2)(16);
+    -- no point resetting from a register; if we still have EoE connectivity this
+    -- is unlikely to be necessary (ethercat reboot) and if we don't we can't get
+    -- to this register anyways...
+    -- lan9254RstReq     <= r.regs(2)(24);
 
     P_PWRCYCLE : process (r) is
     begin
@@ -662,27 +662,20 @@ begin
       end if;
     end process P_PWRCYCLE;
 
-    tstLedPw <= r.regs(3)(tstLedPw'range);
+    tstLedPw          <= r.regs(3)(tstLedPw'range);
 
-    -- the ICAPE2 can be clocked up to 100MHz (70MHz -2le device @ 0.9V)
-    U_ICAP : entity work.IcapE2Reg
-      port map (
-        clk    => sysClkLoc,
-        rst    => sysRstLoc,
-        addr   => icapReq.dwaddr(15 downto 0),
-        rdnw   => icapReq.rdnwr,
-        dInp   => icapReq.data,
-        req    => icapReq.valid,
-
-        dOut   => icapRep.rdata,
-        ack    => icapRep.valid
-      );
+    sfpTxEn(0)        <= r.regs(4)(          31);
+    dbgTrg            <= r.regs(4)(          30);
+    dbgVal            <= r.regs(5);
 
     busLocReps(SS_IDX_ICAP_C).berr <= '0';
 
   end block B_LOC_REGS;
 
   B_ICAP_INIT : block is
+
+    signal icapReq          : Udp2BusReqType := UDP2BUSREQ_INIT_C;
+    signal icapRep          : Udp2BusRepType := UDP2BUSREP_INIT_C;
 
     subtype DwAddrType is std_logic_vector(icapReq.dwaddr'range);
 
@@ -725,7 +718,7 @@ begin
       6 => ( rdnw => '1', addr => ICAP_REG_CMD_C    , data => ICAP_CMD_REBOOT_C                                         )
     );
 
-    type StateType is (IDLE, RUN, WAI);
+    type StateType is (IDLE, RUN, WAI, DONE);
 
     type RegType is record
       state     : StateType;
@@ -749,6 +742,20 @@ begin
 
   begin
 
+    -- the ICAPE2 can be clocked up to 100MHz (70MHz -2le device @ 0.9V)
+    U_ICAP : entity work.IcapE2Reg
+      port map (
+        clk    => sysClkLoc,
+        rst    => warmBootRst,
+        addr   => icapReq.dwaddr(15 downto 0),
+        rdnw   => icapReq.rdnwr,
+        dInp   => icapReq.data,
+        req    => icapReq.valid,
+
+        dOut   => icapRep.rdata,
+        ack    => icapRep.valid
+      );
+
     -- decide if we need to warm-boot
 
     P_ICAP_INIT_COMB : process ( r, busLocReqs, icapRep, jumper7, dbgTrg, dbgVal ) is
@@ -766,6 +773,8 @@ begin
       busLocReps(SS_IDX_ICAP_C)       <= icapRep;
       busLocReps(SS_IDX_ICAP_C).valid <= '0';
 
+      warmBootDone                    <= toSl( GEN_WMB_ILA_G );
+
       v.ltrg := dbgTrg;
 
       case ( r.state ) is
@@ -774,7 +783,7 @@ begin
           -- hand over the bus
           icapReq                         <= busLocReqs(SS_IDX_ICAP_C);
           busLocReps(SS_IDX_ICAP_C).valid <= icapRep.valid;
-          if ( ( (dbgTrg and not r.ltrg) = '1') and ( busLocReqs(SS_IDX_ICAP_C).valid = '0' ) ) then
+          if ( ( not GEN_WMB_ILA_G or ( (dbgTrg and not r.ltrg) = '1') ) and ( busLocReqs(SS_IDX_ICAP_C).valid = '0' ) ) then
              v.state := RUN;
              v.ip    := ICAP_PROG_C'low;
              v.valid := '1';
@@ -799,7 +808,11 @@ begin
                      or ( jumper7          = '0' )  -- jumper7 = 0 prevents reboot
                      or ( icapRep.rdata(8) = '1' )  -- if this is already 2nd boot; don't attempt a 3rd
                 ) then
-                  v.state      := IDLE;
+                  if ( GEN_WMB_ILA_G ) then
+                    v.state      := IDLE;
+                  else
+                    v.state      := DONE;
+                  end if;
                 end if;
               end if;
             end if;
@@ -813,6 +826,9 @@ begin
             v.cnt := r.cnt - 1;
           end if;
 
+        when DONE =>
+          warmBootDone <= '1';
+
       end case;
 
       rin <= v;
@@ -821,7 +837,7 @@ begin
     P_ICAP_INIT_SEQ : process ( sysClkLoc ) is
     begin
        if ( rising_edge( sysClkLoc ) ) then
-         if ( sysRstLoc = '1' ) then
+         if ( warmBootRst = '1' ) then
            r <= REG_INIT_C;
          else
            r <= rin;
@@ -829,7 +845,7 @@ begin
        end if;
     end process P_ICAP_INIT_SEQ;
 
-    G_REBOOT_ILA : if ( true ) generate
+    G_REBOOT_ILA : if ( GEN_WMB_ILA_G ) generate
       U_ILA : component Ila_256
         port map (
             clk                  => sysClkLoc,
