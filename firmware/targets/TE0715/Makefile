@@ -6,8 +6,8 @@ target: yaml-link prom bin
 export PRJ_VERSION = 0x00000002
 
 # Define target part
-export PRJ_PART = XC7Z015CLG485-2
-#export PRJ_PART = XC7Z030SBG485-1
+#export PRJ_PART = XC7Z015CLG485-2
+export PRJ_PART = XC7Z030SBG485-1
 #export PRJ_PART = XC7Z012SCLG485-1
 
 PRJ_FAMILY = $(shell echo "$(PRJ_PART)" | sed -e 's/\(XC7Z\)\([0-9]\+\).*/7z\2/')
