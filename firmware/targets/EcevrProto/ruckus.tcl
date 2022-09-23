@@ -10,6 +10,10 @@ foreach f {
   EcEvrProtoPkg.vhd
   EcEvrProtoTop.vhd
   TimingGtpCoreWrapper.vhd
+  gtp/TimingGtp_common.vhd
+  gtp/TimingGtp_cpll_railing.vhd
+  gtp/TimingGtpPkg.vhd
+  gtp/TimingGtpWrapper.vhd
 } {
   loadSource    -path "$::DIR_PATH/hdl/$f"
 }
@@ -17,6 +21,8 @@ foreach f {
 loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-misc.xdc"
 loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-io.xdc"
 loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-clocks.xdc"
+loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-clock_groups.xdc"
+loadConstraints -path "$::DIR_PATH/hdl/EcEvrProto-io_timing.xdc"
 
 # some submodule ruckus.tcl's already set the strategy
 # (too late for our properties.tcl).
