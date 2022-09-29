@@ -28,7 +28,8 @@ entity EcEvrProtoTop is
     SPI_LD_BLK_SZ_G          : natural := 16; -- Erase block size: 12, 15, 16
     EEP_WR_WAIT_G            : natural := 1000000;
     GEN_WMB_ILA_G            : boolean := false;
-    GEN_DRP_ILA_G            : boolean := false
+    GEN_DRP_ILA_G            : boolean := false;
+    SYS_CLK_PLL_G            : boolean := false
   );
   port (
     -- external clocks
@@ -239,11 +240,21 @@ begin
   pllLocked                  <= mgtRxStatus(1);
 
   -- ATM we have not connected an MMCM
-  assert ( SYS_CLK_FREQ_G = LAN9254_CLK_FREQ_G )
-    report ("differen SYS_CLK_FREQ_G requires an MMCM")
-    severity failure;
+  G_LAN9254_CLK : if ( not SYS_CLK_PLL_G ) generate
+    assert ( SYS_CLK_FREQ_G = LAN9254_CLK_FREQ_G )
+      report ("different SYS_CLK_FREQ_G requires an MMCM")
+      severity failure;
 
-  sysClkLoc      <= lan9254Clk;
+    sysClkLoc      <= lan9254Clk;
+  end generate G_LAN9254_CLK;
+
+  G_PLL_CLK : if ( SYS_CLK_PLL_G ) generate
+    assert ( SYS_CLK_FREQ_G = PLL_CLK_FREQ_G )
+      report ("different SYS_CLK_FREQ_G requires an MMCM")
+      severity failure;
+
+    sysClkLoc      <= pllClk;
+  end generate G_PLL_CLK;
 
   sysClk         <= sysClkLoc;
   sysRst         <= sysRstLoc;
