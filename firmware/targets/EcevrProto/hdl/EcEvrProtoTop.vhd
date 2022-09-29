@@ -29,6 +29,7 @@ entity EcEvrProtoTop is
     EEP_WR_WAIT_G            : natural := 1000000;
     GEN_WMB_ILA_G            : boolean := false;
     GEN_DRP_ILA_G            : boolean := false;
+    GEN_ICAP_WARMBOOT_G      : boolean := false;
     SYS_CLK_PLL_G            : boolean := false
   );
   port (
@@ -689,11 +690,9 @@ begin
     dbgTrg            <= r.regs(4)(          30);
     dbgVal            <= r.regs(5);
 
-    busLocReps(SS_IDX_ICAP_C).berr <= '0';
-
   end block B_LOC_REGS;
 
-  B_ICAP_INIT : block is
+  G_ICAP_INIT : if ( GEN_ICAP_WARMBOOT_G ) generate
 
     signal icapReq          : Udp2BusReqType := UDP2BUSREQ_INIT_C;
     signal icapRep          : Udp2BusRepType := UDP2BUSREP_INIT_C;
@@ -796,6 +795,8 @@ begin
 
       busLocReps(SS_IDX_ICAP_C)       <= icapRep;
       busLocReps(SS_IDX_ICAP_C).valid <= '0';
+      busLocReps(SS_IDX_ICAP_C).berr  <= '0';
+
 
       warmBootDone                    <= toSl( GEN_WMB_ILA_G );
 
@@ -908,7 +909,13 @@ begin
         );
     end generate G_REBOOT_ILA;
 
-  end block B_ICAP_INIT;
+  end generate G_ICAP_INIT;
+
+  G_NO_ICAP_INIT : if ( not GEN_ICAP_WARMBOOT_G ) generate
+  begin
+    warmBootDone              <= '1';
+    busLocReps(SS_IDX_ICAP_C) <= UDP2BUSREP_ERROR_C;
+  end generate G_NO_ICAP_INIT;
 
   B_RXPDO : block is
   begin
