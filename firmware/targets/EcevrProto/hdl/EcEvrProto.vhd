@@ -123,8 +123,8 @@ architecture Impl of EcEvrProto is
   signal sfpTxFault    : std_logic_vector(NUM_SFP_G - 1 downto 0);
   signal sfpTxEn       : std_logic_vector(NUM_SFP_G - 1 downto 0) := (others => '1');
 
-  signal sysClk        : std_logic;
-  signal sysRstReq     : std_logic;
+  signal sysClk        : std_logic := '0';
+  signal sysRstReq     : std_logic := '0';
 
 begin
 
@@ -224,7 +224,7 @@ begin
   U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_C ), I => mgtTxP(0) );
 
 
-  B_STARTUP : block is
+  G_STARTUP : if ( false ) generate
     -- STARTUPE2 apparently (this is not documented but I looked at the simulation)
     -- does not immediately pass user clock pulses (caused SPI erase faults!)
     -- but needs a few cycles. Hold off sysRst until this is complete.
@@ -279,7 +279,7 @@ begin
         USRDONETS  => '0'   -- 1-bit input: User DONE 3-state enable output
       );
 
-  end block B_STARTUP;
+  end generate G_STARTUP;
 
   U_IOBUF_SPI_CSEL : IOBUF
     port map ( IO => spiCselPin, O => open,           I => spiMstOut.csel, T => '0' );
