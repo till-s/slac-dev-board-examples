@@ -374,7 +374,7 @@ begin
       GIT_HASH_G        => GIT_HASH_G,
       EEP_I2C_ADDR_G    => x"50",
       EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
-      GEN_HBI_ILA_G     => true,
+      GEN_HBI_ILA_G     => false,
       GEN_ESC_ILA_G     => true,
       GEN_EOE_ILA_G     => false,
       GEN_FOE_ILA_G     => false,
