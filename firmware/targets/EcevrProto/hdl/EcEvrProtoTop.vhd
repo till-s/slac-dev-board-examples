@@ -29,7 +29,7 @@ entity EcEvrProtoTop is
     EEP_WR_WAIT_G            : natural   := 1000000;
     GEN_WMB_ILA_G            : boolean   := false;
     GEN_DRP_ILA_G            : boolean   := false;
-    GEN_ICAP_WARMBOOT_G      : boolean   := false;
+    GEN_ICAP_WARMBOOT_G      : boolean   := true;
     SYS_CLK_PLL_G            : boolean   := false;
     ESC_POLLED_MODE_G        : boolean   := true
   );

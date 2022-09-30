@@ -226,7 +226,7 @@ begin
   U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_C ), I => mgtTxP(0) );
 
 
-  G_STARTUP : if ( false ) generate
+  G_STARTUP : if ( true ) generate
     -- STARTUPE2 apparently (this is not documented but I looked at the simulation)
     -- does not immediately pass user clock pulses (caused SPI erase faults!)
     -- but needs a few cycles. Hold off sysRst until this is complete.
