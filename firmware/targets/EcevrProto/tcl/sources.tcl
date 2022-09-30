@@ -85,8 +85,8 @@ set files [list \
 ]
 add_files -norecurse -fileset [get_filesets sources_1] $files
 
-#source "${origin_dir}/../tcl/genIla256.tcl"
-#source "${origin_dir}/../tcl/genTimingGtp.tcl"
+source "${origin_dir}/../tcl/genIla256.tcl"
+source "${origin_dir}/../tcl/genTimingGtp.tcl"
 
 set files [list \
  [file normalize "${origin_dir}/../hdl/EcEvrProto-clocks.xdc"] \
