@@ -24,13 +24,14 @@ entity EcEvrProtoTop is
     PLL_CLK_FREQ_G           : real;
     LAN9254_CLK_FREQ_G       : real;
     SYS_CLK_FREQ_G           : real;
-    SPI_CLK_FREQ_G           : real    := 12.5E6;
-    SPI_LD_BLK_SZ_G          : natural := 16; -- Erase block size: 12, 15, 16
-    EEP_WR_WAIT_G            : natural := 1000000;
-    GEN_WMB_ILA_G            : boolean := false;
-    GEN_DRP_ILA_G            : boolean := false;
-    GEN_ICAP_WARMBOOT_G      : boolean := false;
-    SYS_CLK_PLL_G            : boolean := false
+    SPI_CLK_FREQ_G           : real      := 12.5E6;
+    SPI_LD_BLK_SZ_G          : natural   := 16; -- Erase block size: 12, 15, 16
+    EEP_WR_WAIT_G            : natural   := 1000000;
+    GEN_WMB_ILA_G            : boolean   := false;
+    GEN_DRP_ILA_G            : boolean   := false;
+    GEN_ICAP_WARMBOOT_G      : boolean   := false;
+    SYS_CLK_PLL_G            : boolean   := false;
+    ESC_POLLED_MODE_G        : std_logic := '1'
   );
   port (
     -- external clocks
@@ -178,6 +179,7 @@ architecture Impl of EcEvrProtoTop is
   signal lan9254HbiOb     : Lan9254HBIOutType;
   signal lan9254HbiIb     : Lan9254HBIInpType;
   signal lan9254Irq       : std_logic;
+  signal lan9254IrqIn     : std_logic;
 
   signal ecLatch          : std_logic_vector(EC_NUM_LATCH_INP_C - 1 downto 0);
   signal ecSync           : std_logic_vector(EC_NUM_SYNC_OUT_C  - 1 downto 0);
@@ -347,7 +349,7 @@ begin
 
       lan9254_hbiOb   => lan9254HbiOb,
       lan9254_hbiIb   => lan9254HbiIb,
-      lan9254_irq     => lan9254Irq,
+      lan9254_irq     => lan9254IrqIn,
       lan9254RstbInp  => lan9254RstbOut, -- in  std_logic := '1';
       lan9254RstbOut  => lan9254RstbInp, -- out std_logic;
 
@@ -355,6 +357,7 @@ begin
       ec_LATCH        => ecLatch
     );
 
+  lan9254Irq <= lan9254IrqIn or ESC_POLLED_MODE_G;
 
   U_MAIN : entity work.EcEvrWrapper
     generic map (
