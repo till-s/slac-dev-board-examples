@@ -31,7 +31,7 @@ entity EcEvrProtoTop is
     GEN_DRP_ILA_G            : boolean   := false;
     GEN_ICAP_WARMBOOT_G      : boolean   := false;
     SYS_CLK_PLL_G            : boolean   := false;
-    ESC_POLLED_MODE_G        : std_logic := '1'
+    ESC_POLLED_MODE_G        : boolean   := true
   );
   port (
     -- external clocks
@@ -357,7 +357,13 @@ begin
       ec_LATCH        => ecLatch
     );
 
-  lan9254Irq <= lan9254IrqIn or ESC_POLLED_MODE_G;
+  G_LAN9254_POLL : if ( ESC_POLLED_MODE_G ) generate
+    lan9254Irq <= EC_IRQ_ACT_C;
+  end generate G_LAN9254_POLL;
+
+  G_LAN9254_POLL : if ( not ESC_POLLED_MODE_G ) generate
+    lan9254Irq <= lan9254IrqIn;
+  end generate G_LAN9254_POLL;
 
   U_MAIN : entity work.EcEvrWrapper
     generic map (
@@ -368,9 +374,9 @@ begin
       GIT_HASH_G        => GIT_HASH_G,
       EEP_I2C_ADDR_G    => x"50",
       EEP_I2C_MUX_SEL_G => std_logic_vector( to_unsigned( EEP_I2C_IDX_C, 4 ) ),
-      GEN_HBI_ILA_G     => true,
+      GEN_HBI_ILA_G     => false,
       GEN_ESC_ILA_G     => true,
-      GEN_EOE_ILA_G     => false,
+      GEN_EOE_ILA_G     => true,
       GEN_FOE_ILA_G     => false,
       GEN_U2B_ILA_G     => false,
       GEN_CNF_ILA_G     => true,
