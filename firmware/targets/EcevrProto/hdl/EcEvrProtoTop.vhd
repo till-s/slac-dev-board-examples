@@ -892,6 +892,11 @@ begin
     end process P_ICAP_INIT_SEQ;
 
     G_REBOOT_ILA : if ( GEN_WMB_ILA_G ) generate
+      signal state_dbg : std_logic_vector(1 downto 0);
+      signal ip_dbg    : std_logic_vector(3 downto 0);
+    begin
+      state_dbg <= std_logic_vector( to_unsigned( StateType'pos( r.state ), 2 ) );
+      ip_dbg    <= std_logic_vector( to_unsigned( r.ip , 4 ) );
       U_ILA : component Ila_256
         port map (
             clk                  => sysClkLoc,
@@ -902,9 +907,9 @@ begin
 
             probe1(31 downto  0) => icapRep.rdata,
             probe1(32          ) => icapRep.valid,
-            probe1(33 downto 33) => std_logic_vector( to_unsigned( StateType'pos( r.state ), 1 ) ),
-            probe1(35 downto 34) => "00",
-            probe1(39 downto 36) => std_logic_vector( to_unsigned( r.ip , 4 ) ),
+            probe1(34 downto 33) => state_dbg,
+            probe1(          35) => '0',
+            probe1(39 downto 36) => ip_dbg,
             probe1(63 downto 40) => (others => '0'),
 
             probe2(63 downto  0) => (others => '0'),
