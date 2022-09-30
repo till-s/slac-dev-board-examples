@@ -11,8 +11,10 @@ use     work.EcEvrBspPkg.all;
 use     work.EcEvrProtoPkg.all;
 
 entity EcEvrProto is
+  -- WARNING: vivado 2021.1 crashed w/o indication what went wrong if
+  --          a generic w/o default is not set by the tool!
   generic (
-    GIT_HASH_G               : std_logic_vector(31 downto 0);
+    GIT_HASH_G               : std_logic_vector(31 downto 0) := (others => '0');
     NUM_LED_G                : natural := 9;
     NUM_POF_G                : natural := 2;
     NUM_GPIO_G               : natural := 3;
