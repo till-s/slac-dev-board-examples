@@ -361,9 +361,9 @@ begin
     lan9254Irq <= EC_IRQ_ACT_C;
   end generate G_LAN9254_POLL;
 
-  G_LAN9254_POLL : if ( not ESC_POLLED_MODE_G ) generate
+  G_LAN9254_IRQ  : if ( not ESC_POLLED_MODE_G ) generate
     lan9254Irq <= lan9254IrqIn;
-  end generate G_LAN9254_POLL;
+  end generate G_LAN9254_IRQ;
 
   U_MAIN : entity work.EcEvrWrapper
     generic map (
