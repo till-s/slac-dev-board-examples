@@ -1,7 +1,7 @@
 puts "USER PRE_SYNTH_RUN script"
 
 if { [exec sh -c {test -z "`git status -s -uno`"; echo $?}] == 1 } {
-  set git_hash {0000_0000}
+  set git_hash {00000000}
   puts "GIT NOT CLEAN - not providing a hash"
 } else {
   set git_hash "[exec git rev-parse --short=8 HEAD]"
