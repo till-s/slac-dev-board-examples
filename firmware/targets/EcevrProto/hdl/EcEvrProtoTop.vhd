@@ -120,7 +120,7 @@ architecture Impl of EcEvrProtoTop is
   constant SPI_BOOT_IMAGE_SIZE_C       : A24Type := x"220000";
   constant SPI_EBLK_SIZE_C             : A24Type := to_unsigned( 2**SPI_LD_BLK_SZ_G, A24Type'length );
 
-  constant SPI_INFO_IMAGE_SIZE_C       : A25Type := x"400000"; -- arbitrary file with aux. info, e.g., debug probes
+  constant SPI_INFO_IMAGE_SIZE_C       : A24Type := x"400000"; -- arbitrary file with aux. info, e.g., debug probes
 
   constant SPI_GOLDEN_BOOT_FILE_BEG_C  : A24Type := x"000000";
   constant SPI_GOLDEN_BOOT_FILE_END_C  : A24Type := SPI_GOLDEN_BOOT_FILE_BEG_C + SPI_BOOT_IMAGE_SIZE_C - 1;
