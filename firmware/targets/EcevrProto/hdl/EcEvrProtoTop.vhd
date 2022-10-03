@@ -145,7 +145,7 @@ architecture Impl of EcEvrProtoTop is
             flags   => FLASH_FILE_FLAG_WP_C
          ),
     2 => (
-            id      => x"42", -- 'I' ('info' following the standard/wildcard image)
+            id      => x"41", -- 'A' ('aux' following the standard/wildcard image)
             begAddr => SPI_INFO_FILE_BEG_C,
             endAddr => SPI_INFO_FILE_END_C,
             flags   => FLASH_FILE_FLAGS_NONE_C
