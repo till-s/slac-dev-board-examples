@@ -382,7 +382,8 @@ begin
       GEN_CNF_ILA_G     => false,
       GEN_I2C_ILA_G     => true,
       GEN_EEP_ILA_G     => false,
-      NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C
+      NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
+      EVR_FLAVOR_G      => "PSI"
     )
     port map (
       sysClk            => sysClkLoc,
@@ -437,9 +438,13 @@ begin
       timingRecRst      => mgtRxRecRst,
 
       timingRxData      => mgtRxData,
-      timingDataK       => mgtRxDataK,
+      timingRxDataK     => mgtRxDataK,
       evrEventsAdj      => open,  --: out    std_logic_vector( 3 downto 0)
-      pdoTrg            => pdoTrg
+      pdoTrg            => pdoTrg,
+
+      timingTxClk       => mgtTxUsrClk,
+      timingTxData      => mgtTxData,
+      timingTxDataK     => mgtTxDataK
     );
 
   B_MGT : block is
