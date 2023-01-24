@@ -211,6 +211,9 @@ architecture Impl of EcEvrProtoTop is
   signal mgtTxStatus      : std_logic_vector(15 downto 0);
   signal mgtRxStatus      : std_logic_vector(15 downto 0);
 
+  signal timingMGTStatus  : std_logic_vector(31 downto 0);
+  signal timingMGTControl : std_logic_vector(31 downto 0);
+
   signal rxPDOMst         : Lan9254PDOMstType;
 
   signal dbgTrg           : std_logic;
@@ -432,7 +435,8 @@ begin
 
       evrStable         => evrStable,
 
-      timingMGTStatus   => open, -- in     std_logic_vector(31 downto 0) := (others => '0');
+      timingMGTStatus   => timingMGTStatus,
+      timingMGTControl  => timingMGTControl,
 
       timingRecClk      => mgtRxRecClk,
       timingRecRst      => mgtRxRecRst,
@@ -663,7 +667,7 @@ begin
       end case;
 
       -- read-only
-      v.regs(1)              := mgtRxStatus & mgtTxStatus;
+      v.regs(1)              := timingMGTStatus; 
       v.regs(4)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) & x"0000";
       rin <= v;
     end process P_COMB;
@@ -681,8 +685,10 @@ begin
 
     busRepLoc         <= r.rep;
 
-    mgtTxControl      <= r.regs(0)(15 downto  0);
-    mgtRxControl      <= r.regs(0)(31 downto 16);
+    mgtTxControl      <= r.regs(0)(15 downto  0) or timingMGTControl(15 downto  0);
+    mgtRxControl      <= r.regs(0)(31 downto 16) or timingMGTControl(31 downto 16);
+
+    timingMGTStatus   <= mgtRxStatus & mgtTxStatus;
 
     fileWP            <= not r.regs(2)(16);
     -- no point resetting from a register; if we still have EoE connectivity this
