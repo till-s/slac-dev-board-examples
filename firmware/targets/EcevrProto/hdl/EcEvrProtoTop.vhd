@@ -28,6 +28,7 @@ entity EcEvrProtoTop is
     SPI_LD_BLK_SZ_G          : natural   := 16; -- Erase block size: 12, 15, 16
     EEP_WR_WAIT_G            : natural   := 1000000;
     GEN_WMB_ILA_G            : boolean   := false;
+    GEN_RST_ILA_G            : boolean   := true;
     GEN_DRP_ILA_G            : boolean   := false;
     GEN_ICAP_WARMBOOT_G      : boolean   := true;
     SYS_CLK_PLL_G            : boolean   := false;
@@ -907,7 +908,7 @@ begin
        end if;
     end process P_ICAP_INIT_SEQ;
 
-    G_REBOOT_ILA : if ( GEN_WMB_ILA_G ) generate
+    G_REBOOT_ILA : if ( GEN_WMB_ILA_G or GEN_RST_ILA_G ) generate
       signal state_dbg : std_logic_vector(1 downto 0);
       signal ip_dbg    : std_logic_vector(3 downto 0);
     begin
@@ -924,9 +925,16 @@ begin
             probe1(31 downto  0) => icapRep.rdata,
             probe1(32          ) => icapRep.valid,
             probe1(34 downto 33) => state_dbg,
-            probe1(          35) => '0',
+            probe1(          35) => warmBootDone,
             probe1(39 downto 36) => ip_dbg,
-            probe1(63 downto 40) => (others => '0'),
+            probe1(          40) => warmBootRst,
+            probe1(          41) => sysRstLoc,
+            probe1(          42) => sysRstReq,
+            probe1(          43) => lan9254RstReq,
+            probe1(          44) => lan9254RstbOut,
+            probe1(          45) => lan9254RstbInp,
+            probe1(          46) => mgtRxRecRst,
+            probe1(63 downto 47) => (others => '0'),
 
             probe2(63 downto  0) => (others => '0'),
             probe3(63 downto  0) => (others => '0')
