@@ -23,3 +23,6 @@
 [submodule "firmware/submodules/ecevr-core"]
 	path = firmware/submodules/ecevr-core
 	url = ../ecevr-core
+[submodule "firmware/submodules/mrf-openevr"]
+	path = firmware/submodules/mrf-openevr
+	url = git@github.com:paulscherrerinstitute/mrf-openevr.git
