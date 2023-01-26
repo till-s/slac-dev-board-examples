@@ -204,7 +204,6 @@ if { $obj != "" } {
 }
 set obj [get_runs synth_1]
 set_property -name "part" -value "${project_part}" -objects $obj
-set_property -name "auto_incremental_checkpoint" -value "1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 set_property -name "steps.synth_design.tcl.pre" -value "[file normalize "$origin_dir/..//vivado/pre_synth_run.tcl"]" -objects $obj
 set_property -name "steps.synth_design.args.flatten_hierarchy" -value "none" -objects $obj
@@ -215,9 +214,9 @@ current_run -synthesis [get_runs synth_1]
 
 # Create 'impl_1' run (if not found)
 if {[string equal [get_runs -quiet impl_1] ""]} {
-    create_run -name impl_1 -part ${project_part} -flow {Vivado Implementation 2021} -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
+    create_run -name impl_1 -part ${project_part} -flow {Vivado Implementation 2021} -strategy "Performance_Explore" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
 } else {
-  set_property strategy "Vivado Implementation Defaults" [get_runs impl_1]
+  set_property strategy "Performance_Explore" [get_runs impl_1]
   set_property flow "Vivado Implementation 2021" [get_runs impl_1]
 }
 set obj [get_runs impl_1]
@@ -430,7 +429,11 @@ set_property -name "options.warn_on_violation" -value "1" -objects $obj
 }
 set obj [get_runs impl_1]
 set_property -name "part" -value "${project_part}" -objects $obj
-set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
+set_property -name "strategy" -value "Performance_Explore" -objects $obj
+set_property -name "steps.opt_design.args.directive" -value "Explore" -objects $obj
+set_property -name "steps.place_design.args.directive" -value "Explore" -objects $obj
+set_property -name "steps.phys_opt_design.args.directive" -value "Explore" -objects $obj
+set_property -name "steps.route_design.args.directive" -value "Explore" -objects $obj
 set_property -name "steps.write_bitstream.tcl.pre" -value "[file normalize "$origin_dir/../vivado/pre_bitstream.tcl"]" -objects $obj
 set_property -name "steps.write_bitstream.args.bin_file" -value "1" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj

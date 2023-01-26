@@ -92,7 +92,10 @@ architecture Impl of EcEvrProto is
   signal lan9254ClkInp : std_logic;
   signal lan9254Clk    : std_logic;
 
-  signal leds          : std_logic_vector(ledPins'range);
+  signal mmcmLocked    : std_logic := '0';
+
+  signal ledsOu        : std_logic_vector(ledPins'range);
+  signal ledsIn        : std_logic_vector(ledPins'range);
   signal pofInp        : std_logic_vector(pofInpPins'range);
   signal pofOut        : std_logic_vector(pofOutPins'range);
   signal pwrCycle      : std_logic;
@@ -142,11 +145,86 @@ begin
   U_IOBUF_LAN9254CLK_PLL : IOBUF
     port map ( IO => lan9254ClkPin, T => '1', I => '0', O => lan9254ClkInp );
 
-  U_BUFG_CLK_LAN9254 : BUFG
+  B_MMCM : block is
+    signal fbInp, fbOut : std_logic;
+    signal mmcmClkOut   : std_logic;
+  begin
+
+    MMCME2_BASE_inst : MMCME2_BASE
+    generic map (
+      BANDWIDTH => "OPTIMIZED",  -- Jitter programming (OPTIMIZED, HIGH, LOW)
+      CLKFBOUT_MULT_F => 40.0,    -- Multiply value for all CLKOUT (2.000-64.000).
+      CLKFBOUT_PHASE => 0.0,     -- Phase offset in degrees of CLKFB (-360.000-360.000).
+      CLKIN1_PERIOD => 0.0,      -- Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
+      -- CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
+      CLKOUT1_DIVIDE => 40,
+      CLKOUT2_DIVIDE => 40,
+      CLKOUT3_DIVIDE => 40,
+      CLKOUT4_DIVIDE => 40,
+      CLKOUT5_DIVIDE => 40,
+      CLKOUT6_DIVIDE => 40,
+      CLKOUT0_DIVIDE_F => 40.0,   -- Divide amount for CLKOUT0 (1.000-128.000).
+      -- CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
+      CLKOUT0_DUTY_CYCLE => 0.5,
+      CLKOUT1_DUTY_CYCLE => 0.5,
+      CLKOUT2_DUTY_CYCLE => 0.5,
+      CLKOUT3_DUTY_CYCLE => 0.5,
+      CLKOUT4_DUTY_CYCLE => 0.5,
+      CLKOUT5_DUTY_CYCLE => 0.5,
+      CLKOUT6_DUTY_CYCLE => 0.5,
+      -- CLKOUT0_PHASE - CLKOUT6_PHASE: Phase offset for each CLKOUT (-360.000-360.000).
+      CLKOUT0_PHASE => 0.0,
+      CLKOUT1_PHASE => 0.0,
+      CLKOUT2_PHASE => 0.0,
+      CLKOUT3_PHASE => 0.0,
+      CLKOUT4_PHASE => 0.0,
+      CLKOUT5_PHASE => 0.0,
+      CLKOUT6_PHASE => 0.0,
+      CLKOUT4_CASCADE => FALSE,  -- Cascade CLKOUT4 counter with CLKOUT6 (FALSE, TRUE)
+      DIVCLK_DIVIDE => 1,        -- Master division value (1-106)
+      REF_JITTER1 => 0.0,        -- Reference input jitter in UI (0.000-0.999).
+      STARTUP_WAIT => FALSE      -- Delays DONE until MMCM is locked (FALSE, TRUE)
+    )
     port map (
-      I  => lan9254ClkInp,
-      O  => lan9254Clk
+      -- Clock Outputs: 1-bit (each) output: User configurable clock outputs
+      CLKOUT0 => mmcmClkOut,     -- 1-bit output: CLKOUT0
+      CLKOUT0B => open,   -- 1-bit output: Inverted CLKOUT0
+      CLKOUT1 => open,     -- 1-bit output: CLKOUT1
+      CLKOUT1B => open,   -- 1-bit output: Inverted CLKOUT1
+      CLKOUT2 => open,     -- 1-bit output: CLKOUT2
+      CLKOUT2B => open,   -- 1-bit output: Inverted CLKOUT2
+      CLKOUT3 => open,     -- 1-bit output: CLKOUT3
+      CLKOUT3B => open,   -- 1-bit output: Inverted CLKOUT3
+      CLKOUT4 => open,     -- 1-bit output: CLKOUT4
+      CLKOUT5 => open,     -- 1-bit output: CLKOUT5
+      CLKOUT6 => open,     -- 1-bit output: CLKOUT6
+      -- Feedback Clocks: 1-bit (each) output: Clock feedback ports
+      CLKFBOUT => fbOut,   -- 1-bit output: Feedback clock
+      CLKFBOUTB => open, -- 1-bit output: Inverted CLKFBOUT
+      -- Status Ports: 1-bit (each) output: MMCM status ports
+      LOCKED => mmcmLocked,       -- 1-bit output: LOCK
+      -- Clock Inputs: 1-bit (each) input: Clock input
+      CLKIN1 => lan9254ClkInp,       -- 1-bit input: Clock
+      -- Control Ports: 1-bit (each) input: MMCM control ports
+      PWRDWN => '0',       -- 1-bit input: Power-down
+      RST => '0',             -- 1-bit input: Reset
+      -- Feedback Clocks: 1-bit (each) input: Clock feedback ports
+      CLKFBIN => fbInp      -- 1-bit input: Feedback clock
     );
+
+    U_BUFG_MMCM_FB : BUFG
+      port map (
+        I  => fbOut,
+        O  => fbInp
+      );
+
+    U_BUFG_CLK_LAN9254 : BUFG
+      port map (
+        I  => mmcmClkOut,
+        O  => lan9254Clk
+      );
+  end block B_MMCM;
+
 
   G_BUF_CLK_MGT: for i in mgtRefClkPPins'range generate
     U_IBUFDS : component IBUFDS_GTE2
@@ -164,9 +242,15 @@ begin
       );
   end generate G_BUF_CLK_MGT;
 
+  process ( ledsIn, mmcmLocked ) is
+  begin
+    ledsOu    <= ledsIn;
+    ledsOu(7) <= ledsIn(7) or mmcmLocked;
+  end process;
+
   G_BUF_LED : for i in ledPins'range generate
     U_IOBUF_LED : IOBUF
-      port map ( IO => ledPins(i), T => '0', I => leds(i), O => open );
+      port map ( IO => ledPins(i), T => '0', I => ledsOu(i), O => open );
   end generate G_BUF_LED;
 
   G_BUF_POF_INP : for i in pofInpPins'range generate
@@ -314,7 +398,7 @@ begin
       sysRst                   => open,
       sysRstReq                => sysRstReq,
 
-      leds                     => leds,
+      leds                     => ledsIn,
       pofInp                   => pofInp,
       pofOut                   => pofOut,
       pwrCycle                 => pwrCycle,

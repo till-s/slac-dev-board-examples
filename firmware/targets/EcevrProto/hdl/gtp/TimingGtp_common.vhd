@@ -221,7 +221,7 @@ begin
         PLL1LOCKDETCLK                  =>      PLL1LOCKDETCLK_IN,
         PLL1LOCKEN                      =>      tied_to_vcc_i,
         PLL1PD                          =>      PLL1PD_IN,
-        PLL1REFCLKLOST                  =>      open,
+        PLL1REFCLKLOST                  =>      PLL1REFCLKLOST_OUT,
         PLL1REFCLKSEL                   =>      PLL1REFCLKSEL_IN,
         PLL1RESET                       =>      PLL1RESET_IN,
         ---------------------------- Common Block - Ports --------------------------

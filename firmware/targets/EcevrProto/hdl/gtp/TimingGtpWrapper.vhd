@@ -146,6 +146,16 @@ architecture Impl of TimingMgtWrapper is
 
    signal pllRefClk         : std_logic_vector(1 downto 0);
    signal pllRefClkBuf      : std_logic_vector(1 downto 0);
+
+   signal txBufStatus       : std_logic_vector(1 downto 0);
+   signal enCommaAlign      : std_logic := '1';
+
+   signal softRxRst         : std_logic;
+   signal softTxRst         : std_logic;
+
+   signal loopbackMode      : std_logic_vector(2 downto 0);
+   signal rxPolInvert       : std_logic;
+   signal txPolInvert       : std_logic;
 begin
 
    gtRxPllSel_i <= (gtRxPllSel & gtRxPllSel);
@@ -153,11 +163,19 @@ begin
 
    drpClk       <= sysClk;
 
+   softRxRst    <= rxControl(0);
+   rxPolInvert  <= rxControl(1);
+   enCommaAlign <= not rxControl(2);
+   loopbackMode <= rxControl(10 downto 8);
+
+   softTxRst    <= txControl(0);
+   txPolInvert  <= txControl(1);
+
    U_TIMING_GTP : component TimingGtp
       port map (
          sysclk_in                       =>      sysClk,
-         soft_reset_tx_in                =>      txControl(0),
-         soft_reset_rx_in                =>      rxControl(0),
+         soft_reset_tx_in                =>      softTxRst,
+         soft_reset_rx_in                =>      softRxRst,
          dont_reset_on_data_error_in     =>      '0',
          gt0_drp_busy_out                =>      drpBsy,
          gt0_tx_fsm_reset_done_out       =>      txRstDone,
@@ -183,7 +201,7 @@ begin
          --------------------------- Digital Monitor Ports --------------------------
          gt0_dmonitorout_out             =>      open,
          ------------------------------- Loopback Ports -----------------------------
-         gt0_loopback_in                 =>      rxControl(10 downto 8),
+         gt0_loopback_in                 =>      loopbackMode,
          --------------------- RX Initialization and Reset Ports --------------------
          gt0_eyescanreset_in             =>      '0',
          gt0_rxuserrdy_in                =>      '1',
@@ -205,6 +223,8 @@ begin
          ------------------- Receive Ports - RX Buffer Bypass Ports -----------------
          gt0_rxphmonitor_out             =>      open,
          gt0_rxphslipmonitor_out         =>      open,
+         gt0_rxmcommaalignen_in          =>      enCommaAlign,
+         gt0_rxpcommaalignen_in          =>      enCommaAlign,
          --------------------- Receive Ports - RX Equalizer Ports -------------------
          gt0_rxlpmhfhold_in               =>      '0',
          gt0_rxlpmlfhold_in               =>      '0',
@@ -236,11 +256,12 @@ begin
          gt0_txoutclkpcs_out             =>      open,
          --------------------- Transmit Ports - TX Gearbox Ports --------------------
          gt0_txcharisk_in                =>      txDataK,
+         gt0_txbufstatus_out             =>      txBufStatus,
          ------------- Transmit Ports - TX Initialization and Reset Ports -----------
          gt0_txresetdone_out             =>      open,
 
-         gt0_rxpolarity_in               =>      rxControl(1),
-         gt0_txpolarity_in               =>      txControl(1),
+         gt0_rxpolarity_in               =>      rxPolInvert,
+         gt0_txpolarity_in               =>      txPolInvert,
 
          -- these clock inputs must be wired from the respective PLLs
          gt0_pll0outclk_in               =>      pllOutClk_i   (0),
@@ -387,7 +408,9 @@ begin
    rxStatus(                      1) <= pllLocked_x(RXPLL);
    rxStatus(                      0) <= rxRstDone;
 
-   txStatus(txStatus'left downto  3) <= (others => '0');
+   txStatus(txStatus'left downto  6) <= (others => '0');
+   txStatus( 5            downto  4) <= txBufStatus;
+   txStatus(                      3) <= '0';
    txStatus(                      2) <= pllRefClkLost_x(TXPLL);
    txStatus(                      1) <= pllLocked_x(TXPLL);
    txStatus(                      0) <= txRstDone;

@@ -37,6 +37,8 @@ component TimingGtp is
     gt0_gtprxp_in : in STD_LOGIC;
     gt0_rxphmonitor_out : out STD_LOGIC_VECTOR ( 4 downto 0 );
     gt0_rxphslipmonitor_out : out STD_LOGIC_VECTOR ( 4 downto 0 );
+    gt0_rxmcommaalignen_in : in STD_LOGIC;
+    gt0_rxpcommaalignen_in : in STD_LOGIC;
     gt0_dmonitorout_out : out STD_LOGIC_VECTOR ( 14 downto 0 );
     gt0_rxlpmhfhold_in : in STD_LOGIC;
     gt0_rxlpmlfhold_in : in STD_LOGIC;
@@ -52,6 +54,7 @@ component TimingGtp is
     gt0_txusrclk_in : in STD_LOGIC;
     gt0_txusrclk2_in : in STD_LOGIC;
     gt0_txcharisk_in : in STD_LOGIC_VECTOR ( 1 downto 0 );
+    gt0_txbufstatus_out : out STD_LOGIC_VECTOR ( 1 downto 0 );
     gt0_gtptxn_out : out STD_LOGIC;
     gt0_gtptxp_out : out STD_LOGIC;
     gt0_txoutclk_out : out STD_LOGIC;

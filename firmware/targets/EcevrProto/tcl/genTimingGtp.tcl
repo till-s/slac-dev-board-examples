@@ -2,8 +2,8 @@
 # TCL console.
    create_ip -name gtwizard -vendor xilinx.com -library ip -version 3.6 -module_name TimingGtp
    set_property -dict [list \
-      CONFIG.identical_val_tx_line_rate {3.7142857}\
-      CONFIG.identical_val_tx_reference_clock {185.714}\
+      CONFIG.identical_val_tx_line_rate {2.856}\
+      CONFIG.identical_val_tx_reference_clock {142.800}\
       CONFIG.gt0_val_tx_data_width {16}\
       CONFIG.gt0_val_encoding {8B/10B}\
       CONFIG.gt0_val_rx_data_width {16}\
@@ -17,17 +17,17 @@
       CONFIG.gt0_val_port_rxslide {false}\
       CONFIG.gt0_val_pd_trans_time_non_p2 {25}\
       CONFIG.gt0_val_port_loopback {true}\
-      CONFIG.identical_val_rx_line_rate {3.7142857}\
+      CONFIG.identical_val_rx_line_rate {2.856}\
       CONFIG.gt_val_tx_pll {PLL0}\
       CONFIG.gt_val_rx_pll {PLL1}\
-      CONFIG.identical_val_rx_reference_clock {185.714}\
-      CONFIG.gt0_val_tx_line_rate {3.7142857}\
+      CONFIG.identical_val_rx_reference_clock {142.800}\
+      CONFIG.gt0_val_tx_line_rate {2.856}\
       CONFIG.gt0_val_tx_int_datawidth {20}\
-      CONFIG.gt0_val_tx_reference_clock {185.714}\
-      CONFIG.gt0_val_rx_line_rate {3.7142857}\
+      CONFIG.gt0_val_tx_reference_clock {142.800}\
+      CONFIG.gt0_val_rx_line_rate {2.856}\
       CONFIG.gt0_val_rx_data_width {16}\
       CONFIG.gt0_val_rx_int_datawidth {20}\
-      CONFIG.gt0_val_rx_reference_clock {185.714}\
+      CONFIG.gt0_val_rx_reference_clock {142.800}\
       CONFIG.gt0_val_port_rxcharisk {true}\
       CONFIG.gt0_val_port_txpolarity {true}\
       CONFIG.gt0_val_port_rxpolarity {true}\
