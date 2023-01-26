@@ -397,7 +397,7 @@ begin
       GEN_I2C_ILA_G     => true,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
-      EVR_FLAVOR_G      => "PSI"
+      EVR_FLAVOR_G      => "OPENEVR"
     )
     port map (
       sysClk            => sysClkLoc,
@@ -644,7 +644,8 @@ begin
 
      P_COMB : process ( r, busReqLoc,
        mgtRxStatus, mgtTxStatus,
-       sfpPresentb, sfpTxFault, sfpLos
+       sfpPresentb, sfpTxFault, sfpLos,
+       timingMGTStatus
      ) is
        variable v : RegType;
        variable a : unsigned(7 downto 0);
@@ -678,7 +679,7 @@ begin
       end case;
 
       -- read-only
-      v.regs(1)              := timingMGTStatus; 
+      v.regs(1)              := timingMGTStatus;
       v.regs(4)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) & x"0000";
       rin <= v;
     end process P_COMB;
@@ -696,8 +697,8 @@ begin
 
     busRepLoc         <= r.rep;
 
-    mgtTxControl      <= r.regs(0)(15 downto  0) or timingMGTControl(15 downto  0);
-    mgtRxControl      <= r.regs(0)(31 downto 16) or timingMGTControl(31 downto 16);
+    mgtTxControl      <= r.regs(0)(15 downto  0) xor timingMGTControl(15 downto  0);
+    mgtRxControl      <= r.regs(0)(31 downto 16) xor timingMGTControl(31 downto 16);
 
     timingMGTStatus   <= mgtRxStatus & mgtTxStatus;
 
