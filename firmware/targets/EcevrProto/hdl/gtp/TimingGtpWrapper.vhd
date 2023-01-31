@@ -12,14 +12,29 @@ entity TimingMgtWrapper is
       WITH_COMMON_G      : boolean    := true;
       COMMON_BUF_TYPE_G  : string     := "BUFH"; -- BUFG, BUFH
 
+      -- A few settings determine the line rate (assuming 16bit external data width
+      -- using 8/10bit encoding):
+      --
+      --    line_rate = 2 * pll_freq / outdiv
+      --
+      --    pll_freq  = reference_freq / REFCLK_DIV * FBDIV * FBDIV_45
+      --
+      -- Apparently the recommended range for pll_freq is 1.6..3.3 GHz
+      --
+      -- Thus, applications which need timing clocks from 119 .. 185.4 MHz
+      -- would have to use the DRP port and reprogram the PLL and OUTDIV
+      -- settings.
+      
       -- used only with internal common block
-      PLL0_FBDIV_G       : integer    := 2;
-      PLL0_FBDIV_45_G    : integer    := 5;
-      PLL0_REFCLK_DIV_G  : integer    := 1;
+      PLL0_FBDIV_G       : integer    := 4; -- legal: 1,2,3,4,5
+      PLL0_FBDIV_45_G    : integer    := 5; -- legal: 4,5
+      PLL0_REFCLK_DIV_G  : integer    := 1; -- legal: 1,2
       -- defaults for these based on wizard settings when only PLL0 was used
-      PLL1_FBDIV_G       : integer    := 1;
-      PLL1_FBDIV_45_G    : integer    := 4;
-      PLL1_REFCLK_DIV_G  : integer    := 1
+      PLL1_FBDIV_G       : integer    := 1; -- legal: 1,2,3,4,5
+      PLL1_FBDIV_45_G    : integer    := 4; -- legal: 4,5
+      PLL1_REFCLK_DIV_G  : integer    := 1; -- legal: 1,2
+      RXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
+      TXOUT_DIV_G        : natural    := 2  -- legal: 1,2,4,8
    );
    port (
       sysClk             : in  std_logic;
@@ -79,6 +94,19 @@ entity TimingMgtWrapper is
 end entity TimingMgtWrapper;
 
 architecture Impl of TimingMgtWrapper is
+
+   type RateMapArray is array(natural range 1 to 8) of std_logic_vector(2 downto 0);
+
+   constant RATE_MAP_C : RateMapArray := (
+      1 => "001",
+      2 => "010",
+      4 => "011",
+      8 => "100",
+      others => "001" -- ILLEGAL
+   );
+
+   constant RXRATE_C : std_logic_vector(2 downto 0) := RATE_MAP_C(RXOUT_DIV_G);
+   constant TXRATE_C : std_logic_vector(2 downto 0) := RATE_MAP_C(TXOUT_DIV_G);
 
    -- PLL note:
    -- the 'gtRxPllSel/gtTxPllSel' inputs set the mux which actually feeds the
@@ -202,6 +230,8 @@ begin
          gt0_dmonitorout_out             =>      open,
          ------------------------------- Loopback Ports -----------------------------
          gt0_loopback_in                 =>      loopbackMode,
+         --------------- Receive Ports - Rate Control -------------------------------
+         gt0_rxrate_in                   =>      RXRATE_C,
          --------------------- RX Initialization and Reset Ports --------------------
          gt0_eyescanreset_in             =>      '0',
          gt0_rxuserrdy_in                =>      '1',
@@ -229,6 +259,8 @@ begin
          gt0_rxlpmhfhold_in               =>      '0',
          gt0_rxlpmlfhold_in               =>      '0',
 
+         --------------- Receive Ports - Rate Control -------------------------------
+         gt0_rxratedone_out              =>      open,
          --------------- Receive Ports - RX Fabric Output Control Ports -------------
          gt0_rxoutclk_out                =>      rxOutClk_i,
          gt0_rxoutclkfabric_out          =>      open,
@@ -245,6 +277,8 @@ begin
          ------------------ Transmit Ports - FPGA TX Interface Ports ----------------
          gt0_txusrclk_in                 =>      txUsrClk,
          gt0_txusrclk2_in                =>      txUsrClk,
+         --------------- Tramsmit Ports - Rate Control ------------------------------
+         gt0_txrate_in                   =>      TXRATE_C,
          ------------------ Transmit Ports - TX Data Path interface -----------------
          gt0_txdata_in                   =>      txData,
          ---------------- Transmit Ports - TX Driver and OOB signaling --------------
@@ -254,6 +288,8 @@ begin
          gt0_txoutclk_out                =>      txOutClk_i,
          gt0_txoutclkfabric_out          =>      open,
          gt0_txoutclkpcs_out             =>      open,
+         --------------- Tramsmit Ports - Rate Control ------------------------------
+         gt0_txratedone_out              =>      open,
          --------------------- Transmit Ports - TX Gearbox Ports --------------------
          gt0_txcharisk_in                =>      txDataK,
          gt0_txbufstatus_out             =>      txBufStatus,

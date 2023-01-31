@@ -94,6 +94,7 @@ set files [list \
  [file normalize "${origin_dir}/../hdl/EcEvrProto-io.xdc"] \
  [file normalize "${origin_dir}/../hdl/EcEvrProto-io_timing.xdc"] \
  [file normalize "${origin_dir}/../hdl/EcEvrProto-clock_groups.xdc"] \
+ [file normalize "${origin_dir}/../hdl/dbg.xdc"] \
 ]
 
 add_files -norecurse -fileset [get_filesets constrs_1] $files

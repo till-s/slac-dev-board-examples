@@ -31,6 +31,8 @@
       CONFIG.gt0_val_port_rxcharisk {true}\
       CONFIG.gt0_val_port_txpolarity {true}\
       CONFIG.gt0_val_port_rxpolarity {true}\
+      CONFIG.gt0_val_port_txrate {true}\
+      CONFIG.gt0_val_port_rxrate {true}\
       CONFIG.gt0_val_port_txsysclksel {true}\
       CONFIG.gt0_val_port_rxsysclksel {true}\
       CONFIG.gt0_val_port_rxmcommaalignen {true} \

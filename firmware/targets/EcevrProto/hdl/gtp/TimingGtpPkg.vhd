@@ -22,8 +22,8 @@ package TimingGtpPkg is
          gt0_drpwe_in : in STD_LOGIC;
          gt0_rxsysclksel_in : in STD_LOGIC_VECTOR ( 1 downto 0 );
          gt0_txsysclksel_in : in STD_LOGIC_VECTOR ( 1 downto 0 );
-
          gt0_loopback_in : in STD_LOGIC_VECTOR ( 2 downto 0 );
+         gt0_rxrate_in : in STD_LOGIC_VECTOR ( 2 downto 0 );
          gt0_eyescanreset_in : in STD_LOGIC;
          gt0_rxuserrdy_in : in STD_LOGIC;
          gt0_eyescandataerror_out : out STD_LOGIC;
@@ -43,6 +43,7 @@ package TimingGtpPkg is
          gt0_dmonitorout_out : out STD_LOGIC_VECTOR ( 14 downto 0 );
          gt0_rxlpmhfhold_in : in STD_LOGIC;
          gt0_rxlpmlfhold_in : in STD_LOGIC;
+         gt0_rxratedone_out : out STD_LOGIC;
          gt0_rxoutclk_out : out STD_LOGIC;
          gt0_rxoutclkfabric_out : out STD_LOGIC;
          gt0_gtrxreset_in : in STD_LOGIC;
@@ -54,6 +55,7 @@ package TimingGtpPkg is
          gt0_txdata_in : in STD_LOGIC_VECTOR ( 15 downto 0 );
          gt0_txusrclk_in : in STD_LOGIC;
          gt0_txusrclk2_in : in STD_LOGIC;
+         gt0_txrate_in : in STD_LOGIC_VECTOR ( 2 downto 0 );
          gt0_txcharisk_in : in STD_LOGIC_VECTOR ( 1 downto 0 );
          gt0_txbufstatus_out : out STD_LOGIC_VECTOR ( 1 downto 0 );
          gt0_gtptxn_out : out STD_LOGIC;
@@ -61,6 +63,7 @@ package TimingGtpPkg is
          gt0_txoutclk_out : out STD_LOGIC;
          gt0_txoutclkfabric_out : out STD_LOGIC;
          gt0_txoutclkpcs_out : out STD_LOGIC;
+         gt0_txratedone_out : out STD_LOGIC;
          gt0_txresetdone_out : out STD_LOGIC;
          gt0_txpolarity_in : in STD_LOGIC;
          GT0_PLL0OUTCLK_IN : in STD_LOGIC;
@@ -114,6 +117,14 @@ package TimingGtpPkg is
       txPllLocked         : std_logic;
       txBufStatus         : std_logic_vector(1 downto 0);
    end record MgtStatusType;
+
+   subtype GtpRateSelectorType is std_logic_vector(2 downto 0);
+
+   -- legal values for the rxrate_in/txrate_in ports
+   constant GTP_OUTDIV_1_C : GtpRateSelectorType := "001";
+   constant GTP_OUTDIV_2_C : GtpRateSelectorType := "010";
+   constant GTP_OUTDIV_4_C : GtpRateSelectorType := "011";
+   constant GTP_OUTDIV_8_C : GtpRateSelectorType := "100";
 
    constant MGT_STATUS_INIT_C : MgtStatusType := (
       rxResetDone         => '0',
