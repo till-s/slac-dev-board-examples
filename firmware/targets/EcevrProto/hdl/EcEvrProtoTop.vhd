@@ -32,7 +32,9 @@ entity EcEvrProtoTop is
     GEN_DRP_ILA_G            : boolean   := false;
     GEN_ICAP_WARMBOOT_G      : boolean   := true;
     SYS_CLK_PLL_G            : boolean   := false;
-    ESC_POLLED_MODE_G        : boolean   := true
+    ESC_POLLED_MODE_G        : boolean   := true;
+    RX_POLARITY_INVERT_G     : std_logic := '0';
+    TX_POLARITY_INVERT_G     : std_logic := '0'
   );
   port (
     -- external clocks
@@ -217,13 +219,10 @@ architecture Impl of EcEvrProtoTop is
   signal busReqLoc        : Udp2BusReqType;
   signal busRepLoc        : Udp2BusRepType := UDP2BUSREP_ERROR_C;
 
-  signal mgtRxControl     : std_logic_vector(15 downto 0);
-  signal mgtTxControl     : std_logic_vector(15 downto 0);
-  signal mgtTxStatus      : std_logic_vector(15 downto 0);
-  signal mgtRxStatus      : std_logic_vector(15 downto 0);
-
-  signal timingMGTStatus  : std_logic_vector(31 downto 0);
-  signal timingMGTControl : std_logic_vector(31 downto 0);
+  signal evrMGTStatus     : EvrMGTStatusType;
+  signal evrMGTControl    : EvrMGTControlType;
+  signal mgtStatus        : MgtStatusType;
+  signal mgtControl       : MgtControlType;
 
   signal rxPDOMst         : Lan9254PDOMstType;
 
@@ -247,14 +246,20 @@ architecture Impl of EcEvrProtoTop is
 
   signal pdoBlink         : std_logic_vector(1 downto 0) := "00";
 
+  function resize(constant x : in std_logic_vector; constant l : in natural)
+    return std_logic_vector is
+  begin
+    return std_logic_vector( resize( unsigned( x ), l ) );
+  end function resize;
+
 begin
 
   -- abbreviations
   busReqLoc                  <= busLocReqs( SS_IDX_LOC_C );
   busLocReps( SS_IDX_LOC_C ) <= busRepLoc;
 
-  pllRefClkLost              <= mgtRxStatus(2);
-  pllLocked                  <= mgtRxStatus(1);
+  pllRefClkLost              <= mgtStatus.rxPllRefClkLost;
+  pllLocked                  <= mgtStatus.rxPllLocked;
 
   -- ATM we have not connected an MMCM
   G_LAN9254_CLK : if ( not SYS_CLK_PLL_G ) generate
@@ -397,7 +402,9 @@ begin
       GEN_I2C_ILA_G     => true,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
-      EVR_FLAVOR_G      => "PSI"
+      EVR_FLAVOR_G      => "PSI",
+      RX_POL_INVERT_G   => RX_POLARITY_INVERT_G,
+      TX_POL_INVERT_G   => TX_POLARITY_INVERT_G
     )
     port map (
       sysClk            => sysClkLoc,
@@ -446,8 +453,8 @@ begin
 
       evrStable         => evrStable,
 
-      timingMGTStatus   => timingMGTStatus,
-      timingMGTControl  => timingMGTControl,
+      timingMGTStatus   => evrMGTStatus,
+      timingMGTControl  => evrMGTControl,
 
       timingRecClk      => mgtRxRecClk,
       timingRecRst      => mgtRxRecRst,
@@ -531,8 +538,6 @@ begin
         gtRefClk         => mgtRefClk, -- in  std_logic_vector(1 downto 0) := "00";
 
         -- Rx ports
-        rxControl        => mgtRxControl, -- in  std_logic_vector(15 downto 0) := (others => '0');
-        rxStatus         => mgtRxStatus, -- out std_logic_vector(15 downto 0);
         rxUsrClkActive   => open, -- in  std_logic := '1';
         rxUsrClk         => mgtRxRecClk,  -- in  std_logic;
         rxData           => mgtRxData,    -- out std_logic_vector(15 downto 0);
@@ -542,13 +547,14 @@ begin
         rxRefClk         => rxRefClk,
 
         -- Tx Ports
-        txControl        => mgtTxControl, -- in  std_logic_vector(1 downto 0) := (others => '0');
-        txStatus         => mgtTxStatus, -- out std_logic_vector(7 downto 0);
         txUsrClk         => mgtTxUsrClk, -- in  std_logic;
         txUsrClkActive   => open, -- in  std_logic := '1';
         txData           => mgtTxData,  -- in  std_logic_vector(15 downto 0);
         txDataK          => mgtTxDataK, -- in  std_logic_vector(1 downto 0);
-        txOutClk         => mgtTxUsrClk  -- out std_logic;
+        txOutClk         => mgtTxUsrClk, -- out std_logic;
+
+        mgtStatus        => mgtStatus,
+        mgtControl       => mgtControl
       );
 
     P_REF_BLINK : process ( rxRefClk ) is
@@ -642,10 +648,11 @@ begin
          repOb      => busLocReps
        );
 
-     P_COMB : process ( r, busReqLoc,
-       mgtRxStatus, mgtTxStatus,
+     P_COMB : process (
+       r, busReqLoc,
        sfpPresentb, sfpTxFault, sfpLos,
-       timingMGTStatus
+       mgtStatus,
+       evrMGTControl
      ) is
        variable v : RegType;
        variable a : unsigned(7 downto 0);
@@ -679,7 +686,20 @@ begin
       end case;
 
       -- read-only
-      v.regs(1)              := timingMGTStatus;
+      v.regs(1)              := resize(    mgtStatus.txBufStatus
+                                         & '0'
+                                         & mgtStatus.txResetDone
+                                         & mgtStatus.txPllLocked
+                                         & mgtStatus.txPllRefClkLost
+                   
+                                         & mgtStatus.rxNotIntable
+                                         & mgtStatus.rxDispError
+                                         & '0'
+                                         & mgtStatus.rxResetDone
+                                         & mgtStatus.rxPllLocked
+                                         & mgtStatus.rxPllRefClkLost,
+                                         v.regs(1)'length );
+
       v.regs(4)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) & x"0000";
       rin <= v;
     end process P_COMB;
@@ -697,10 +717,31 @@ begin
 
     busRepLoc         <= r.rep;
 
-    mgtTxControl      <= r.regs(0)(15 downto  0) xor timingMGTControl(15 downto  0);
-    mgtRxControl      <= r.regs(0)(31 downto 16) xor timingMGTControl(31 downto 16);
+    -- map types
+    P_MAP : process ( mgtStatus, evrMGTControl, r ) is
+    begin
+      evrMGTStatus                       <= EVR_MGT_STATUS_INIT_C;
+      mgtControl                         <= MGT_CONTROL_INIT_C;
 
-    timingMGTStatus   <= mgtRxStatus & mgtTxStatus;
+      mgtControl.rxPllReset              <= '0';
+      mgtControl.rxReset                 <= evrMGTControl.rxReset;
+      mgtControl.rxPolarityInvert        <= evrMGTControl.rxPolarityInvert;
+      mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable;
+      mgtControl.txPllReset              <= '0';
+      mgtControl.txReset                 <= evrMGTControl.txReset;
+      mgtControl.txPolarityInvert        <= evrMGTControl.txPolarityInvert;
+      mgtControl.txLoopback              <= r.regs(4)(2 downto 0);
+
+      evrMGTStatus.rxPllLocked           <= mgtStatus.rxPllLocked;
+      evrMGTStatus.rxResetDone           <= mgtStatus.rxResetDone;
+      evrMGTStatus.rxDispError           <= mgtStatus.rxDispError;
+      evrMGTStatus.rxNotIntable          <= mgtStatus.rxNotIntable;
+      evrMGTStatus.rxPllRefClkLost       <= mgtStatus.rxPllRefClkLost;
+      evrMGTStatus.txPllLocked           <= mgtStatus.txPllLocked;
+      evrMGTStatus.txResetDone           <= mgtStatus.txResetDone;
+      evrMGTStatus.txBufStatus           <= mgtStatus.txBufStatus;
+      evrMGTStatus.txPllRefClkLost       <= mgtStatus.txPllRefClkLost;
+    end process P_MAP;
 
     fileWP            <= not r.regs(2)(16);
     -- no point resetting from a register; if we still have EoE connectivity this

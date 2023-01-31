@@ -56,8 +56,6 @@ entity TimingMgtWrapper is
       pllRefClkSel       : in  PllRefClkSelArray := (others => PLLREFCLK_SEL_REF0_C);
 
       -- Receiver
-      rxControl          : in  std_logic_vector(15 downto 0)            := (others => '0');
-      rxStatus           : out std_logic_vector(15 downto 0);
       rxUsrClk           : in  std_logic;
       rxUsrClkActive     : in  std_logic := '1';
       rxData             : out std_logic_vector(15 downto 0);
@@ -68,13 +66,15 @@ entity TimingMgtWrapper is
       rxRefClk           : out std_logic := '0';
 
       -- Transmitter
-      txControl          : in  std_logic_vector(15 downto 0)            := (others => '0');
-      txStatus           : out std_logic_vector(15 downto 0);
       txUsrClk           : in  std_logic;
       txUsrClkActive     : in  std_logic := '1';
       txData             : in  std_logic_vector(15 downto 0)            := (others => '0');
       txDataK            : in  std_logic_vector( 1 downto 0)            := (others => '0');
-      txOutClk           : out std_logic
+      txOutClk           : out std_logic;
+
+      -- MGT control + status; different clock domains
+      mgtControl         : in  MGTControlType := MGT_CONTROL_INIT_C;
+      mgtStatus          : out MGTStatusType
    );
 end entity TimingMgtWrapper;
 
@@ -163,13 +163,13 @@ begin
 
    drpClk       <= sysClk;
 
-   softRxRst    <= rxControl(0);
-   rxPolInvert  <= rxControl(1);
-   enCommaAlign <= not rxControl(2);
-   loopbackMode <= rxControl(10 downto 8);
+   softRxRst    <= mgtControl.rxReset;
+   rxPolInvert  <= mgtControl.rxPolarityInvert;
+   enCommaAlign <= not mgtControl.rxCommaAlignDisable;
+   loopbackMode <= mgtControl.txLoopback;
 
-   softTxRst    <= txControl(0);
-   txPolInvert  <= txControl(1);
+   softTxRst    <= mgtControl.txReset;
+   txPolInvert  <= mgtControl.txPolarityInvert;
 
    U_TIMING_GTP : component TimingGtp
       port map (
@@ -400,19 +400,19 @@ begin
    txOutClk                          <= txOutClk_b;
    rxOutClk                          <= rxOutClk_b;
 
-   rxStatus(rxStatus'left downto  8) <= (others => '0');
-   rxStatus( 7            downto  6) <= rxDispErr_i;
-   rxStatus( 5            downto  4) <= rxDecErr_i;
-   rxStatus( 3            downto  3) <= (others => '0');
-   rxStatus(                      2) <= pllRefClkLost_x(RXPLL);
-   rxStatus(                      1) <= pllLocked_x(RXPLL);
-   rxStatus(                      0) <= rxRstDone;
+   P_MGT_STATUS : process ( rxDispErr_i, rxDecErr_i, pllRefClkLost_x, pllLocked_x, rxRstDone, txBufStatus, txRstDone ) is
+   begin
+      mgtStatus                       <= MGT_STATUS_INIT_C;
+      mgtStatus.rxDispError           <= rxDispErr_i;
+      mgtStatus.rxNotIntable          <= rxDecErr_i;
+      mgtStatus.rxPllRefClkLost       <= pllRefClkLost_x(RXPLL);
+      mgtStatus.rxPllLocked           <= pllLocked_x(RXPLL);
+      mgtStatus.rxResetDone           <= rxRstDone;
 
-   txStatus(txStatus'left downto  6) <= (others => '0');
-   txStatus( 5            downto  4) <= txBufStatus;
-   txStatus(                      3) <= '0';
-   txStatus(                      2) <= pllRefClkLost_x(TXPLL);
-   txStatus(                      1) <= pllLocked_x(TXPLL);
-   txStatus(                      0) <= txRstDone;
+      mgtStatus.txBufStatus           <= txBufStatus;
+      mgtStatus.txPllRefClkLost       <= pllRefClkLost_x(TXPLL);
+      mgtStatus.txPllLocked           <= pllLocked_x(TXPLL);
+      mgtStatus.txResetDone           <= txRstDone;
+   end process P_MGT_STATUS;
 
 end architecture Impl;
