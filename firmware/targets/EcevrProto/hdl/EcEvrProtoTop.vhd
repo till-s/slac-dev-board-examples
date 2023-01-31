@@ -397,7 +397,7 @@ begin
       GEN_I2C_ILA_G     => true,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
-      EVR_FLAVOR_G      => "OPENEVR"
+      EVR_FLAVOR_G      => "PSI"
     )
     port map (
       sysClk            => sysClkLoc,
