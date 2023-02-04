@@ -2,7 +2,7 @@
 
 create_clock -period 40.000 -name pllClk     [get_ports {pllClkPin}]
 create_clock -period 40.000 -name lan9254Clk [get_ports {lan9254ClkPin}]
-create_clock -period  5.40 -name mgtRefClk  [get_ports {mgtRefClkPPins[1]}]
+create_clock -period  7.00 -name mgtRefClk  [get_ports {mgtRefClkPPins[1]}]
 
 # note that usrCClk we specify here is not the SCLK (which is generated
 # by dividing by 2*prescale_dQuick Accessivisor). This has to be addressed with
