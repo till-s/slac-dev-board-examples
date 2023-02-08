@@ -88,16 +88,40 @@ add_files -norecurse -fileset [get_filesets sources_1] $files
 source "${origin_dir}/../tcl/genIla256.tcl"
 source "${origin_dir}/../tcl/genTimingGtp.tcl"
 
-set files [list \
- [file normalize "${origin_dir}/../hdl/EcEvrProto-clocks.xdc"] \
- [file normalize "${origin_dir}/../hdl/EcEvrProto-misc.xdc"] \
- [file normalize "${origin_dir}/../hdl/EcEvrProto-io.xdc"] \
- [file normalize "${origin_dir}/../hdl/EcEvrProto-io_timing.xdc"] \
- [file normalize "${origin_dir}/../hdl/EcEvrProto-clock_groups.xdc"] \
- [file normalize "${origin_dir}/../hdl/dbg.xdc"] \
-]
+if { [get_property top [get_filesets sources_1]] == "TE0715Top" } {
+  set files [list \
+   [file normalize "${origin_dir}/../hdl/TE0715Top.vhd"] \
+   [file normalize "${origin_dir}/../hdl/Ps7Wrapper.vhd"] \
+  ]
+  add_files -norecurse -fileset [get_filesets sources_1] $files
 
-add_files -norecurse -fileset [get_filesets constrs_1] $files
+  source "${origin_dir}/../tcl/genPS7.tcl"
 
-set_property used_in_synthesis false [get_files *hdl/EcEvrProto-io_timing.xdc]
+  set files [list \
+   [file normalize "${origin_dir}/../hdl/EcEvrDevBoard-clocks.xdc"] \
+   [file normalize "${origin_dir}/../hdl/EcEvrDevBoard-io.xdc"] \
+   [file normalize "${origin_dir}/../hdl/EcEvrDevBoard-io_timing.xdc"] \
+  ]
+
+  add_files -norecurse -fileset [get_filesets constrs_1] $files
+
+  set_property used_in_synthesis false [get_files *hdl/EcEvrDevBoard-io_timing.xdc]
+
+} else {
+
+  set files [list \
+   [file normalize "${origin_dir}/../hdl/EcEvrProto-clocks.xdc"] \
+   [file normalize "${origin_dir}/../hdl/EcEvrProto-misc.xdc"] \
+   [file normalize "${origin_dir}/../hdl/EcEvrProto-io.xdc"] \
+   [file normalize "${origin_dir}/../hdl/EcEvrProto-io_timing.xdc"] \
+   [file normalize "${origin_dir}/../hdl/EcEvrProto-clock_groups.xdc"] \
+   [file normalize "${origin_dir}/../hdl/dbg.xdc"] \
+  ]
+
+  add_files -norecurse -fileset [get_filesets constrs_1] $files
+
+  set_property used_in_synthesis false [get_files *hdl/EcEvrProto-io_timing.xdc]
+}
+
+
 set_property STEPS.WRITE_BITSTREAM.ARGS.BIN_FILE true [get_runs impl_1]
