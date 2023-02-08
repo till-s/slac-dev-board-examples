@@ -15,22 +15,25 @@ entity EcEvrProto is
   --          a generic w/o default is not set by the tool!
   generic (
     GIT_HASH_G               : std_logic_vector(31 downto 0) := (others => '0');
-    NUM_LED_G                : natural := 9;
-    NUM_POF_G                : natural := 2;
-    NUM_GPIO_G               : natural := 3;
-    NUM_SFP_G                : natural := 1;
-    NUM_MGT_G                : natural := 4;
-    NUM_REFCLK_G             : natural := 2;
-    PLL_CLK_FREQ_G           : real    := 25.0E6;
-    SYS_CLK_FREQ_G           : real    := 25.0E6;
-    LAN9254_CLK_FREQ_G       : real    := 25.0E6
+    NUM_LED_G                : natural     := 9;
+    NUM_POF_G                : natural     := 2;
+    NUM_GPIO_G               : natural     := 3;
+    NUM_SFP_G                : natural     := 1;
+    NUM_MGT_G                : natural     := 4;
+    NUM_REFCLK_G             : natural     := 2;
+    SYS_CLK_FREQ_G           : real        := 25.0E6;
+    LAN9254_CLK_FREQ_G       : real        := 25.0E6;
+    PLL_CLK_FREQ_G           : real        := 25.0E6;
+    MGT_USED_IDX_G           : natural     := 1;
+    MGT_REF_CLK_USED_IDX_G   : natural     := 1;
+    I2C_CLK_PRG_ENABLE_G     : std_logic   := '1'
   );
   port (
     -- external clocks
     -- aux-clock from reference clock generator
-    pllClkPin                : inout std_logic;
+    pllClkPin                : in    std_logic;
     -- from LAN9254 (used to clock fpga logic)
-    lan9254ClkPin            : inout std_logic;
+    lan9254ClkPin            : in    std_logic;
 
     -- LAN9254 chip interface
     lan9254Pins              : inout std_logic_vector(43 downto 0);
@@ -61,9 +64,9 @@ entity EcEvrProto is
     jumper7Pin               : inout std_logic;
     jumper8Pin               : inout std_logic;
 
-    spiMosiPin               : inout std_logic;
-    spiCselPin               : inout std_logic;
-    spiMisoPin               : inout std_logic;
+    spiMosiPin               : out   std_logic;
+    spiCselPin               : out   std_logic;
+    spiMisoPin               : in    std_logic;
 
     sfpLosPins               : inout std_logic_vector(NUM_SFP_G - 1 downto 0);
     sfpPresentbPins          : inout std_logic_vector(NUM_SFP_G - 1 downto 0);
@@ -85,7 +88,6 @@ architecture Impl of EcEvrProto is
 
   constant NUM_USED_MGT_C : natural := 1;
 
-  constant MGT_USED_IDX_C : natural := 1;
 
   signal pllClkInp     : std_logic;
   signal pllClk        : std_logic;
@@ -131,10 +133,20 @@ architecture Impl of EcEvrProto is
   signal sysClk        : std_logic := '0';
   signal sysRstReq     : std_logic := '0';
 
+  function FBOUT_MULT_F return real is
+  begin
+    return 1000.0E6 / LAN9254_CLK_FREQ_G;
+  end function FBOUT_MULT_F;
+
+  function CLKOUT0_DIV_F return real is
+  begin
+    return 1000.0E6 / SYS_CLK_FREQ_G;
+  end function CLKOUT0_DIV_F;
+
 begin
 
-  U_IOBUF_CLK_PLL : IOBUF
-    port map ( IO => pllClkPin, T => '1', I => '0', O => pllClkInp );
+  U_IOBUF_CLK_PLL : IBUF
+    port map ( I => pllClkPin, O => pllClkInp );
 
   U_BUFG_CLK_PLL : BUFG
     port map (
@@ -142,8 +154,8 @@ begin
       O  => pllClk
     );
 
-  U_IOBUF_LAN9254CLK_PLL : IOBUF
-    port map ( IO => lan9254ClkPin, T => '1', I => '0', O => lan9254ClkInp );
+  U_IOBUF_LAN9254CLK_PLL : IBUF
+    port map ( I => lan9254ClkPin, O => lan9254ClkInp );
 
   B_MMCM : block is
     signal fbInp, fbOut : std_logic;
@@ -153,7 +165,7 @@ begin
     MMCME2_BASE_inst : MMCME2_BASE
     generic map (
       BANDWIDTH => "OPTIMIZED",  -- Jitter programming (OPTIMIZED, HIGH, LOW)
-      CLKFBOUT_MULT_F => 40.0,    -- Multiply value for all CLKOUT (2.000-64.000).
+      CLKFBOUT_MULT_F => FBOUT_MULT_F,    -- Multiply value for all CLKOUT (2.000-64.000).
       CLKFBOUT_PHASE => 0.0,     -- Phase offset in degrees of CLKFB (-360.000-360.000).
       CLKIN1_PERIOD => 0.0,      -- Input clock period in ns to ps resolution (i.e. 33.333 is 30 MHz).
       -- CLKOUT0_DIVIDE - CLKOUT6_DIVIDE: Divide amount for each CLKOUT (1-128)
@@ -163,7 +175,7 @@ begin
       CLKOUT4_DIVIDE => 40,
       CLKOUT5_DIVIDE => 40,
       CLKOUT6_DIVIDE => 40,
-      CLKOUT0_DIVIDE_F => 40.0,   -- Divide amount for CLKOUT0 (1.000-128.000).
+      CLKOUT0_DIVIDE_F => CLKOUT0_DIV_F,   -- Divide amount for CLKOUT0 (1.000-128.000).
       -- CLKOUT0_DUTY_CYCLE - CLKOUT6_DUTY_CYCLE: Duty cycle for each CLKOUT (0.01-0.99).
       CLKOUT0_DUTY_CYCLE => 0.5,
       CLKOUT1_DUTY_CYCLE => 0.5,
@@ -301,13 +313,13 @@ begin
       port map ( IO => lan9254Pins(i), T => lan9254_t(i), I => lan9254_o(i), O => lan9254_i(i) );
   end generate G_LAN9254_IOBUF;
 
-  U_MGT_IBUFN : IBUF port map ( I => mgtRxNPins( MGT_USED_IDX_C ), O => mgtRxN(0) );
+  U_MGT_IBUFN : IBUF port map ( I => mgtRxNPins( MGT_USED_IDX_G ), O => mgtRxN(0) );
 
-  U_MGT_IBUFP : IBUF port map ( I => mgtRxPPins( MGT_USED_IDX_C ), O => mgtRxP(0) );
+  U_MGT_IBUFP : IBUF port map ( I => mgtRxPPins( MGT_USED_IDX_G ), O => mgtRxP(0) );
 
-  U_MGT_OBUFN : OBUF port map ( O => mgtTxNPins( MGT_USED_IDX_C ), I => mgtTxN(0) );
+  U_MGT_OBUFN : OBUF port map ( O => mgtTxNPins( MGT_USED_IDX_G ), I => mgtTxN(0) );
 
-  U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_C ), I => mgtTxP(0) );
+  U_MGT_OBUFP : OBUF port map ( O => mgtTxPPins( MGT_USED_IDX_G ), I => mgtTxP(0) );
 
 
   G_STARTUP : if ( true ) generate
@@ -367,12 +379,12 @@ begin
 
   end generate G_STARTUP;
 
-  U_IOBUF_SPI_CSEL : IOBUF
-    port map ( IO => spiCselPin, O => open,           I => spiMstOut.csel, T => '0' );
-  U_IOBUF_SPI_MOSI : IOBUF
-    port map ( IO => spiMosiPin, O => open,           I => spiMstOut.mosi, T => '0' );
-  U_IOBUF_SPI_MISO : IOBUF
-    port map ( IO => spiMisoPin, O => spiSubInp.miso, I => '0',            T => '1' );
+  U_IOBUF_SPI_CSEL : OBUF
+    port map ( O => spiCselPin, I => spiMstOut.csel );
+  U_IOBUF_SPI_MOSI : OBUF
+    port map ( O => spiMosiPin, I => spiMstOut.mosi );
+  U_IOBUF_SPI_MISO : IBUF
+    port map ( I => spiMisoPin, O => spiSubInp.miso );
 
 
   U_Top : entity work.EcEvrProtoTop
@@ -383,9 +395,8 @@ begin
       NUM_GPIO_G               => NUM_GPIO_G,
       NUM_SFP_G                => NUM_SFP_G,
       NUM_MGT_G                => NUM_USED_MGT_C,
-      PLL_CLK_FREQ_G           => PLL_CLK_FREQ_G,
-      LAN9254_CLK_FREQ_G       => LAN9254_CLK_FREQ_G,
-      SYS_CLK_FREQ_G           => SYS_CLK_FREQ_G
+      SYS_CLK_FREQ_G           => SYS_CLK_FREQ_G,
+      I2C_CLK_PRG_ENABLE_G     => I2C_CLK_PRG_ENABLE_G
     )
     port map (
       pllClk                   => pllClk,

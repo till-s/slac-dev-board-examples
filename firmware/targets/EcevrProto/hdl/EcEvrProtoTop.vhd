@@ -21,8 +21,6 @@ entity EcEvrProtoTop is
     NUM_GPIO_G               : natural;
     NUM_SFP_G                : natural;
     NUM_MGT_G                : natural;
-    PLL_CLK_FREQ_G           : real;
-    LAN9254_CLK_FREQ_G       : real;
     SYS_CLK_FREQ_G           : real;
     SPI_CLK_FREQ_G           : real      := 12.5E6;
     SPI_LD_BLK_SZ_G          : natural   := 16; -- Erase block size: 12, 15, 16
@@ -259,29 +257,14 @@ architecture Impl of EcEvrProtoTop is
 
 begin
 
+  sysClkLoc                  <= lan9254Clk;
+
   -- abbreviations
   busReqLoc                  <= busLocReqs( SS_IDX_LOC_C );
   busLocReps( SS_IDX_LOC_C ) <= busRepLoc;
 
   pllRefClkLost              <= mgtStatus.rxPllRefClkLost;
   pllLocked                  <= mgtStatus.rxPllLocked;
-
-  -- ATM we have not connected an MMCM
-  G_LAN9254_CLK : if ( not SYS_CLK_PLL_G ) generate
-    assert ( SYS_CLK_FREQ_G = LAN9254_CLK_FREQ_G )
-      report ("different SYS_CLK_FREQ_G requires an MMCM")
-      severity failure;
-
-    sysClkLoc      <= lan9254Clk;
-  end generate G_LAN9254_CLK;
-
-  G_PLL_CLK : if ( SYS_CLK_PLL_G ) generate
-    assert ( SYS_CLK_FREQ_G = PLL_CLK_FREQ_G )
-      report ("different SYS_CLK_FREQ_G requires an MMCM")
-      severity failure;
-
-    sysClkLoc      <= pllClk;
-  end generate G_PLL_CLK;
 
   sysClk         <= sysClkLoc;
   sysRst         <= sysRstLoc;
