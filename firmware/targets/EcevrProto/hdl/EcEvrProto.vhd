@@ -257,7 +257,7 @@ begin
   process ( ledsIn, mmcmLocked ) is
   begin
     ledsOu    <= ledsIn;
-    ledsOu(7) <= ledsIn(7) or mmcmLocked;
+    ledsOu(6) <= ledsIn(6) or not mmcmLocked;
   end process;
 
   G_BUF_LED : for i in ledPins'range generate
