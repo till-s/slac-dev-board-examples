@@ -1,0 +1,33 @@
+Memory-map that can be accessed with UDP
+
+Byte addresses
+
+0x00_0000 - 0x07_ffff: MUX ->
+  0x00_0000 - 0x01_ffff: PSI EVR320 registers
+  0x02_0000 - 0x03_ffff: Configuration readback; GIT_HASH (@0x02_0010) 
+  0x04_0000 - 0x05_ffff: <unused>
+  0x06_0000 - 0x07_ffff: <unused>
+
+0x08_0000 - 0x0f_ffff: SPI flash readout (special, paged mode)
+                       0x08_0000 - 0x08_ffff : flash page contents (A15 - A0)
+                       0x09_0000             : page register; write A23 - A16 here
+0x10_0000 - 0x17_ffff: I2C controller
+                       i2c-addr   is encoded in byte-addr [18:12] -> dwaddr [16:10]
+                       i2c-mux    is encoded in byte-addr [11: 8] -> dwaddr [ 9: 6]
+                       i2c-offset is encoded in byte-addr [ 7: 0] -> dwaddr [ 5: 0]
+                       and byte-lanes; single-byte access only!
+
+0x18_0000 - 0x1f_ffff: MUX ->
+  0x18_0000 - 0x18_ffff: TOP module local registers
+                       power-cycle: write 0xdead to register @ offset 8
+  0x19_0000 - 0x19_ffff: GTP DRP registers (half-word aligned access!)
+  0x1a_0000 - 0x1a_ffff: ICAP registers    (dword aligned access!)
+  0x1b_0000 - 0x1b_ffff: <unused>
+  0x1c_0000 - 0x1c_ffff: <unused>
+  0x1d_0000 - 0x1d_ffff: <unused>
+  0x1e_0000 - 0x1e_ffff: <unused>
+  0x1f_0000 - 0x1f_ffff: <unused>
+0x20_0000 - 0x27_ffff: <unused>
+0x28_0000 - 0x2f_ffff: <reserved>
+0x30_0000 - 0x37_ffff: ESC Statistics counters
+0x38_0000 - 0x3f_ffff: Lan9254 chip (careful!)

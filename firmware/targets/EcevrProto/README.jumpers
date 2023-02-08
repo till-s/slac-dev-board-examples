@@ -1,0 +1,42 @@
+Switch:
+       Note: emulation mode '010' HBI muxed 16-bit direct access (what FW needs)
+
+######### DEFAULT SETTINGS ##########################
+
+Std DIP Switch settings:
+  use EEPROM (A..K): ON, off, off, off, ON, ON, off, X
+  EEPROM emulation : ON, ON , ON , off, ON, ON, off, X
+  fallback boot    :                            ON
+
+Install JP2201 (silk-screen box, closer to RJ-45) to enable autoneg.
+
+No jumper on JP1 (jtag)
+
+Bypass current selection (J1)
+
+#####################################################
+
+NOTE: in non-emulation mode, EM0 (pos 5) defines the EEPROM size: 
+        ON:  1-byte addressing
+        OFF: 2-byte addressing
+
+SW2101
+Lbl Pos
+ A   1    (ALELO_pol)          : ON required for emulation mode
+ I   2    (EEPROM isolation)   : OFF when using EEPROM, ON for emulation mode
+ EM2 3    (Emulation mode)     : OFF when using EEPROM, ON for HBI-16-mux emulation
+ EM1 4    (Emulation mode)     : OFF when using EEPROM, OFF for HBI-16-mux emulation
+ EM0 5    (Emulation mode)     : ON/(OFF)  when using EEPROM, ON for HBI-16-mux emulation
+ F   6    (Autoneg PortB)      : ON, (Off to disable FD autoneg. on port B)
+ J   7    (Firmware use)       : OFF (normal boot), ON (fallback boot; golden image)
+ K   8    (Firmware use)       : reserved
+
+JP1 (JTAG jumper)              : enforce JTAG boot (wait) when jumper installed
+
+JP2201    (Autoneg PortA)      : FD autoneg. enabled when installed on (2-3),
+                                 ( silk-screen box marking, closer to ethernet connector ),
+                                 disabled when installed on (1-2).
+
+J1 (min. current select)       : bypass, 1.5A or 3A; need at least one jumper installed
+
+J4                             : JTAG header
