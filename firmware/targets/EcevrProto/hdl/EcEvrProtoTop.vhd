@@ -34,7 +34,9 @@ entity EcEvrProtoTop is
     SYS_CLK_PLL_G            : boolean   := false;
     ESC_POLLED_MODE_G        : boolean   := true;
     RX_POLARITY_INVERT_G     : std_logic := '0';
-    TX_POLARITY_INVERT_G     : std_logic := '0'
+    TX_POLARITY_INVERT_G     : std_logic := '0';
+    MGT_REF_CLK_USED_IDX_G   : natural   := 1;
+    I2C_CLK_PRG_ENABLE_G     : std_logic := '1'
   );
   port (
     -- external clocks
@@ -165,6 +167,10 @@ architecture Impl of EcEvrProtoTop is
             endAddr => SPI_NORMAL_BOOT_FILE_END_C,
             flags   => FLASH_FILE_FLAGS_NONE_C
          )
+  );
+
+  constant PLL_REF_CLK_SEL_C : PllRefClkSelArray := (
+    others => selPllRefClk( MGT_REF_CLK_USED_IDX_G )
   );
 
   signal sysClkLoc        : std_logic;
@@ -403,7 +409,8 @@ begin
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
       EVR_FLAVOR_G      => "PSI",
       RX_POL_INVERT_G   => RX_POLARITY_INVERT_G,
-      TX_POL_INVERT_G   => TX_POLARITY_INVERT_G
+      TX_POL_INVERT_G   => TX_POLARITY_INVERT_G,
+      I2C_CLK_PRG_ENA_G => I2C_CLK_PRG_ENABLE_G
     )
     port map (
       sysClk            => sysClkLoc,
@@ -532,7 +539,7 @@ begin
         pllRst           => open, -- out std_logic_vector(1 downto 0);
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
-        gtRefClk         => mgtRefClk, -- in  std_logic_vector(1 downto 0) := "00";
+        gtRefClk         => mgtRefClk(MGT_REF_CLK_USED_IDX_G downto MGT_REF_CLK_USED_IDX_G), -- in  std_logic_vector
 
         -- Rx ports
         rxUsrClkActive   => open, -- in  std_logic := '1';
