@@ -18,7 +18,6 @@ foreach f {
   EcEvrProto.vhd
   EcEvrProtoPkg.vhd
   EcEvrProtoTop.vhd
-  TimingGtpCoreWrapper.vhd
   gtp/TimingGtp_common.vhd
   gtp/TimingGtp_cpll_railing.vhd
   gtp/TimingGtpPkg.vhd
