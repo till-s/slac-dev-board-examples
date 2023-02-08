@@ -232,15 +232,14 @@ architecture Impl of EcEvrProtoTop is
   signal evrStable        : std_logic;
   signal pllRefClkLost    : std_logic;
   signal pllLocked        : std_logic;
-  signal rxRefClk         : std_logic;
   signal pdoTrg           : std_logic;
 
   -- blink with frequency refClk / 1e8 
   subtype RefClkCountType  is natural range 0 to 49999999;
   subtype FlickerCountType is natural range 0 to 4999999;
 
-  signal rxRefClkCount    : RefClkCountType  := RefClkCountType'high;
-  signal rxRefClkBlink    : std_logic        := '0';
+  signal rxClkCount       : RefClkCountType  := RefClkCountType'high;
+  signal rxClkBlink       : std_logic        := '0';
   -- flicker with ~10hz
   signal flickerCount     : FlickerCountType := 0;
 
@@ -520,11 +519,9 @@ begin
         gtTxP            => mgtTxP(0),
         gtTxN            => mgtTxN(0),
 
-        -- clock pll selection:
-        gtRxPllSel       => '0',
-        gtTxPllSel       => '0',
-
         -- signals for external common block (with_common_g = false)
+        gtPllSel         => open, -- clock pll selection
+
         pllOutClk        => open, -- in  std_logic_vector(1 downto 0) := "00";
         pllOutRefClk     => open, -- in  std_logic_vector(1 downto 0) := "00";
 
@@ -544,8 +541,6 @@ begin
         rxDataK          => mgtRxDataK,   -- out std_logic_vector(1 downto 0);
         rxOutClk         => mgtRxRecClk, -- out std_logic;
 
-        rxRefClk         => rxRefClk,
-
         -- Tx Ports
         txUsrClk         => mgtTxUsrClk, -- in  std_logic;
         txUsrClkActive   => open, -- in  std_logic := '1';
@@ -557,14 +552,14 @@ begin
         mgtControl       => mgtControl
       );
 
-    P_REF_BLINK : process ( rxRefClk ) is
+    P_REF_BLINK : process ( mgtRxRecClk ) is
     begin
-      if ( rising_edge( rxRefClk ) ) then
-        if ( rxRefClkCount = 0 ) then
-          rxRefClkBlink <= not rxRefClkBlink;
-          rxRefClkCount <= RefClkCountType'high;
+      if ( rising_edge( mgtRxRecClk ) ) then
+        if ( rxClkCount = 0 ) then
+          rxClkBlink <= not rxClkBlink;
+          rxClkCount <= RefClkCountType'high;
         else
-          rxRefClkCount <= rxRefClkCount - 1;
+          rxClkCount <= rxClkCount - 1;
         end if;
         if ( (pdoTrg and not pdoBlink(1)) = '1' ) then
            pdoBlink <= "11";
@@ -581,7 +576,7 @@ begin
       end if;
     end process P_REF_BLINK;
 
-    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable, pdoBlink, rxRefClkBlink ) is
+    P_MGT_LEDS : process ( sfpLos, pllRefClkLost, evrStable, pdoBlink, rxClkBlink ) is
     begin
       -- BGR
       mgtLeds <= "000";
@@ -597,9 +592,9 @@ begin
          mgtLeds(1) <= not sfpLos(0);
       else
          -- have refclk; if there is RX signal blink yellow, otherwise blink red
-         mgtLeds(0) <= rxRefClkBlink;
+         mgtLeds(0) <= rxClkBlink;
          if ( sfpLos(0) = '0' ) then
-           mgtLeds(1) <= rxRefClkBlink;
+           mgtLeds(1) <= rxClkBlink;
          end if;
       end if;
       

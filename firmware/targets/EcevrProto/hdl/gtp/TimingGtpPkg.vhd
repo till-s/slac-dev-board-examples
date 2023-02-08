@@ -71,9 +71,6 @@ package TimingGtpPkg is
          GT0_PLL0RESET_OUT : out STD_LOGIC;
          GT0_PLL0LOCK_IN : in STD_LOGIC;
          GT0_PLL0REFCLKLOST_IN : in STD_LOGIC;
-         GT0_PLL1RESET_OUT : out STD_LOGIC;
-         GT0_PLL1LOCK_IN : in STD_LOGIC;
-         GT0_PLL1REFCLKLOST_IN : in STD_LOGIC;
          GT0_PLL1OUTCLK_IN : in STD_LOGIC;
          GT0_PLL1OUTREFCLK_IN : in STD_LOGIC
       );
