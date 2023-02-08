@@ -10,24 +10,32 @@ class GenXdc:
 
   PAT = re.compile("^(IO_|MGT(REFCLK|PTX|PRX)|CCLK_).*")
 
-  def __init__(self, pin_file, pin_map, sysClkFrq, prefix="EcEvrProto"):
-    self.pin_file_     = pin_file
-    self.pin_map_      = pin_map
+  def __init__(self, mapper, sysClkFrq, prefix=None):
+    if prefix is None:
+      prefix=mapper.boardName()
+    self.mapper_       = mapper
+    self.pin_file_     = mapper.pinFileName()
+    self.pin_map_      = mapper.mkPinMap()
     self.prefix_       = prefix
     self.xio_file_     = prefix + "-io.xdc"
     self.xtm_file_     = prefix + "-io_timing.xdc"
-    self.notfound_     = pin_map.copy()
+    self.notfound_     = self.pin_map_.copy()
     self.sysClkFrq_    = sysClkFrq
+    self.haveSpi_      = not self.mapper_.getMap()["spiMosiPin"]["name"] is None
     # SPI freq. must match generic in HDL!
     self.spiClkFrq_    = 12.5E6
 
   def genHdr(self):
-    with io.open(self.xio_file_, "w") as x:
+    def pr(x):
       x.write("## Automatically generated; do not modify\n")
       x.write("## Edit 'ecevr_pinmap.py' instead and run gen_xdc.py\n")
+      x.write('## This file was generated for board: {}\n'.format(self.mapper_.boardName()))
+      x.write('## using pin definitions for device : {}\n'.format(self.mapper_.pinFileName()))
+      x.write('##\n')
+    with io.open(self.xio_file_, "w") as x:
+      pr(x)
     with io.open(self.xtm_file_, "w") as t:
-      t.write("## Automatically generated; do not modify\n")
-      t.write("## Edit 'ecevr_pinmap.py' instead and run gen_xdc.py\n")
+      pr(t)
 
   def findAttr(self, name):
     rv = []
@@ -73,8 +81,9 @@ class GenXdc:
       clk))
 
   def mkIoFalsePath(self, f, clk, portName):
-    f.write("set_input_delay  0 -clock [get_clocks {{{:s}}}] [get_ports {{{:s}}}]\n".format(clk, portName))
-    f.write("set_output_delay 0 -clock [get_clocks {{{:s}}}] [get_ports {{{:s}}}]\n".format(clk, portName))
+    if not clk is None:
+      f.write("set_input_delay  0 -clock [get_clocks {{{:s}}}] [get_ports {{{:s}}}]\n".format(clk, portName))
+      f.write("set_output_delay 0 -clock [get_clocks {{{:s}}}] [get_ports {{{:s}}}]\n".format(clk, portName))
     f.write("set_false_path -from [get_ports {{{:s}}}]\n".format(portName))
     f.write("set_false_path -to   [get_ports {{{:s}}}]\n".format(portName))
 
@@ -99,77 +108,78 @@ class GenXdc:
           portName))
         t.write("set_false_path -to   [get_ports {{{:s}}}]\n".format(portName))
 
-      # SPI interface timing
-      spiClk = "usrCClk"
-      spiMosiPort = "spiMosiPin"
-      spiMisoPort = "spiMisoPin"
-      spiCselPort = "spiCselPin"
-      # W25Q128JW
-      spiMosiSetup = 2.0 + 0.1 # add trace delay
-      spiMosiHold  = 3.0
-      spiCselSetup = 5.0 + 0.1 # add trace delay
-      spiCselHold  = 5.0
-      spiMisoDely  = 6.0 + 0.4 # add trace delay
-      spiMisoHold  = 1.5
+      if self.haveSpi_:
+        # SPI interface timing
+        spiClk = "usrCClk"
+        spiMosiPort = "spiMosiPin"
+        spiMisoPort = "spiMisoPin"
+        spiCselPort = "spiCselPin"
+        # W25Q128JW
+        spiMosiSetup = 2.0 + 0.1 # add trace delay
+        spiMosiHold  = 3.0
+        spiCselSetup = 5.0 + 0.1 # add trace delay
+        spiCselHold  = 5.0
+        spiMisoDely  = 6.0 + 0.4 # add trace delay
+        spiMisoHold  = 1.5
 
-      halfPeriodCycles = int(math.ceil(self.sysClkFrq_/self.spiClkFrq_/2.0))
+        halfPeriodCycles = int(math.ceil(self.sysClkFrq_/self.spiClkFrq_/2.0))
 
-      t.write( "set_output_delay -clock [get_clocks {:s}] -max {:f} [get_ports {{{:s}}}]\n".format(
-        spiClk,
-        spiMosiSetup,
-        spiMosiPort))
-      t.write( "set_output_delay -clock [get_clocks {:s}] -min {:f} [get_ports {{{:s}}}]\n".format(
-        spiClk,
-        - spiMosiHold,
-        spiMosiPort))
+        t.write( "set_output_delay -clock [get_clocks {:s}] -max {:f} [get_ports {{{:s}}}]\n".format(
+          spiClk,
+          spiMosiSetup,
+          spiMosiPort))
+        t.write( "set_output_delay -clock [get_clocks {:s}] -min {:f} [get_ports {{{:s}}}]\n".format(
+          spiClk,
+          - spiMosiHold,
+          spiMosiPort))
 
-      # SPI clock is derived from sysClk, dividing by 2; we can relax the hold requirement
-      # by shifting hold analysis by 1 sysClk cycle
-      t.write( "set_multicycle_path -setup {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
-        halfPeriodCycles,
-        spiMosiPort,
-        spiClk))
-      t.write( "set_multicycle_path -hold {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
-        2*halfPeriodCycles-1,
-        spiMosiPort,
-        spiClk))
+        # SPI clock is derived from sysClk, dividing by 2; we can relax the hold requirement
+        # by shifting hold analysis by 1 sysClk cycle
+        t.write( "set_multicycle_path -setup {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
+          halfPeriodCycles,
+          spiMosiPort,
+          spiClk))
+        t.write( "set_multicycle_path -hold {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
+          2*halfPeriodCycles-1,
+          spiMosiPort,
+          spiClk))
 
-      t.write( "set_output_delay -clock [get_clocks {:s}] -max {:f} [get_ports {{{:s}}}]\n".format(
-        spiClk,
-        spiCselSetup,
-        spiCselPort))
-      t.write( "set_output_delay -clock [get_clocks {:s}] -min {:f} [get_ports {{{:s}}}]\n".format(
-        spiClk,
-        - spiCselHold,
-        spiCselPort))
-      # SPI clock is derived from sysClk, dividing by 2; we can relax the hold requirement
-      # by shifting hold analysis by 1 sysClk cycle
-      t.write( "set_multicycle_path -setup {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
-        halfPeriodCycles,
-        spiCselPort,
-        spiClk))
-      t.write( "set_multicycle_path -hold {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
-        2*halfPeriodCycles-1,
-        spiCselPort,
-        spiClk))
+        t.write( "set_output_delay -clock [get_clocks {:s}] -max {:f} [get_ports {{{:s}}}]\n".format(
+          spiClk,
+          spiCselSetup,
+          spiCselPort))
+        t.write( "set_output_delay -clock [get_clocks {:s}] -min {:f} [get_ports {{{:s}}}]\n".format(
+          spiClk,
+          - spiCselHold,
+          spiCselPort))
+        # SPI clock is derived from sysClk, dividing by 2; we can relax the hold requirement
+        # by shifting hold analysis by 1 sysClk cycle
+        t.write( "set_multicycle_path -setup {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
+          halfPeriodCycles,
+          spiCselPort,
+          spiClk))
+        t.write( "set_multicycle_path -hold {:d} -through [get_ports {{{:s}}}] -to [get_clocks {:s}]\n".format(
+          2*halfPeriodCycles-1,
+          spiCselPort,
+          spiClk))
 
-      t.write( "set_input_delay -clock [get_clocks {:s}] -max {:f} [get_ports {{{:s}}}]\n".format(
-        spiClk,
-        spiMisoDely,
-        spiMisoPort))
-      t.write( "set_input_delay -clock [get_clocks {:s}] -min {:f} [get_ports {{{:s}}}]\n".format(
-        spiClk,
-        spiMisoHold,
-        spiMisoPort))
-      t.write( "set_multicycle_path -setup {:d} -through [get_ports {{{:s}}}] -from [get_clocks {:s}]\n".format(
-        halfPeriodCycles,
-        spiMisoPort,
-        spiClk))
+        t.write( "set_input_delay -clock [get_clocks {:s}] -max {:f} [get_ports {{{:s}}}]\n".format(
+          spiClk,
+          spiMisoDely,
+          spiMisoPort))
+        t.write( "set_input_delay -clock [get_clocks {:s}] -min {:f} [get_ports {{{:s}}}]\n".format(
+          spiClk,
+          spiMisoHold,
+          spiMisoPort))
+        t.write( "set_multicycle_path -setup {:d} -through [get_ports {{{:s}}}] -from [get_clocks {:s}]\n".format(
+          halfPeriodCycles,
+          spiMisoPort,
+          spiClk))
 
-      t.write( "set_multicycle_path -hold {:d} -through [get_ports {{{:s}}}] -from [get_clocks {:s}]\n".format(
-        2*halfPeriodCycles-1,
-        spiMisoPort,
-        spiClk))
+        t.write( "set_multicycle_path -hold {:d} -through [get_ports {{{:s}}}] -from [get_clocks {:s}]\n".format(
+          2*halfPeriodCycles-1,
+          spiMisoPort,
+          spiClk))
 
           
       for i in self.pin_map_.items():
@@ -280,23 +290,34 @@ class GenXdc:
     pass
 
 if __name__ == "__main__":
-  opts, args = getopt.getopt(sys.argv[1:],"hf:")
+  opts, args = getopt.getopt(sys.argv[1:],"hDf:")
   sysClkFrq  = None
+  dummyClk   = None
+  devBoard   = False
   for o in opts:
     if ( o[0] == "-h" ):
-      print("Usage: {} -f sysClockFreq [-h] filename".format(sys.argv[0]))
+      print("Usage: {} -f sysClockFreq [-D] [-h]".format(sys.argv[0]))
       print("    -h          : this message")
+      print("    -D          : produce constraints for the development board")
       sys.exit(0)
     elif ( o[0] == "-f" ):
       sysClkFrq = float(o[1])
+    elif ( o[0] == "-D" ):
+      devBoard = True
     else:
       raise RuntimeError("Unknown option {}".format(o[0]))
-  if len(args) < 1:
-    raise RuntimeError("Missing pin filename arg")
   if ( sysClkFrq is None ):
-    raise RuntimeError("Need '-f sysClkFreq' argument; frequency must match clock.xdc/top HDL!");
-  gen = GenXdc( args[0], ecevr_pinmap.mkPinMap(), sysClkFrq )
+    if devBoard:
+      sysClkFrq = 50.0E6
+    else:
+      raise RuntimeError("Need '-f sysClkFreq' argument; frequency must match clock.xdc/top HDL!");
+
+  if devBoard:
+    pinm = ecevr_pinmap.EcEvrDevBoardPinMap()
+  else:
+    pinm = ecevr_pinmap.EcEvrProtoPinMap()
+  gen = GenXdc( pinm, sysClkFrq )
   gen.genHdr() 
-  gen.genIo()
-  gen.genIoTiming()
+  gen.genIo(dummyClk=dummyClk)
+  gen.genIoTiming(dummyClk=dummyClk)
   gen.genFtr() 
