@@ -19,7 +19,7 @@
       CONFIG.gt0_val_port_loopback {true}\
       CONFIG.identical_val_rx_line_rate {2.856}\
       CONFIG.gt_val_tx_pll {PLL0}\
-      CONFIG.gt_val_rx_pll {PLL1}\
+      CONFIG.gt_val_rx_pll {PLL0}\
       CONFIG.identical_val_rx_reference_clock {142.800}\
       CONFIG.gt0_val_tx_line_rate {2.856}\
       CONFIG.gt0_val_tx_int_datawidth {20}\
