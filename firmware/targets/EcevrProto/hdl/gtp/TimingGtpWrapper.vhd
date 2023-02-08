@@ -400,8 +400,8 @@ begin
             PLL1OUTCLK_OUT       => pllOutClk_i(1),
             PLL1OUTREFCLK_OUT    => pllOutRefClk_i(1),
 
-            GTREFCLK1_IN         => gtRefClk(1),
-            GTREFCLK0_IN         => gtRefClk(0)
+            GTREFCLK1_IN         => gtRefClkLoc(1),
+            GTREFCLK0_IN         => gtRefClkLoc(0)
          );
 
       pllRst(PLL0)     <= pllRstAny;
