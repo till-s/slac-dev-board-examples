@@ -386,7 +386,7 @@ begin
       GEN_EOE_ILA_G     => false,
       GEN_FOE_ILA_G     => false,
       GEN_U2B_ILA_G     => false,
-      GEN_CNF_ILA_G     => false,
+      GEN_CNF_ILA_G     => true,
       GEN_I2C_ILA_G     => true,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
