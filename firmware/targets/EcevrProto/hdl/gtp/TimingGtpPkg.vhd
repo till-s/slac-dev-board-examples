@@ -81,6 +81,8 @@ package TimingGtpPkg is
    constant PLLREFCLK_SEL_REF0_C : std_logic_vector(2 downto 0) := "001";
    constant PLLREFCLK_SEL_REF1_C : std_logic_vector(2 downto 0) := "010";
 
+   function selPllRefClk(constant x : natural range 0 to 1) return std_logic_vector;
+
    type MgtControlType is record
       rxPllReset          : std_logic;
       rxReset             : std_logic;
@@ -136,3 +138,17 @@ package TimingGtpPkg is
    );
 
 end package TimingGtpPkg;
+
+package body TimingGtpPkg is
+
+   function selPllRefCLk(constant x : natural range 0 to 1)
+   return std_logic_vector is
+   begin
+      if ( x = 0 ) then
+         return PLLREFCLK_SEL_REF0_C;
+      else
+         return PLLREFCLK_SEL_REF1_C;
+      end if;
+   end function selPllRefClk;
+
+end package body TimingGtpPkg;
