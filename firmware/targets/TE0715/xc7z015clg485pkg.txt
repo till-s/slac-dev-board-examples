@@ -1,6 +1,6 @@
-Device/Package xc7z015clg485 10/16/2013 16:15:27                                                                                              
-                                                                                                    
-Pin   Pin Name                 Memory Byte Group  Bank  VCCAUX Group  Super Logic Region  I/O Type  No-Connect
+#Device/Package xc7z015clg485 10/16/2013 16:15:27                                                                                              
+#                                                                                                    
+#Pin   Pin Name                 Memory Byte Group  Bank  VCCAUX Group  Super Logic Region  I/O Type  No-Connect
 T10   DONE_0                   NA                 0     NA            NA                  CONFIG    NA
 N12   DXP_0                    NA                 0     NA            NA                  CONFIG    NA
 K11   GNDADC_0                 NA                 0     NA            NA                  CONFIG    NA
@@ -485,5 +485,5 @@ N15   VCCPINT                  NA                 NA    NA            NA        
 R15   VCCPINT                  NA                 NA    NA            NA                  NA        NA
 V7    NC                       NA                 NA    NA            NA                  NA        NA
 W3    NC                       NA                 NA    NA            NA                  NA        NA
-                                                                                                    
-Total Number of Pins, 484                                                                                              
+#                                                                                                    
+#Total Number of Pins, 484                                                                                              
