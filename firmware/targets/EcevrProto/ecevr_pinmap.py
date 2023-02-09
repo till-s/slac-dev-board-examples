@@ -466,4 +466,11 @@ class EcEvrDevBoardPinMap(EcEvrProtoPinMap):
       self.remap( smap, self.z15Pins )
     else:
       self.remap( smap, self.z30Pins )
+    # some fixup; the eeprom size switch is not sensed
+    # assume a 16k EEPROM
+    # Could change in the HDL but not without changing
+    # the respective port from inout to in. Don't want
+    # to do that - maybe it's used to control the size
+    # at some point...
+    smap["eepSz32kPin"]["props"]["PULLDOWN"]="TRUE"
     return smap

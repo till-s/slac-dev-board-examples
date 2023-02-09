@@ -110,6 +110,7 @@ set_property IOSTANDARD       LVCMOS18     [get_ports {lan9254Pins[5]}]
 
 # IO_L12N_T1_MRCC_34
 set_property PACKAGE_PIN      L4           [get_ports {eepSz32kPin}]
+set_property PULLDOWN         TRUE         [get_ports {eepSz32kPin}]
 set_property IOSTANDARD       LVCMOS18     [get_ports {eepSz32kPin}]
 
 # IO_L15P_T2_DQS_34
