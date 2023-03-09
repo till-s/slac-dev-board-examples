@@ -123,5 +123,16 @@ if { [get_property top [get_filesets sources_1]] == "TE0715Top" } {
   set_property used_in_synthesis false [get_files *hdl/EcEvrProto-io_timing.xdc]
 }
 
+set files [list \
+  [file normalize "${origin_dir}/../tcl/genIla256.tcl"]\
+  [file normalize "${origin_dir}/../tcl/genProject.tcl"] \
+  [file normalize "${origin_dir}/../tcl/genPS7.tcl"] \
+  [file normalize "${origin_dir}/../tcl/genTimingGtp.tcl"] \
+  [file normalize "${origin_dir}/../tcl/sources.tcl"] \
+  [file normalize "${origin_dir}/../vivado/pre_synth_run.tcl"] \
+  [file normalize "${origin_dir}/../vivado/pre_bitstream.tcl"] \
+]
+add_files -norecurse -fileset [get_filesets utils_1] $files
+
 
 set_property STEPS.WRITE_BITSTREAM.ARGS.BIN_FILE true [get_runs impl_1]

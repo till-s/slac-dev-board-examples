@@ -203,6 +203,8 @@ set obj [get_filesets utils_1]
 # Set 'utils_1' fileset properties
 set obj [get_filesets utils_1]
 
+source "${origin_dir}/../tcl/sources.tcl"
+
 set idrFlowPropertiesConstraints ""
 catch {
  set idrFlowPropertiesConstraints [get_param runs.disableIDRFlowPropertyConstraints]

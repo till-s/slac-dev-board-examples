@@ -1,4 +1,4 @@
-if { [llength [get_ips processing_system7_0]] == 0 } {
+if { [llength [get_ips -quiet processing_system7_0]] == 0 } {
     create_ip -name processing_system7 -vendor xilinx.com -library ip -module_name processing_system7_0
 
     # generated from Trenz reference design with vivado/gui
