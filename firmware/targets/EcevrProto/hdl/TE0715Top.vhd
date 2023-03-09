@@ -25,7 +25,8 @@ entity TE0715Top is
     SYS_CLK_FREQ_G           : real    := 50.0E6;
     LAN9254_CLK_FREQ_G       : real    := 50.0E6;
     MGT_USED_IDX_G           : natural := 1;
-    MGT_REF_CLK_USED_IDX_G   : natural := 1
+    MGT_REF_CLK_USED_IDX_G   : natural := 1;
+    EVR_FLAVOR_G             : string  := "OPENEVR" -- supply dummy, some vivado version crashed v/o value!
   );
   port (
     DDR_addr          : inout STD_LOGIC_VECTOR ( 14 downto 0 );
@@ -115,7 +116,8 @@ begin
     LAN9254_CLK_FREQ_G       => LAN9254_CLK_FREQ_G,
     MGT_USED_IDX_G           => MGT_USED_IDX_G,
     MGT_REF_CLK_USED_IDX_G   => MGT_REF_CLK_USED_IDX_G,
-    I2C_CLK_PRG_ENABLE_G     => '0'
+    I2C_CLK_PRG_ENABLE_G     => '0',
+    EVR_FLAVOR_G             => EVR_FLAVOR_G
   )
   port map (
     -- external clocks

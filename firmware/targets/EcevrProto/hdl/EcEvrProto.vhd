@@ -26,7 +26,9 @@ entity EcEvrProto is
     PLL_CLK_FREQ_G           : real        := 25.0E6;
     MGT_USED_IDX_G           : natural     := 1;
     MGT_REF_CLK_USED_IDX_G   : natural     := 1;
-    I2C_CLK_PRG_ENABLE_G     : std_logic   := '1'
+    I2C_CLK_PRG_ENABLE_G     : std_logic   := '1';
+    -- supply dummy, some vivado version crashed v/o value!
+    EVR_FLAVOR_G             : string      := "NONE"
   );
   port (
     -- external clocks
@@ -396,7 +398,8 @@ begin
       NUM_SFP_G                => NUM_SFP_G,
       NUM_MGT_G                => NUM_USED_MGT_C,
       SYS_CLK_FREQ_G           => SYS_CLK_FREQ_G,
-      I2C_CLK_PRG_ENABLE_G     => I2C_CLK_PRG_ENABLE_G
+      I2C_CLK_PRG_ENABLE_G     => I2C_CLK_PRG_ENABLE_G,
+      EVR_FLAVOR_G             => EVR_FLAVOR_G
     )
     port map (
       pllClk                   => pllClk,

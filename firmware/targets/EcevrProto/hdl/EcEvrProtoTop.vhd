@@ -34,7 +34,8 @@ entity EcEvrProtoTop is
     RX_POLARITY_INVERT_G     : std_logic := '0';
     TX_POLARITY_INVERT_G     : std_logic := '0';
     MGT_REF_CLK_USED_IDX_G   : natural   := 1;
-    I2C_CLK_PRG_ENABLE_G     : std_logic := '1'
+    I2C_CLK_PRG_ENABLE_G     : std_logic := '1';
+    EVR_FLAVOR_G             : string
   );
   port (
     -- external clocks
@@ -390,7 +391,7 @@ begin
       GEN_I2C_ILA_G     => true,
       GEN_EEP_ILA_G     => false,
       NUM_BUS_SUBS_G    => NUM_BUS_SUBS_C,
-      EVR_FLAVOR_G      => "PSI",
+      EVR_FLAVOR_G      => EVR_FLAVOR_G,
       RX_POL_INVERT_G   => RX_POLARITY_INVERT_G,
       TX_POL_INVERT_G   => TX_POLARITY_INVERT_G,
       I2C_CLK_PRG_ENA_G => I2C_CLK_PRG_ENABLE_G
