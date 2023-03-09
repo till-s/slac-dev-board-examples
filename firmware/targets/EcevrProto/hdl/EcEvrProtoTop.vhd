@@ -238,6 +238,7 @@ architecture Impl of EcEvrProtoTop is
   signal pllRefClkLost    : std_logic;
   signal pllLocked        : std_logic;
   signal pdoTrg           : std_logic;
+  signal pdoTrgMgtClk     : std_logic;
 
   -- blink with frequency refClk / 1e8 
   subtype RefClkCountType  is natural range 0 to 49999999;
@@ -452,6 +453,7 @@ begin
       timingRxData      => mgtRxData,
       timingRxDataK     => mgtRxDataK,
       evrEventsAdj      => open,  --: out    std_logic_vector( 3 downto 0)
+
       pdoTrg            => pdoTrg,
 
       timingTxClk       => mgtTxUsrClk,
@@ -543,6 +545,14 @@ begin
         mgtControl       => mgtControl
       );
 
+    U_SYNC_PDO_TRG : entity work.SynchronizerBit
+      port map (
+        clk              => mgtRxRecClk,
+        rst              => '0',
+        datInp(0)        => pdoTrg,
+        datOut(0)        => pdoTrgMgtClk
+      );
+
     P_REF_BLINK : process ( mgtRxRecClk ) is
     begin
       if ( rising_edge( mgtRxRecClk ) ) then
@@ -552,8 +562,8 @@ begin
         else
           rxClkCount <= rxClkCount - 1;
         end if;
-        if ( (pdoTrg and not pdoBlink(1)) = '1' ) then
-           pdoBlink <= "11";
+        if ( (pdoTrgMgtClk and not pdoBlink(1)) = '1' ) then
+           pdoBlink     <= "11";
            flickerCount <= FlickerCountType'high;
         end if;
         if ( flickerCount = 0 ) then
@@ -948,36 +958,46 @@ begin
     end process P_ICAP_INIT_SEQ;
 
     G_REBOOT_ILA : if ( GEN_WMB_ILA_G or GEN_RST_ILA_G ) generate
-      signal state_dbg : std_logic_vector(1 downto 0);
-      signal ip_dbg    : std_logic_vector(3 downto 0);
+      signal state_dbg             : std_logic_vector(1 downto 0);
+      signal ip_dbg                : std_logic_vector(3 downto 0);
+      signal mgtRxRecRstLoc        : std_logic;
     begin
       state_dbg <= std_logic_vector( to_unsigned( StateType'pos( r.state ), 2 ) );
       ip_dbg    <= std_logic_vector( to_unsigned( r.ip , 4 ) );
       U_ILA : component Ila_256
         port map (
-            clk                  => sysClkLoc,
-            probe0(29 downto  0) => std_logic_vector(icapReq.dwaddr),
-            probe0(30          ) => icapReq.rdnwr,
-            probe0(31          ) => icapReq.valid,
-            probe0(63 downto 32) => icapReq.data,
+          clk                  => sysClkLoc,
+          probe0(29 downto  0) => std_logic_vector(icapReq.dwaddr),
+          probe0(30          ) => icapReq.rdnwr,
+          probe0(31          ) => icapReq.valid,
+          probe0(63 downto 32) => icapReq.data,
 
-            probe1(31 downto  0) => icapRep.rdata,
-            probe1(32          ) => icapRep.valid,
-            probe1(34 downto 33) => state_dbg,
-            probe1(          35) => warmBootDone,
-            probe1(39 downto 36) => ip_dbg,
-            probe1(          40) => warmBootRst,
-            probe1(          41) => sysRstLoc,
-            probe1(          42) => sysRstReq,
-            probe1(          43) => lan9254RstReq,
-            probe1(          44) => lan9254RstbOut,
-            probe1(          45) => lan9254RstbInp,
-            probe1(          46) => mgtRxRecRst,
-            probe1(63 downto 47) => (others => '0'),
+          probe1(31 downto  0) => icapRep.rdata,
+          probe1(32          ) => icapRep.valid,
+          probe1(34 downto 33) => state_dbg,
+          probe1(          35) => warmBootDone,
+          probe1(39 downto 36) => ip_dbg,
+          probe1(          40) => warmBootRst,
+          probe1(          41) => sysRstLoc,
+          probe1(          42) => sysRstReq,
+          probe1(          43) => lan9254RstReq,
+          probe1(          44) => lan9254RstbOut,
+          probe1(          45) => lan9254RstbInp,
+          probe1(          46) => mgtRxRecRstLoc,
+          probe1(63 downto 47) => (others => '0'),
 
-            probe2(63 downto  0) => (others => '0'),
-            probe3(63 downto  0) => (others => '0')
+          probe2(63 downto  0) => (others => '0'),
+          probe3(63 downto  0) => (others => '0')
         );
+
+        U_SYNC_PDO_TRG : entity work.SynchronizerBit
+          port map (
+            clk                => sysClkLoc,
+            rst                => '0',
+            datInp(0)          => mgtRxRecRst,
+            datOut(0)          => mgtRxRecRstLoc
+          );
+
     end generate G_REBOOT_ILA;
 
   end generate G_ICAP_INIT;

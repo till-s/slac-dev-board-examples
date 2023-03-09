@@ -184,13 +184,25 @@ begin
 
    drpClk       <= sysClk;
 
-   softRxRst    <= mgtControl.rxReset;
    rxPolInvert  <= mgtControl.rxPolarityInvert;
    enCommaAlign <= not mgtControl.rxCommaAlignDisable;
    loopbackMode <= mgtControl.txLoopback;
 
-   softTxRst    <= mgtControl.txReset;
    txPolInvert  <= mgtControl.txPolarityInvert;
+
+   U_SYNC_RST   : entity    work.SynchronizerBit
+      generic map (
+         WIDTH_G                         =>      2
+      )
+      port map (
+         clk                             =>      sysClk,
+         rst                             =>      '0',
+         datInp(0)                       =>      mgtControl.rxReset,
+         datInp(1)                       =>      mgtControl.txReset,
+
+         datOut(0)                       =>      softRxRst,
+         datOut(1)                       =>      softTxRst
+      );
 
    U_TIMING_GTP : component TimingGtp
       port map (
