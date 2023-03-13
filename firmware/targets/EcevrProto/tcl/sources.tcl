@@ -180,7 +180,13 @@ set files [list \
   [file normalize "${origin_dir}/../tcl/genPS7.tcl"] \
   [file normalize "${origin_dir}/../tcl/genTimingGtp.tcl"] \
   [file normalize "${origin_dir}/../tcl/sources.tcl"] \
+  [file normalize "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"] \
   [file normalize "${origin_dir}/../vivado/pre_synth_run.tcl"] \
   [file normalize "${origin_dir}/../vivado/pre_bitstream.tcl"] \
 ]
 add_files -norecurse -fileset [get_filesets utils_1] $files
+
+source "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"
+appCheckAndTouchGitHashFile "${origin_dir}/../hdl/AppGitHashPkg.vhd"
+
+add_files -norecurse -fileset [get_filesets sources_1] [list [file normalize "${origin_dir}/../hdl/AppGitHashPkg.vhd"]]
