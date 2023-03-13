@@ -64,6 +64,7 @@ proc print_help {} {
   puts "$script_file -tclargs \[--origin_dir <path>\]"
   puts "$script_file -tclargs \[--project_name <name>\]"
   puts "$script_file -tclargs \[--dev-board\]"
+  puts "$script_file -tclargs \[--psiEvr320\]"
   puts "$script_file -tclargs \[--help\]\n"
   puts "\n"
   puts "vivado -mode tcl -source $script_file -tclargs <args_to_this_script>\n"
@@ -79,12 +80,14 @@ proc print_help {} {
   puts "                       name is the name of the project from where this"
   puts "                       script was generated.\n"
   puts "\[--dev-board          \] Create project for the development board.\n"
-  puts "\[--help\]               Print help information for this script"
+  puts "\[--help\]               Print help information for this script."
+  puts "\[--psiEvr320\]          Use PSI EVR320 (default is MRF OpenEvr)."
   puts "-------------------------------------------------------------------------\n"
   exit 0
 }
 
 set _dev_board_ 0
+set _psi_evr_   0
 
 if { $::argc > 0 } {
   for {set i 0} {$i < $::argc} {incr i} {
@@ -93,6 +96,7 @@ if { $::argc > 0 } {
       "--origin_dir"   { incr i; set origin_dir [lindex $::argv $i] }
       "--project_name" { incr i; set _opt_proj_name_ [lindex $::argv $i] }
       "--dev-board"    { set _dev_board_ 1 }
+      "--psiEvr320"    { set _psi_evr_   1 }
       "--help"         { print_help }
       default {
         if { [regexp {^-} $option] } {
@@ -161,6 +165,12 @@ if { ${_dev_board_} != 0 } {
   set_property -name top -value "TE0715Top" -object [get_filesets sources_1]
 } else {
   set_property -name top -value "EcEvrProto" -object [get_filesets sources_1]
+}
+
+if { ${_psi_evr_} != 0 } {
+  set_property -name generic -value "EVR_FLAVOR_G=PSI" -object [get_filesets sources_1]
+} else {
+  set_property -name generic -value "EVR_FLAVOR_G=OPENEVR" -object [get_filesets sources_1]
 }
 
 # Set 'sources_1' fileset object
@@ -251,6 +261,8 @@ set obj [get_runs impl_1]
 set_property set_report_strategy_name 1 $obj
 set_property report_strategy {Vivado Implementation Default Reports} $obj
 set_property set_report_strategy_name 0 $obj
+set_property STEPS.WRITE_BITSTREAM.ARGS.BIN_FILE true $obj
+
 # Create 'impl_1_init_report_timing_summary_0' report (if not found)
 if { [ string equal [get_report_configs -of_objects [get_runs impl_1] impl_1_init_report_timing_summary_0] "" ] } {
   create_report_config -report_name impl_1_init_report_timing_summary_0 -report_type report_timing_summary:1.0 -steps init_design -runs impl_1
