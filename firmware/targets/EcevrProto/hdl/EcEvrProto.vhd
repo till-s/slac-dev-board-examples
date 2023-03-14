@@ -9,7 +9,6 @@ use     unisim.vcomponents.all;
 
 use     work.EcEvrBspPkg.all;
 use     work.EcEvrProtoPkg.all;
-use     work.AppGitHashPkg.all;
 
 entity EcEvrProto is
   -- WARNING: vivado 2021.1 crashed w/o indication what went wrong if
@@ -392,7 +391,7 @@ begin
 
   U_Top : entity work.EcEvrProtoTop
     generic map (
-      GIT_HASH_G               => APP_GIT_HASH_C,
+      GIT_HASH_G               => GIT_HASH_G,
       NUM_LED_G                => NUM_LED_G,
       NUM_POF_G                => NUM_POF_G,
       NUM_GPIO_G               => NUM_GPIO_G,
