@@ -6,7 +6,7 @@ set origin_dir [file dirname [info script]]
 #source [get_files -of_objects [get_filesets utils_1] {*/appCheckAndTouchGitHashFile.tcl}]
 source "${origin_dir}/../tcl/appCheckAndTouchGitHashFile.tcl"
 
-set git_hash [appCheckAndTouchGitHashFile "${origin_dir}/../hdl/AppGitHashPkg.vhd"]
+set git_hash [getGitHash]
 
 set genericArgList [get_property generic [current_fileset]]
 lappend genericArgList "GIT_HASH_G=32'h${git_hash}"

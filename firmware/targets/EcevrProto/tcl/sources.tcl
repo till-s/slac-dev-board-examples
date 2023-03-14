@@ -1,3 +1,15 @@
+proc mkNormFlist { patl } {
+  global origin_dir
+
+  set rv [list]
+
+  foreach f $patl {
+    lappend rv [file normalize "${origin_dir}/../$f"]
+  }
+
+  return $rv
+}
+
 set files [list \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/ESCBasicTypesPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/IPAddrConfigPkg.vhd"] \
@@ -107,14 +119,14 @@ if { [string equal "${_evr_flavor_}" "OPENEVR"] } {
   ]
   add_files -norecurse -fileset [get_filesets sources_1] $files
 
-  set files [list \
-   [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/false_paths.xdc"] \
+  set fpat [list \
+   "submodules/mrf-openevr/vhdl/false_paths.xdc" \
   ]
-
+  set files [mkNormFlist $fpat]
   add_files -norecurse -fileset [get_filesets constrs_1] $files
 
-  foreach f $files {
-    set_property used_in_synthesis false [get_files "$f"]
+  foreach f $fpat {
+    set_property used_in_synthesis false [get_files "*/$f"]
   }
 }
 
@@ -146,32 +158,41 @@ if { [ string equal "$_top_mod_" "TE0715Top" ] } {
 
 }
 
-set files [list \
-  [file normalize "${origin_dir}/../hdl/${_top_mod_}-clocks.xdc"] \
-  [file normalize "${origin_dir}/../hdl/EcEvrProto-misc.xdc"] \
-  [file normalize "${origin_dir}/../hdl/${_top_mod_}-io.xdc"] \
-  [file normalize "${origin_dir}/../hdl/${_top_mod_}-io_timing.xdc"] \
+set fpat [list \
+  "hdl/${_top_mod_}-clocks.xdc" \
 ]
 if { [ string equal "$_evr_flavor_" "PSI" ] } {
-  lappend files [file normalize "${origin_dir}/../hdl/${_top_mod_}-clock_groups.xdc"]
+  lappend fpat "hdl/${_top_mod_}-clock_groups.xdc"
 }
-lappend files [file normalize "${origin_dir}/../hdl/EcEvrProto-false_paths.xdc"]
-lappend files [file normalize "${origin_dir}/../hdl/dbg.xdc"]
+lappend fpat "hdl/${_top_mod_}-io.xdc"
 
+set files [mkNormFlist $fpat]
 add_files -norecurse -fileset [get_filesets constrs_1] $files
-foreach f $files {
-  set_property used_in_synthesis false [get_files "$f"]
-}
 
-set files [list \
-  [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/SynchronizerBit.xdc"] \
-  [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/EvrTxPDO.xdc"] \
-  [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/EcEvrWrapper.xdc"] \
+set fpat [list \
+  "hdl/${_top_mod_}-io_timing.xdc" \
+  "hdl/EcEvrProto-misc.xdc" \
 ]
+lappend fpat "hdl/EcEvrProto-false_paths.xdc"
+lappend fpat "hdl/dbg.xdc"
+
+set files [mkNormFlist $fpat]
+
 add_files -norecurse -fileset [get_filesets constrs_1] $files
-foreach f $files {
-  set_property used_in_synthesis false [get_files "$f"]
-  set_property SCOPED_TO_REF "[file rootname [file tail $f]]" [get_files "$f"]
+foreach f $fpat {
+  set_property used_in_synthesis false [get_files "*/$f"]
+}
+
+set fpat [list \
+  "submodules/lan9254-rtl-esc/hdl/SynchronizerBit.xdc" \
+  "submodules/ecevr-core/hdl/EvrTxPDO.xdc" \
+  "submodules/ecevr-core/hdl/EcEvrWrapper.xdc" \
+]
+set files [mkNormFlist $fpat]
+add_files -norecurse -fileset [get_filesets constrs_1] $files
+foreach f $fpat {
+  set_property used_in_synthesis false [get_files "*/$f"]
+  set_property SCOPED_TO_REF "[file rootname [file tail $f]]" [get_files "*/$f"]
 }
 
 set files [list \
