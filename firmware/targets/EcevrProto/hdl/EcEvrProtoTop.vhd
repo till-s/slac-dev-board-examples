@@ -234,11 +234,15 @@ architecture Impl of EcEvrProtoTop is
   signal dbgTrg           : std_logic;
   signal dbgVal           : std_logic_vector(31 downto 0);
 
+  signal eventClk         : std_logic;
+  signal eventRst         : std_logic;
+
   signal evrStable        : std_logic;
   signal pllRefClkLost    : std_logic;
   signal pllLocked        : std_logic;
   signal pdoTrg           : std_logic;
   signal pdoTrgMgtClk     : std_logic;
+  signal pdoTrgEvtClk     : std_logic;
 
   -- blink with frequency refClk / 1e8 
   subtype RefClkCountType  is natural range 0 to 49999999;
@@ -270,21 +274,23 @@ begin
 
   sysClk         <= sysClkLoc;
   sysRst         <= sysRstLoc;
+  warmBootRst    <= sysRstReq;
 
-  P_RESET    : process( lanRstWaitCnt, lanRstAssertCnt, sysRstReq, warmBootDone, lan9254RstReq ) is
+  P_RESET    : process( sysClkLoc ) is
   begin
-    -- sysRstReq holds sysRstReq until STARTUPE2 forwards the clock
-    sysRstLoc      <= sysRstReq or not warmBootDone;
-    -- just use sysRstReq to ensure the warmboot processor is reset
-    warmBootRst    <= sysRstReq;
-    lan9254RstbOut <= '1';
+    if ( rising_edge( sysClkLoc ) ) then
+      -- sysRstLoc holds sysRstReq until STARTUPE2 forwards the clock
+      sysRstLoc      <= sysRstReq or not warmBootDone;
+      -- just use sysRstReq to ensure the warmboot processor is reset
+      lan9254RstbOut <= '1';
 
-    if ( lanRstAssertCnt > 0 ) then
-      lan9254RstbOut <= '0';
-    end if;
+      if ( lanRstAssertCnt > 0 ) then
+        lan9254RstbOut <= '0';
+      end if;
 
-    if ( lanRstWaitCnt   > 0 ) then
-      sysRstLoc      <= '1';
+      if ( lanRstWaitCnt   > 0 ) then
+        sysRstLoc      <= '1';
+      end if;
     end if;
   end process P_RESET;
 
@@ -454,6 +460,8 @@ begin
       timingRxDataK     => mgtRxDataK,
       evrEventsAdj      => open,  --: out    std_logic_vector( 3 downto 0)
 
+      eventClk          => eventClk,
+      eventRst          => eventRst,
       pdoTrg            => pdoTrg,
 
       timingTxClk       => mgtTxUsrClk,
@@ -545,11 +553,19 @@ begin
         mgtControl       => mgtControl
       );
 
+    -- pdoTrg is a combinatorial signal; resync to avoid critical CDC warning
+    P_PDO_TRG_SYNC : process ( eventClk ) is
+    begin
+      if ( rising_edge( eventClk ) ) then
+         pdoTrgEvtClk <= pdoTrg;
+      end if;
+    end process P_PDO_TRG_SYNC;
+
     U_SYNC_PDO_TRG : entity work.SynchronizerBit
       port map (
         clk              => mgtRxRecClk,
         rst              => '0',
-        datInp(0)        => pdoTrg,
+        datInp(0)        => pdoTrgEvtClk,
         datOut(0)        => pdoTrgMgtClk
       );
 
