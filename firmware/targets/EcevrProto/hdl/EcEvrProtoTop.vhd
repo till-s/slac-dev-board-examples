@@ -26,11 +26,11 @@ entity EcEvrProtoTop is
     SPI_LD_BLK_SZ_G          : natural   := 16; -- Erase block size: 12, 15, 16
     EEP_WR_WAIT_G            : natural   := 1000000;
     GEN_WMB_ILA_G            : boolean   := false;
-    GEN_RST_ILA_G            : boolean   := true;
+    GEN_RST_ILA_G            : boolean   := false;
     GEN_DRP_ILA_G            : boolean   := false;
     GEN_ICAP_WARMBOOT_G      : boolean   := true;
     SYS_CLK_PLL_G            : boolean   := false;
-    ESC_POLLED_MODE_G        : boolean   := true;
+    ESC_POLLED_MODE_G        : boolean   := false;
     RX_POLARITY_INVERT_G     : std_logic := '0';
     TX_POLARITY_INVERT_G     : std_logic := '0';
     MGT_REF_CLK_USED_IDX_G   : natural   := 1;
