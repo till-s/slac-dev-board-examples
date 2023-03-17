@@ -124,6 +124,7 @@ architecture Impl of EcEvrProtoTop is
   constant SPI_BOOT_IMAGE_SIZE_C       : A24Type := x"220000";
   constant SPI_EBLK_SIZE_C             : A24Type := to_unsigned( 2**SPI_LD_BLK_SZ_G, A24Type'length );
 
+  constant SPI_PROB_IMAGE_SIZE_C       : A24Type := x"040000"; -- probes of golden image (normally tgz)
   constant SPI_INFO_IMAGE_SIZE_C       : A24Type := x"400000"; -- arbitrary file with aux. info, e.g., debug probes
 
   constant SPI_GOLDEN_BOOT_FILE_BEG_C  : A24Type := x"000000";
@@ -132,7 +133,9 @@ architecture Impl of EcEvrProtoTop is
   constant SPI_NORMAL_BOOT_FILE_END_C  : A24Type := SPI_NORMAL_BOOT_FILE_BEG_C + SPI_BOOT_IMAGE_SIZE_C - 1;
   constant SPI_BARRIER_FILE_BEG_C      : A24Type := SPI_NORMAL_BOOT_FILE_END_C + 1;
   constant SPI_BARRIER_FILE_END_C      : A24Type := SPI_BARRIER_FILE_BEG_C + SPI_EBLK_SIZE_C - 1;
-  constant SPI_INFO_FILE_BEG_C         : A24Type := SPI_BARRIER_FILE_END_C + 1;
+  constant SPI_PROB_FILE_BEG_C         : A24Type := SPI_BARRIER_FILE_END_C + 1;
+  constant SPI_PROB_FILE_END_C         : A24Type := SPI_PROB_FILE_BEG_C + SPI_PROB_IMAGE_SIZE_C - 1;
+  constant SPI_INFO_FILE_BEG_C         : A24Type := SPI_PROB_FILE_END_C + 1;
   constant SPI_INFO_FILE_END_C         : A24Type := SPI_INFO_FILE_BEG_C + SPI_INFO_IMAGE_SIZE_C - 1;
 
   constant SPI_FILE_MAP_C : FlashFileArray := (
@@ -149,18 +152,24 @@ architecture Impl of EcEvrProtoTop is
             flags   => FLASH_FILE_FLAG_WP_C
          ),
     2 => (
-            id      => x"41", -- 'A' ('aux' following the standard/wildcard image)
+            id      => x"50", -- 'P' ('probes' for golden image)
+            begAddr => SPI_PROB_FILE_BEG_C,
+            endAddr => SPI_PROB_FILE_END_C,
+            flags   => FLASH_FILE_FLAGS_NONE_C
+         ),
+    3 => (
+            id      => x"41", -- 'A' ('aux')
             begAddr => SPI_INFO_FILE_BEG_C,
             endAddr => SPI_INFO_FILE_END_C,
             flags   => FLASH_FILE_FLAGS_NONE_C
          ),
-    3 => (
+    4 => (
             id      => x"54", -- 'T' ('test')
             begAddr => x"FE0000",
             endAddr => x"FFFFFF",
             flags   => FLASH_FILE_FLAGS_NONE_C
          ),
-    4 => ( -- catch-all entry must be last!
+    5 => ( -- catch-all entry must be last!
             id      => FOE_FILE_ID_WILDCARD_C,
             begAddr => SPI_NORMAL_BOOT_FILE_BEG_C,
             endAddr => SPI_NORMAL_BOOT_FILE_END_C,
