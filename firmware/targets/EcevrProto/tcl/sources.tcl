@@ -118,16 +118,6 @@ if { [string equal "${_evr_flavor_}" "OPENEVR"] } {
    [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/OpenEvrUdp2BusWrapper.vhd"] \
   ]
   add_files -norecurse -fileset [get_filesets sources_1] $files
-
-  set fpat [list \
-   "submodules/mrf-openevr/vhdl/false_paths.xdc" \
-  ]
-  set files [mkNormFlist $fpat]
-  add_files -norecurse -fileset [get_filesets constrs_1] $files
-
-  foreach f $fpat {
-    set_property used_in_synthesis false [get_files "*/$f"]
-  }
 }
 
 if { [string equal "${_evr_flavor_}" "PSI"] } {
@@ -171,9 +161,14 @@ add_files -norecurse -fileset [get_filesets constrs_1] $files
 
 set fpat [list \
   "hdl/${_top_mod_}-io_timing.xdc" \
-  "hdl/EcEvrProto-misc.xdc" \
 ]
+
+if { [string equal "${_evr_flavor_}" "OPENEVR"] } {
+  lappend fpat "submodules/mrf-openevr/vhdl/false_paths.xdc"
+}
+
 lappend fpat "hdl/EcEvrProto-false_paths.xdc"
+lappend fpat "hdl/EcEvrProto-misc.xdc"
 lappend fpat "hdl/dbg.xdc"
 
 set files [mkNormFlist $fpat]
