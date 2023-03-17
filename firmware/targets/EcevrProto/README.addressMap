@@ -20,6 +20,7 @@ Byte addresses
 0x18_0000 - 0x1f_ffff: MUX ->
   0x18_0000 - 0x18_ffff: TOP module local registers
                        power-cycle: write 0xdead to register @ offset 8
+                       flash-write enable for golden area: 0x10000 @ offset 8
   0x19_0000 - 0x19_ffff: GTP DRP registers (half-word aligned access!)
   0x1a_0000 - 0x1a_ffff: ICAP registers    (dword aligned access!)
   0x1b_0000 - 0x1b_ffff: <unused>
