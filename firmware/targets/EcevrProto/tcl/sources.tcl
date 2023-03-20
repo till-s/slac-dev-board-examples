@@ -116,6 +116,8 @@ if { [string equal "${_evr_flavor_}" "OPENEVR"] } {
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/delay_measure_wnd.vhd"] \
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/transceiver_dc.vhd"] \
    [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/OpenEvrUdp2BusWrapper.vhd"] \
+   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/EcEvrPulseGen.vhd"] \
+   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/Bus2BusAsync.vhd"] \
   ]
   add_files -norecurse -fileset [get_filesets sources_1] $files
 }
@@ -180,6 +182,7 @@ foreach f $fpat {
 
 set fpat [list \
   "submodules/lan9254-rtl-esc/hdl/SynchronizerBit.xdc" \
+  "submodules/lan9254-rtl-esc/hdl/Bus2BusAsync.xdc" \
   "submodules/ecevr-core/hdl/EvrTxPDO.xdc" \
   "submodules/ecevr-core/hdl/EcEvrWrapper.xdc" \
 ]
