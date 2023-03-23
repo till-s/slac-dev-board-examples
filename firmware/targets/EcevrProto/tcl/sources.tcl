@@ -111,7 +111,7 @@ if { [string equal "${_evr_flavor_}" "OPENEVR"] } {
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/evr_pkg.vhd"] \
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/databuf_rx_dc.vhd"] \
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/average.vhd"] \
-   [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/buf_bsram.vhd"] \
+   [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/buf_bsram_inferred.vhd"] \
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/delay_adjust.vhd"] \
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/delay_measure_wnd.vhd"] \
    [file normalize "${origin_dir}/../submodules/mrf-openevr/vhdl/transceiver_dc.vhd"] \
