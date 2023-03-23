@@ -237,6 +237,7 @@ architecture Impl of EcEvrProtoTop is
   signal evrMGTControl    : EvrMGTControlType;
   signal mgtStatus        : MgtStatusType;
   signal mgtControl       : MgtControlType;
+  signal timingMMCMLocked : std_logic := '0';
 
   signal rxPDOMst         : Lan9254PDOMstType;
 
@@ -264,6 +265,8 @@ architecture Impl of EcEvrProtoTop is
 
   signal pdoBlink         : std_logic_vector(1 downto 0) := "00";
 
+  signal evrClkCount      : unsigned(26 downto 0) := (others => '0');
+
   function resize(constant x : in std_logic_vector; constant l : in natural)
     return std_logic_vector is
   begin
@@ -281,9 +284,9 @@ begin
   pllRefClkLost              <= mgtStatus.rxPllRefClkLost;
   pllLocked                  <= mgtStatus.rxPllLocked;
 
-  sysClk         <= sysClkLoc;
-  sysRst         <= sysRstLoc;
-  warmBootRst    <= sysRstReq;
+  sysClk                     <= sysClkLoc;
+  sysRst                     <= sysRstLoc;
+  warmBootRst                <= sysRstReq;
 
   P_RESET    : process( sysClkLoc ) is
   begin
@@ -475,7 +478,8 @@ begin
 
       timingTxClk       => mgtTxUsrClk,
       timingTxData      => mgtTxData,
-      timingTxDataK     => mgtTxDataK
+      timingTxDataK     => mgtTxDataK,
+      timingMMCMLocked  => timingMMCMLocked
     );
 
   B_MGT : block is
@@ -567,6 +571,7 @@ begin
     begin
       if ( rising_edge( eventClk ) ) then
          pdoTrgEvtClk <= pdoTrg;
+         evrClkCount  <= evrClkCount + 1;
       end if;
     end process P_PDO_TRG_SYNC;
 
@@ -630,21 +635,23 @@ begin
 
   B_LOC_REGS : block is
 
-    constant NUM_REGS_C : natural := 6;
+    constant NUM_REGS_C : natural := 8;
 
     type StateType is (IDLE);
 
     type RegType is record
-      state      : StateType;
-      rep        : Udp2BusRepType;
-      regs       : Slv32Array(0 to NUM_REGS_C - 1);
+      state                    : StateType;
+      rep                      : Udp2BusRepType;
+      rxRstDonLst              : std_logic;
+      regs                     : Slv32Array(0 to NUM_REGS_C - 1);
     end record RegType;
 
     constant REG_INIT_C : RegType := (
-      state      => IDLE,
-      rep        => UDP2BUSREP_INIT_C,
+      state                    => IDLE,
+      rep                      => UDP2BUSREP_INIT_C,
+      rxRstDonLst              => '0',
       -- initialize individual registers here
-      regs       => (others => (others => '0'))
+      regs                     => (others => (others => '0'))
     );
 
     signal r   : RegType := REG_INIT_C;
@@ -673,7 +680,8 @@ begin
        r, busReqLoc,
        sfpPresentb, sfpTxFault, sfpLos,
        mgtStatus,
-       evrMGTControl
+       evrMGTControl,
+       timingMMCMLocked
      ) is
        variable v : RegType;
        variable a : unsigned(7 downto 0);
@@ -683,6 +691,12 @@ begin
 
       if ( ( busReqLoc.valid and r.rep.valid ) = '1' ) then
         v.rep.valid := '0';
+      end if;
+
+      v.rxRstDonLst := mgtStatus.rxResetDone;
+
+      if ( ( not r.rxRstDonLst and mgtStatus.rxResetDone ) = '1' ) then
+         v.regs(6) := std_logic_vector( unsigned( r.regs(6) ) + 1 );
       end if;
 
       case ( r.state ) is
@@ -715,13 +729,13 @@ begin
                    
                                          & mgtStatus.rxNotIntable
                                          & mgtStatus.rxDispError
-                                         & '0'
+                                         & timingMMCMLocked
                                          & mgtStatus.rxResetDone
                                          & mgtStatus.rxPllLocked
                                          & mgtStatus.rxPllRefClkLost,
                                          v.regs(1)'length );
 
-      v.regs(4)(23 downto 0) := "00000" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0) & x"0000";
+      v.regs(4)(19 downto 16) := "0" & sfpPresentb(0) & sfpTxFault(0) & sfpLos(0);
       rin <= v;
     end process P_COMB;
 
@@ -745,7 +759,7 @@ begin
       mgtControl                         <= MGT_CONTROL_INIT_C;
 
       mgtControl.rxPllReset              <= '0';
-      mgtControl.rxReset                 <= evrMGTControl.rxReset;
+      mgtControl.rxReset                 <= evrMGTControl.rxReset             or      r.regs(4)(28);
       mgtControl.rxPolarityInvert        <= evrMGTControl.rxPolarityInvert;
       mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable;
       mgtControl.txPllReset              <= '0';
@@ -1098,10 +1112,11 @@ begin
 
   end generate G_PWM;
 
-  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds ) is
+  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount ) is
   begin
     ledsLoc                        <= (others => '0');
     ledsLoc(2 downto 0)            <= mgtLeds;
+--   ledsLoc(3)                     <= evrClkCount(evrClkCount'left);
     ledsLoc(8)                     <= spiMstLoc.util(0) or tstLeds(2); --R
     ledsLoc(7)                     <= spiMstLoc.util(1) or tstLeds(1); --G
     ledsLoc(6)                     <=  '0'              or tstLeds(0); --B
