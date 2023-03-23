@@ -2,6 +2,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+use work.IlaWrappersPkg.all;
+
 library unisim;
 use     unisim.vcomponents.all;
 
@@ -24,13 +26,14 @@ entity TimingMgtWrapper is
       -- Thus, applications which need timing clocks from 119 .. 185.4 MHz
       -- would have to use the DRP port and reprogram the PLL and OUTDIV
       -- settings.
-      
+
       -- used only with internal common block
       PLL0_FBDIV_G       : integer    := 4; -- legal: 1,2,3,4,5
       PLL0_FBDIV_45_G    : integer    := 5; -- legal: 4,5
       PLL0_REFCLK_DIV_G  : integer    := 1; -- legal: 1,2
       RXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
-      TXOUT_DIV_G        : natural    := 2  -- legal: 1,2,4,8
+      TXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
+      GEN_ILA_G          : boolean    := false
    );
    port (
       sysClk             : in  std_logic;
@@ -151,6 +154,8 @@ architecture Impl of TimingMgtWrapper is
    signal gtRxPllSel_i      : std_logic_vector(1 downto 0);
    signal gtTxPllSel_i      : std_logic_vector(1 downto 0);
 
+   signal rxData_i          : std_logic_vector(15 downto 0);
+   signal rxDataK_i         : std_logic_vector( 1 downto 0);
    signal rxDispErr_i       : std_logic_vector(1 downto 0);
    signal rxDecErr_i        : std_logic_vector(1 downto 0);
 
@@ -247,7 +252,7 @@ begin
          gt0_rxusrclk_in                 =>      rxUsrClk,
          gt0_rxusrclk2_in                =>      rxUsrClk,
          ------------------ Receive Ports - FPGA RX interface Ports -----------------
-         gt0_rxdata_out                  =>      rxData,
+         gt0_rxdata_out                  =>      rxData_i,
          ------------------ Receive Ports - RX 8B/10B Decoder Ports -----------------
          gt0_rxdisperr_out               =>      rxDispErr_i,
          gt0_rxnotintable_out            =>      rxDecErr_i,
@@ -273,7 +278,7 @@ begin
          gt0_gtrxreset_in                =>      '0',
          gt0_rxlpmreset_in               =>      '0',
          ------------------- Receive Ports - RX8B/10B Decoder Ports -----------------
-         gt0_rxcharisk_out               =>      rxDataK,
+         gt0_rxcharisk_out               =>      rxDataK_i,
          -------------- Receive Ports -RX Initialization and Reset Ports ------------
          gt0_rxresetdone_out             =>      open,
          --------------------- TX Initialization and Reset Ports --------------------
@@ -433,6 +438,9 @@ begin
    txOutClk                          <= txOutClk_b;
    rxOutClk                          <= rxOutClk_b;
 
+   rxData                            <= rxData_i;
+   rxDataK                           <= rxDataK_i;
+
    P_MGT_STATUS : process ( rxDispErr_i, rxDecErr_i, pllRefClkLost_x, pllLocked_x, rxRstDone, txBufStatus, txRstDone ) is
    begin
       mgtStatus                       <= MGT_STATUS_INIT_C;
@@ -447,5 +455,47 @@ begin
       mgtStatus.txPllLocked           <= pllLocked_x;
       mgtStatus.txResetDone           <= txRstDone;
    end process P_MGT_STATUS;
+
+   G_ILA : if ( GEN_ILA_G ) generate
+      signal rxRstDone_d : std_logic;
+      signal gtPllSel_d  : std_logic;
+      signal pllLocked_d : std_logic;
+   begin
+
+      U_SYN : entity work.SynchronizerBit
+         generic map (
+            WIDTH_G              => 3
+         )
+         port map (
+            clk                  => rxOutClk_b,
+            rst                  => '0',
+            datInp(0)            => rxRstDone,
+            datInp(1)            => gtPllSel_i,
+            datInp(2)            => pllLocked_x,
+
+            datOut(0)            => rxRstDone_d,
+            datOut(1)            => gtPllSel_d,
+            datOut(2)            => pllLocked_d
+         );
+
+      U_ILA : Ila_256
+         port map (
+            clk                  => rxOutClk_b,
+
+            probe0(15 downto  0) => rxData_i,
+            probe0(17 downto 16) => rxDataK_i,
+            probe0(19 downto 18) => rxDispErr_i,
+            probe0(21 downto 20) => rxDecErr_i,
+            probe0(22          ) => rxRstDone_d,
+            probe0(25 downto 23) => RXRATE_C,
+            probe0(26          ) => gtPllSel_d,
+            probe0(27          ) => pllLocked_d,
+            probe0(63 downto 28) => (others => '0'),
+
+            probe1(63 downto  0) => (others => '0'),
+            probe2(63 downto  0) => (others => '0'),
+            probe3(63 downto  0) => (others => '0')
+         );
+   end generate G_ILA;
 
 end architecture Impl;
