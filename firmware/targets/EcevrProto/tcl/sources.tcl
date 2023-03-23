@@ -44,6 +44,7 @@ set files [list \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/ESCTxPDO.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/EcEvrBspPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/SynchronizerBit.vhd"] \
+  [file normalize "${origin_dir}/../submodules/lan9254-rtl-esc/hdl/SynchronizerVec.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/EcEvrBoardMap.vhd"] \
   [file normalize "${origin_dir}/../hdl/EcEvrProtoPkg.vhd"] \
   [file normalize "${origin_dir}/../submodules/ecevr-core/hdl/FoE2SpiPkg.vhd"] \
@@ -182,6 +183,7 @@ foreach f $fpat {
 
 set fpat [list \
   "submodules/lan9254-rtl-esc/hdl/SynchronizerBit.xdc" \
+  "submodules/lan9254-rtl-esc/hdl/SynchronizerVec.xdc" \
   "submodules/lan9254-rtl-esc/hdl/Bus2BusAsync.xdc" \
   "submodules/ecevr-core/hdl/EvrTxPDO.xdc" \
   "submodules/ecevr-core/hdl/EcEvrWrapper.xdc" \
