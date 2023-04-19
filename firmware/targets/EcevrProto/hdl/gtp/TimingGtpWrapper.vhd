@@ -33,7 +33,8 @@ entity TimingMgtWrapper is
       PLL0_REFCLK_DIV_G  : integer    := 1; -- legal: 1,2
       RXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
       TXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
-      GEN_ILA_G          : boolean    := false
+      GEN_RX_ILA_G       : boolean    := false;
+      GEN_CTL_ILA_G      : boolean    := true
    );
    port (
       sysClk             : in  std_logic;
@@ -449,28 +450,75 @@ begin
       mgtStatus.txResetDone           <= txRstDone;
    end process P_MGT_STATUS;
 
-   G_ILA : if ( GEN_ILA_G ) generate
-      signal rxRstDone_d : std_logic;
-      signal gtPllSel_d  : std_logic;
-      signal pllLocked_d : std_logic;
+   G_CTL_ILA : if ( GEN_CTL_ILA_G ) generate
+      signal rxRstDone_d         : std_logic;
+      signal gtPllSel_d          : std_logic;
+      signal pllLocked_d         : std_logic;
+      signal pllRst_d            : std_logic;
+      signal pllRefClkLost_d     : std_logic;
+      signal pllRefClkLost_i0_d  : std_logic;
+      signal pllRefClkLost_i1_d  : std_logic;
+      signal pllLocked_i0_d      : std_logic;
+      signal pllLocked_i1_d      : std_logic;
+      signal pllRstAny_d         : std_logic;
    begin
 
       U_SYN : entity work.SynchronizerBit
          generic map (
-            WIDTH_G              => 3
+            WIDTH_G              => 10
          )
          port map (
-            clk                  => rxOutClk_b,
+            clk                  => sysClk,
             rst                  => '0',
             datInp(0)            => rxRstDone,
             datInp(1)            => gtPllSel_i,
             datInp(2)            => pllLocked_x,
+            datInp(3)            => pllRst_x,
+            datInp(4)            => pllRefClkLost_x,
+            datInp(5)            => pllLocked_i(0),
+            datInp(6)            => pllRstAny,
+            datInp(7)            => pllLocked_i(1),
+            datInp(8)            => pllRefClkLost_i(0),
+            datInp(9)            => pllRefClkLost_i(1),
 
             datOut(0)            => rxRstDone_d,
             datOut(1)            => gtPllSel_d,
-            datOut(2)            => pllLocked_d
+            datOut(2)            => pllLocked_d,
+            datOut(3)            => pllRst_d,
+            datOut(4)            => pllRefClkLost_d,
+            datOut(5)            => pllLocked_i0_d,
+            datOut(6)            => pllRstAny_d,
+            datOut(7)            => pllLocked_i1_d,
+            datOut(8)            => pllRefClkLost_i0_d,
+            datOut(9)            => pllRefClkLost_i1_d
          );
 
+      U_ILA : Ila_256
+         port map (
+            clk                  => sysClk,
+
+            probe0(21 downto  0) => (others => '0'),
+            probe0(22          ) => rxRstDone_d,
+            probe0(25 downto 23) => RXRATE_C,
+            probe0(26          ) => gtPllSel_d,
+            probe0(27          ) => pllLocked_d,
+            probe0(28          ) => pllRst_d,
+            probe0(29          ) => pllRefClkLost_d,
+            probe0(30          ) => pllLocked_i0_d,
+            probe0(31          ) => pllRstAny_d,
+            probe0(32          ) => pllLocked_i1_d,
+            probe0(33          ) => pllRefClkLost_i0_d,
+            probe0(34          ) => pllRefClkLost_i1_d,
+            probe0(63 downto 35) => (others => '0'),
+
+            probe1(63 downto  0) => (others => '0'),
+            probe2(63 downto  0) => (others => '0'),
+            probe3(63 downto  0) => (others => '0')
+         );
+   end generate G_CTL_ILA;
+
+   G_RX_ILA : if ( GEN_RX_ILA_G ) generate
+   begin
       U_ILA : Ila_256
          port map (
             clk                  => rxOutClk_b,
@@ -479,16 +527,14 @@ begin
             probe0(17 downto 16) => rxDataK_i,
             probe0(19 downto 18) => rxDispErr_i,
             probe0(21 downto 20) => rxDecErr_i,
-            probe0(22          ) => rxRstDone_d,
+            probe0(22          ) => '0',
             probe0(25 downto 23) => RXRATE_C,
-            probe0(26          ) => gtPllSel_d,
-            probe0(27          ) => pllLocked_d,
-            probe0(63 downto 28) => (others => '0'),
+            probe0(63 downto 26) => (others => '0'),
 
             probe1(63 downto  0) => (others => '0'),
             probe2(63 downto  0) => (others => '0'),
             probe3(63 downto  0) => (others => '0')
          );
-   end generate G_ILA;
+   end generate G_RX_ILA;
 
 end architecture Impl;
