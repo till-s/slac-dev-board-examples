@@ -518,7 +518,22 @@ begin
    end generate G_CTL_ILA;
 
    G_RX_ILA : if ( GEN_RX_ILA_G ) generate
+      signal softRxRst_d, rxRstDone_d : std_logic;
    begin
+      U_SYN : entity work.SynchronizerBit
+         generic map (
+            WIDTH_G              => 2
+         )
+         port map (
+            clk                  => rxOutClk_b,
+            rst                  => '0',
+            datInp(0)            => softRxRst,
+            datInp(1)            => rxRstDone,
+
+            datOut(0)            => softRxRst_d,
+            datOut(1)            => rxRstDone_d
+         );
+
       U_ILA : Ila_256
          port map (
             clk                  => rxOutClk_b,
@@ -527,9 +542,10 @@ begin
             probe0(17 downto 16) => rxDataK_i,
             probe0(19 downto 18) => rxDispErr_i,
             probe0(21 downto 20) => rxDecErr_i,
-            probe0(22          ) => '0',
-            probe0(25 downto 23) => RXRATE_C,
-            probe0(63 downto 26) => (others => '0'),
+            probe0(22          ) => softRxRst_d,
+            probe0(23          ) => rxRstDone_d,
+            probe0(26 downto 24) => RXRATE_C,
+            probe0(63 downto 27) => (others => '0'),
 
             probe1(63 downto  0) => (others => '0'),
             probe2(63 downto  0) => (others => '0'),
