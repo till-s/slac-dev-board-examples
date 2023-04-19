@@ -787,7 +787,7 @@ begin
       mgtControl.rxPllReset              <= '0';
       mgtControl.rxReset                 <= evrMGTControl.rxReset             or      r.regs(4)(28);
       mgtControl.rxPolarityInvert        <= evrMGTControl.rxPolarityInvert;
-      mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable;
+      mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable and not r.regs(4)(27);
       mgtControl.txPllReset              <= r.regs(4)(4);
       mgtControl.txReset                 <= evrMGTControl.txReset;
       mgtControl.txPolarityInvert        <= evrMGTControl.txPolarityInvert;
