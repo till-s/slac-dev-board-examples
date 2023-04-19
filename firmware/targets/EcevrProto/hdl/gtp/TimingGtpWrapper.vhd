@@ -33,8 +33,8 @@ entity TimingMgtWrapper is
       PLL0_REFCLK_DIV_G  : integer    := 1; -- legal: 1,2
       RXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
       TXOUT_DIV_G        : natural    := 2; -- legal: 1,2,4,8
-      GEN_RX_ILA_G       : boolean    := false;
-      GEN_CTL_ILA_G      : boolean    := true
+      GEN_RX_ILA_G       : boolean    := true;
+      GEN_CTL_ILA_G      : boolean    := false
    );
    port (
       sysClk             : in  std_logic;
