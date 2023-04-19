@@ -220,6 +220,8 @@ architecture Impl of EcEvrProtoTop is
   signal mgtTxUsrClk      : std_logic;
   signal mgtRxRecClk      : std_logic;
   signal mgtRxRecRst      : std_logic := '1';
+  signal mgtRefClkBuf     : std_logic_vector(1 downto 0);
+  signal mgtRefClkLoc     : std_logic;
 
   signal busReqs          : Udp2BusReqArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREQ_INIT_C);
   signal busReps          : Udp2BusRepArray(NUM_BUS_SUBS_C - 1 downto 0) := (others => UDP2BUSREP_ERROR_C);
@@ -260,6 +262,8 @@ architecture Impl of EcEvrProtoTop is
 
   signal rxClkCount       : RefClkCountType  := RefClkCountType'high;
   signal rxClkBlink       : std_logic        := '0';
+  signal refClkCount      : RefClkCountType  := RefClkCountType'high;
+  signal refClkBlink      : std_logic        := '0';
   -- flicker with ~10hz
   signal flickerCount     : FlickerCountType := 0;
 
@@ -547,6 +551,8 @@ begin
 
         -- ref clock for internal common block (WITH_COMMON_G = true)
         gtRefClk         => mgtRefClk(MGT_REF_CLK_USED_IDX_G downto MGT_REF_CLK_USED_IDX_G), -- in  std_logic_vector
+        gtRefClkBuf      => mgtRefClkBuf,
+
 
         -- Rx ports
         rxUsrClkActive   => open, -- in  std_logic := '1';
@@ -566,6 +572,8 @@ begin
         mgtControl       => mgtControl
       );
 
+    mgtRefClkLoc <= mgtRefClkBuf( MGT_REF_CLK_USED_IDX_G );
+
     -- pdoTrg is a combinatorial signal; resync to avoid critical CDC warning
     P_PDO_TRG_SYNC : process ( eventClk ) is
     begin
@@ -582,6 +590,18 @@ begin
         datInp(0)        => pdoTrgEvtClk,
         datOut(0)        => pdoTrgMgtClk
       );
+
+    P_DBG_BLINK : process ( mgtRefClkLoc ) is
+    begin
+      if ( rising_edge( mgtRefClkLoc ) ) then
+        if ( refClkCount = 0 ) then
+          refClkBlink <= not refClkBlink;
+          refClkCount <= RefClkCountType'high - 1;
+        else
+          refClkCount <= refClkCount - 1;
+        end if;
+      end if;
+    end process P_DBG_BLINK;
 
     P_REF_BLINK : process ( mgtRxRecClk ) is
     begin
@@ -1112,14 +1132,14 @@ begin
 
   end generate G_PWM;
 
-  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount ) is
+  P_LEDS : process( spiMstLoc, pdoLeds, tstLeds, mgtLeds, evrClkCount, refClkBlink ) is
   begin
     ledsLoc                        <= (others => '0');
     ledsLoc(2 downto 0)            <= mgtLeds;
 --   ledsLoc(3)                     <= evrClkCount(evrClkCount'left);
-    ledsLoc(8)                     <= spiMstLoc.util(0) or tstLeds(2); --R
+    ledsLoc(8)                     <= spiMstLoc.util(0) or tstLeds(2); --B
     ledsLoc(7)                     <= spiMstLoc.util(1) or tstLeds(1); --G
-    ledsLoc(6)                     <=  '0'              or tstLeds(0); --B
+    ledsLoc(6)                     <= refClkBlink       or tstLeds(0); --R
   end process P_LEDS;
 
   leds   <= ledsLoc;
