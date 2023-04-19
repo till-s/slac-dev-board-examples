@@ -59,6 +59,11 @@ entity EcEvrProtoTop is
     pofInp                   : in    std_logic_vector(NUM_POF_G - 1 downto 0) := (others => '0');
     pofOut                   : out   std_logic_vector(NUM_POF_G - 1 downto 0);
 
+    -- GPIO
+    gpio_i                   : in    std_logic_vector(NUM_GPIO_G - 1 downto 0) := (others => '0');
+    gpio_t                   : out   std_logic_vector(NUM_GPIO_G - 1 downto 0) := (others => '1');
+    gpio_o                   : out   std_logic_vector(NUM_GPIO_G - 1 downto 0) := (others => '0');
+
     -- Power-Cycle
     pwrCycle                 : out   std_logic := '0';
 
@@ -240,6 +245,7 @@ architecture Impl of EcEvrProtoTop is
   signal mgtStatus        : MgtStatusType;
   signal mgtControl       : MgtControlType;
   signal timingMMCMLocked : std_logic := '0';
+  signal evrTriggers      : std_logic_vector(3 downto 0);
 
   signal rxPDOMst         : Lan9254PDOMstType;
 
@@ -474,7 +480,7 @@ begin
 
       timingRxData      => mgtRxData,
       timingRxDataK     => mgtRxDataK,
-      evrEventsAdj      => open,  --: out    std_logic_vector( 3 downto 0)
+      evrEventsAdj      => evrTriggers,
 
       eventClk          => eventClk,
       eventRst          => eventRst,
@@ -1141,6 +1147,15 @@ begin
     ledsLoc(7)                     <= spiMstLoc.util(1) or tstLeds(1); --G
     ledsLoc(6)                     <=                      tstLeds(0); --R
   end process P_LEDS;
+
+  P_GPIO : process ( evrTriggers ) is
+    constant L_C : natural := ite( gpio_t'left < evrTriggers'left - 1, gpio_t'left, evrTriggers'left - 1 );
+  begin
+    gpio_t <= (others => '1');
+    gpio_o <= (others => '0');
+    gpio_t( L_C downto 0 ) <= (others => '0'); 
+    gpio_o( L_C downto 0 ) <= evrTriggers( L_C + 1 downto 1 );
+  end process P_GPIO;
 
   leds   <= ledsLoc;
   spiMst <= spiMstLoc;

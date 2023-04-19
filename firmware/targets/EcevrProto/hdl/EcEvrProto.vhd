@@ -98,10 +98,13 @@ architecture Impl of EcEvrProto is
 
   signal mmcmLocked    : std_logic := '0';
 
-  signal ledsOu        : std_logic_vector(ledPins'range);
-  signal ledsIn        : std_logic_vector(ledPins'range);
+  signal ledsOut       : std_logic_vector(ledPins'range);
+  signal ledsInp       : std_logic_vector(ledPins'range);
   signal pofInp        : std_logic_vector(pofInpPins'range);
   signal pofOut        : std_logic_vector(pofOutPins'range);
+  signal gpio_i        : std_logic_vector(gpioDatPins'range);
+  signal gpio_o        : std_logic_vector(gpioDatPins'range) := (others => '0');
+  signal gpio_t        : std_logic_vector(gpioDatPins'range) := (others => '1');
   signal pwrCycle      : std_logic;
   signal i2cSclInp     : std_logic_vector(i2cSclPins'range);
   signal i2cSclOut     : std_logic_vector(i2cSclPins'range);
@@ -256,15 +259,15 @@ begin
       );
   end generate G_BUF_CLK_MGT;
 
-  process ( ledsIn, mmcmLocked ) is
+  process ( ledsInp, mmcmLocked ) is
   begin
-    ledsOu    <= ledsIn;
-    ledsOu(6) <= ledsIn(6) or not mmcmLocked;
+    ledsOut    <= ledsInp;
+    ledsOut(6) <= ledsInp(6) or not mmcmLocked;
   end process;
 
   G_BUF_LED : for i in ledPins'range generate
     U_IOBUF_LED : IOBUF
-      port map ( IO => ledPins(i), T => '0', I => ledsOu(i), O => open );
+      port map ( IO => ledPins(i), T => '0', I => ledsOut(i), O => open );
   end generate G_BUF_LED;
 
   G_BUF_POF_INP : for i in pofInpPins'range generate
@@ -286,6 +289,17 @@ begin
     U_IOBUF_I2C_SDA : IOBUF
       port map ( IO => i2cSdaPins(i), T => i2cSdaOut(i), I => '0', O => i2cSdaInp(i) );
   end generate G_BUF_I2C;
+
+  G_BUF_GPIO : for i in gpioDatPins'range generate
+    signal gpio_dir : std_logic;
+  begin
+    gpio_dir <= not gpio_t(i);
+
+    U_IOBUF_GPIO_DAT : IOBUF
+      port map ( IO => gpioDatPins(i), T => gpio_t(i), I => gpio_o(i), O => gpio_i(i) );
+    U_IOBUF_GPIO_DIR : IOBUF
+      port map ( IO => gpioDirPins(i), T => '0'      , I => gpio_dir , O => open      );
+  end generate G_BUF_GPIO;
 
   U_IOBUF_EEP_WP : IOBUF
       port map ( IO => eepWPPin,      T => '0',          I => eepWp, O => open );
@@ -412,9 +426,12 @@ begin
       sysRst                   => open,
       sysRstReq                => sysRstReq,
 
-      leds                     => ledsIn,
+      leds                     => ledsInp,
       pofInp                   => pofInp,
       pofOut                   => pofOut,
+      gpio_i                   => gpio_i,
+      gpio_o                   => gpio_o,
+      gpio_t                   => gpio_t,
       pwrCycle                 => pwrCycle,
       i2cSclInp                => i2cSclInp,
       i2cSclOut                => i2cSclOut,
