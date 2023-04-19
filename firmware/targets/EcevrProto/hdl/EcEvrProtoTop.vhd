@@ -1139,7 +1139,7 @@ begin
 --   ledsLoc(3)                     <= evrClkCount(evrClkCount'left);
     ledsLoc(8)                     <= spiMstLoc.util(0) or tstLeds(2); --B
     ledsLoc(7)                     <= spiMstLoc.util(1) or tstLeds(1); --G
-    ledsLoc(6)                     <= refClkBlink       or tstLeds(0); --R
+    ledsLoc(6)                     <=                      tstLeds(0); --R
   end process P_LEDS;
 
   leds   <= ledsLoc;
