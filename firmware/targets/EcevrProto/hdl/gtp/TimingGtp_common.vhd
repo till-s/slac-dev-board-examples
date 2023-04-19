@@ -106,6 +106,9 @@ port
     GTREFCLK1_IN         : in std_logic;
     GTREFCLK0_IN         : in std_logic;
 
+    GTGREFCLK1_IN        : in std_logic := '0';
+    GTGREFCLK0_IN        : in std_logic := '0';
+
     -- defaults for these based on wizard settings when only PLL0 was used
     PLL1LOCK_OUT         : out std_logic;
     PLL1LOCKDETCLK_IN    : in std_logic := '0';
@@ -198,7 +201,7 @@ begin
         ----------------- Common Block - GTPE2_COMMON Clocking Ports ---------------
         GTEASTREFCLK0                   =>      GTEASTREFCLK0_IN,
         GTEASTREFCLK1                   =>      GTEASTREFCLK1_IN,
-        GTGREFCLK1                      =>      tied_to_ground_i,
+        GTGREFCLK1                      =>      GTGREFCLK1_IN,
         GTREFCLK0                       =>      GTREFCLK0_IN,
         GTREFCLK1                       =>      GTREFCLK1_IN,
         GTWESTREFCLK0                   =>      GTWESTREFCLK0_IN,
@@ -226,7 +229,7 @@ begin
         PLL1RESET                       =>      PLL1RESET_IN,
         ---------------------------- Common Block - Ports --------------------------
         BGRCALOVRDENB                   =>      tied_to_vcc_i,
-        GTGREFCLK0                      =>      tied_to_ground_i,
+        GTGREFCLK0                      =>      GTGREFCLK0_IN,
         PLLRSVD1                        =>      "0000000000000000",
         PLLRSVD2                        =>      "00000",
         REFCLKOUTMONITOR0               =>      open,

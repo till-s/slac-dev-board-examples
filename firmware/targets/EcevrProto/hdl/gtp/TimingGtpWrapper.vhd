@@ -66,7 +66,10 @@ entity TimingMgtWrapper is
       -- can hook up just one input (gtRefClk(0) or gtRefClk(1)) to avoid instantiation
       -- of unnecessary buffers etc.
       gtRefClk           : in  std_logic_vector;
-      gtRefClkBuf        : out std_logic_vector(1 downto 0);
+      gtRefClkBuf        : out std_logic_vector(1 downto 0) := (others => '0');
+
+      -- for special purposes we can connect a fabric clock
+      gtgRefClk          : in  std_logic_vector(1 downto 0) := (others => '0');
 
       pllRefClkSel       : in  PllRefClkSelArray := (others => PLLREFCLK_SEL_REF0_C);
 
@@ -135,7 +138,7 @@ architecture Impl of TimingMgtWrapper is
       end if;
    end function mapPll;
 
-   signal gtRefClkLoc       : std_logic_vector(1 downto 0);
+   signal gtRefClkLoc       : std_logic_vector(1 downto 0) := (others => '0');
 
    signal pllLocked_x       : std_logic;
    signal pllRefClkLost_x   : std_logic;
@@ -145,8 +148,8 @@ architecture Impl of TimingMgtWrapper is
    signal pllOutRefClk_i    : std_logic_vector(1 downto 0);
 
    -- remapped to actual PLL 0/1
-   signal pllLocked_i       : std_logic_vector(1 downto 0);
-   signal pllRefClkLost_i   : std_logic_vector(1 downto 0);
+   signal pllLocked_i       : std_logic_vector(1 downto 0) := (others => '0');
+   signal pllRefClkLost_i   : std_logic_vector(1 downto 0) := (others => '1');
    signal pllRst_i          : std_logic_vector(1 downto 0);
 
    -- Clock PLL selection: bit 1: rx/txoutclk, bit 0: rx/tx data path
@@ -172,6 +175,7 @@ architecture Impl of TimingMgtWrapper is
 
    signal pllRefClk         : std_logic_vector(1 downto 0);
    signal pllRefClkBuf      : std_logic_vector(1 downto 0);
+   signal pllRstAny         : std_logic := '0';
 
    signal txBufStatus       : std_logic_vector(1 downto 0);
    signal enCommaAlign      : std_logic := '1';
@@ -343,52 +347,38 @@ begin
    U_BUF_RXCLK : component BUFG port map ( I => rxOutClk_i, O => rxOutClk_b );
 
    G_COMMON : if ( WITH_COMMON_G ) generate
-      signal pllInitRstOfRef : std_logic_vector(1 downto 0);
-      signal pllInitPdOfRef  : std_logic_vector(1 downto 0);
       signal pllInitRst      : std_logic;
       signal pllInitPd       : std_logic;
-      signal pllRstAny       : std_logic;
    begin
 
-      G_RAIL_RST : for refinp in pllInitRstOfRef'range generate
-         -- generate reset signals synchronous to the reference clock
-         -- inputs
-         G_RST_GEN : if ( refinp >= gtRefClk'low and refinp <= gtRefClk'high ) generate
-            U_INITIAL_RST : entity work.TimingGtp_cpll_railing
-               generic map (
-                  USE_BUF => COMMON_BUF_TYPE_G
-               )
-               port map (
-                  cpll_reset_out => pllInitRstOfRef(refinp),
-                  cpll_pd_out    => pllInitPdOfRef(refinp),
-                  refclk_out     => gtRefClkBuf(refinp),
-                  refclk_in      => gtRefClk(refinp)
-               );
-            gtRefClkLoc(refinp) <= gtRefClk(refinp);
-         end generate G_RST_GEN;
+      -- generate reset signals
+      U_INITIAL_RST : entity work.TimingGtp_cpll_railing
+         generic map (
+            USE_BUF        => "NONE"
+         )
+         port map (
+            cpll_reset_out => pllInitRst,
+            cpll_pd_out    => pllInitPd,
+            refclk_out     => open,
+            refclk_in      => sysClk
+         );
 
-         G_NO_RST_GEN : if ( refinp < gtRefClk'low or refinp > gtRefClk'high ) generate
-               pllInitRstOfRef(refinp)   <= '0';
-               pllInitPdOfRef(refinp)    <= '1';
-               gtRefClkBuf(refinp)       <= '0';
-               gtRefClkLoc(refinp)       <= '0';
-         end generate G_NO_RST_GEN;
-      end generate G_RAIL_RST;
-
-      -- map resets to PLLs; pick the refclk that has been selected for
-      -- PLL0
-      P_SEL : process ( pllInitRstOfRef, pllInitPdOfRef, pllRefClkSel ) is
+      G_REF_LOC : for ref in gtRefClk'low to gtRefClk'high generate
       begin
-         if ( pllRefClkSel(PLL0) = PLLREFCLK_SEL_REF1_C ) then
-            pllInitRst <= pllInitRstOfRef(1);
-            pllInitPd  <= pllInitPdOfRef(1);
-         else
-            pllInitRst <= pllInitRstOfRef(0);
-            pllInitPd  <= pllInitPdOfRef(0);
-         end if;
-      end process P_SEL;
 
-      pllRstAny <= pllInitRst or pllRst_i(PLL0);
+         gtRefClkLoc( ref ) <= gtRefClk( ref );
+
+         G_BUFH : if ( COMMON_BUF_TYPE_G = "BUFH" ) generate
+            U_BUF : BUFH port map ( I => gtRefClk( ref ), O => gtRefClkBuf( ref ) );
+         end generate G_BUFH;
+
+         G_BUFG : if ( COMMON_BUF_TYPE_G = "BUFG" ) generate
+            U_BUF : BUFG port map ( I => gtRefClk( ref ), O => gtRefClkBuf( ref ) );
+         end generate G_BUFG;
+
+      end generate G_REF_LOC;
+
+      pllRstAny <= pllInitRst or pllRst_i(PLL0) or mgtControl.txPllReset;
 
       U_GTP_COMMON : entity work.TimingGtp_common
          generic map (
@@ -418,7 +408,10 @@ begin
             PLL1OUTREFCLK_OUT    => pllOutRefClk_i(1),
 
             GTREFCLK1_IN         => gtRefClkLoc(1),
-            GTREFCLK0_IN         => gtRefClkLoc(0)
+            GTREFCLK0_IN         => gtRefClkLoc(0),
+
+            GTGREFCLK1_IN        => gtgRefClk(1),
+            GTGREFCLK0_IN        => gtgRefClk(0)
          );
 
       pllRst(PLL0)     <= pllRstAny;
@@ -432,7 +425,7 @@ begin
       pllLocked_i      <= pllLocked;
       pllRefClkLost_i  <= pllRefClkLost;
       pllRst           <= pllRst_i;
-      gtpllSel_i       <= gtPllSel;
+      gtPllSel_i       <= gtPllSel;
    end generate G_NO_COMMON;
 
    txOutClk                          <= txOutClk_b;
