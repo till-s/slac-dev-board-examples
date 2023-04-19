@@ -12,7 +12,7 @@ use work.TimingGtpPkg.all;
 entity TimingMgtWrapper is
    generic (
       WITH_COMMON_G      : boolean    := true;
-      COMMON_BUF_TYPE_G  : string     := "BUFH"; -- BUFG, BUFH
+      COMMON_BUF_TYPE_G  : string     := "BUFH"; -- BUFG, BUFH, NONE
 
       -- A few settings determine the line rate (assuming 16bit external data width
       -- using 8/10bit encoding):
