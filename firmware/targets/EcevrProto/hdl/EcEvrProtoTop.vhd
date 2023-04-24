@@ -961,7 +961,7 @@ begin
               if ( GEN_WMB_ILA_G ) then
                 v.state := IDLE;
               else
-                v.state      := DONE;
+                v.state := DONE;
               end if;
             else
               v.ip    := r.ip + 1;
