@@ -248,6 +248,7 @@ architecture Impl of EcEvrProtoTop is
   signal evrTriggers      : std_logic_vector(3 downto 0);
 
   signal rxPDOMst         : Lan9254PDOMstType;
+  signal rxCommaAlignEn   : std_logic;
 
   signal dbgTrg           : std_logic;
   signal dbgVal           : std_logic_vector(31 downto 0);
@@ -778,8 +779,16 @@ begin
 
     busRepLoc         <= r.rep;
 
+    U_SYNC_PDO_TRG : entity work.SynchronizerBit
+      port map (
+        clk              => mgtRxRecClk,
+        rst              => '0',
+        datInp(0)        => r.regs(4)(27),
+        datOut(0)        => rxCommaAlignEn
+      );
+
     -- map types
-    P_MAP : process ( mgtStatus, evrMGTControl, r ) is
+    P_MAP : process ( mgtStatus, evrMGTControl, r, rxCommaAlignEn ) is
     begin
       evrMGTStatus                       <= EVR_MGT_STATUS_INIT_C;
       mgtControl                         <= MGT_CONTROL_INIT_C;
@@ -787,7 +796,7 @@ begin
       mgtControl.rxPllReset              <= '0';
       mgtControl.rxReset                 <= evrMGTControl.rxReset             or      r.regs(4)(28);
       mgtControl.rxPolarityInvert        <= evrMGTControl.rxPolarityInvert;
-      mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable and not r.regs(4)(27);
+      mgtControl.rxCommaAlignDisable     <= evrMGTControl.rxCommaAlignDisable and not rxCommaAlignEn;
       mgtControl.txPllReset              <= r.regs(4)(4);
       mgtControl.txReset                 <= evrMGTControl.txReset;
       mgtControl.txPolarityInvert        <= evrMGTControl.txPolarityInvert;
