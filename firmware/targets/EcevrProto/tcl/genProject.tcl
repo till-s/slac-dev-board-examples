@@ -122,7 +122,7 @@ if { [info exists _opt_proj_name_] } {
 if { ${_dev_board_} != 0 } {
   set project_part   "xc7z015clg485-2"
 } else {
-  set project_part   "xc7a35tlcsg325-1"
+  set project_part   "xc7a35tcsg325-1"
 }
 
 # Check for paths and files needed for project creation
