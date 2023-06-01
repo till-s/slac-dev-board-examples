@@ -22,7 +22,7 @@
 	branch = straumann_t
 [submodule "firmware/submodules/ecevr-core"]
 	path = firmware/submodules/ecevr-core
-	url = ../ecevr-core
+	url = git@github.com:paulscherrerinstitute/ecevr-core.git
 [submodule "firmware/submodules/mrf-openevr"]
 	path = firmware/submodules/mrf-openevr
 	url = git@github.com:paulscherrerinstitute/mrf-openevr.git
